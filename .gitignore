@@ -20,9 +20,17 @@
 *.cache
 
 # =========================
+# SQL (controle fino)
+backup.sql
+*.dump.sql
+!bases/**/database/*.sql
+
+# =========================
 # DOCKER
 docker/mysql/data/
 docker/mysql/logs/
+docker/**/*.log
+docker/**/*.pid
 
 # =========================
 # VS CODE
@@ -32,6 +40,12 @@ docker/mysql/logs/
 # SISTEMA
 node_modules/
 vendor/
+
+# =========================
+# TEMP
+*.tmp
+*.bak
+*.swp
 
 # =========================
 # OS
