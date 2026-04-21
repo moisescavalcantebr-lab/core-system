@@ -1,0 +1,39 @@
+# =========================
+# ENV (nunca versionar)
+# =========================
+/env/*.php
+!/env/*.example.php
+
+# =========================
+# STORAGE (arquivos gerados)
+/storage/*
+!/storage/.gitkeep
+
+# =========================
+# PROJECTS (instâncias dinâmicas)
+/projects/*
+!/projects/.gitkeep
+
+# =========================
+# LOGS / CACHE
+*.log
+*.cache
+
+# =========================
+# DOCKER
+docker/mysql/data/
+docker/mysql/logs/
+
+# =========================
+# VS CODE
+.vscode/
+
+# =========================
+# SISTEMA
+node_modules/
+vendor/
+
+# =========================
+# OS
+.DS_Store
+Thumbs.db

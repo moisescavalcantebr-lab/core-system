@@ -1,0 +1,12 @@
+/* =========================
+CORE ADMIN
+========================= */
+
+/* BASE GLOBAL */
+@import url('./core_base.css');
+
+/* LAYOUT ADMIN */
+@import url('./admin/layout.css');
+
+/* COMPONENTES */
+@import url('./admin/components.css');

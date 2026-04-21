@@ -1,0 +1,65 @@
+/* =========================
+BLOG BASE
+========================= */
+
+.c-blog {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+/* =========================
+TIPOGRAFIA
+========================= */
+
+.c-blog h1 {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.c-blog h2 {
+    font-size: 1.5rem;
+    margin-top: 30px;
+    margin-bottom: 10px;
+}
+
+.c-blog p {
+    margin-bottom: 15px;
+}
+
+/* =========================
+META
+========================= */
+
+.blog-meta {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin-bottom: 20px;
+}
+
+/* =========================
+IMAGEM
+========================= */
+
+.blog-image-media img {
+    width: 100%;
+    margin: 20px 0;
+}
+
+.blog-caption {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+/* =========================
+QUOTE
+========================= */
+
+.blog-quote {
+    border-left: 3px solid var(--border-color);
+    padding-left: 15px;
+    margin: 20px 0;
+    font-style: italic;
+}

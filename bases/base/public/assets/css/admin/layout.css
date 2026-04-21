@@ -1,0 +1,698 @@
+/* =========================
+BASE
+========================= */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body.c-app {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: var(--bg-body);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================
+HEADER
+========================= */
+
+.c-header {
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.c-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.c-header-logo {
+    height: 36px;
+    width: auto;
+}
+
+.c-header-title {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.c-header-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.c-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.c-header-right {
+    display: flex;
+    align-items: center;
+}
+
+.c-sidebar-toggle {
+    font-size: 18px;
+}
+
+.c-user-name {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+@media (max-width: 600px) {
+    .c-user-name {
+        display: none;
+    }
+}
+.c-user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: var(--button-text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.c-user-avatar-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.c-user-logout {
+    font-size: 12px;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.c-user-logout:hover {
+    text-decoration: underline;
+    opacity: 0.8;
+}
+
+/* =========================
+LAYOUT (MOBILE FIRST)
+========================= */
+
+.c-layout {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* SIDEBARS (mobile hidden) */
+
+.c-sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+
+    width: 240px;
+    height: 100vh;
+
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+
+    padding: 20px;
+
+    z-index: 1000;
+    transition: 0.3s ease;
+}
+
+.c-sidebar.open {
+    left: 0;
+}
+
+.c-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0,0,0,0.4);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: 0.3s ease;
+    z-index: 999;
+}
+
+.c-sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* CONTENT */
+
+.c-content {
+    padding: 16px;
+}
+
+/* =========================
+FOOTER
+========================= */
+
+.c-footer {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: var(--bg-header);
+    border-top: 1px solid var(--border-color);
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.c-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+    .c-menu-toggle {
+        display: block;
+    }
+}
+/* =========================
+PAGE STRUCTURE
+========================= */
+
+.c-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding-top: 10px;
+}
+
+.c-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.c-page-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.c-page-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* =========================
+PAGE BUILDER GRID
+========================= */
+
+.c-page-builder-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr; /* 🔥 esquerda menor, preview maior */
+    gap: 20px;
+    align-items: start;
+}
+
+.c-page-builder-grid .c-card:last-child {
+    width: 100%;
+}
+
+.c-page-builder-grid .c-card:last-child {
+    min-height: 750px;
+}
+
+
+.c-preview-frame {
+    width: 100%;
+    height: 750px; /* 🔥 mais alto */
+    border: none;
+}
+.c-preview-wrapper {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg-body);;
+}
+/* =========================
+GRIDS RESPONSIVOS
+========================= */
+.c-settings-grid,
+.c-profile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+/* dashboard e media já são bons */
+.c-dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.c-media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 16px;
+}
+
+.c-grid {
+    display: grid;
+    gap: 20px;
+}
+
+
+/* =========================
+SIDEBAR NAV
+========================= */
+
+.c-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.c-sidebar-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.c-sidebar-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    opacity: 0.7;
+}
+
+.c-sidebar-link {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.c-sidebar-link:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.c-sidebar-link.active {
+    background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* =========================
+TABLE
+========================= */
+.c-table-wrapper {
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.c-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.c-table thead {
+    background: var(--bg-hover);
+}
+
+.c-table td {
+    padding: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.c-table th {
+    text-align: left;
+    padding: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.c-table-logs tbody tr {
+    transition: var(--transition);
+}
+
+.c-table-logs tbody tr:hover {
+    background: var(--bg-hover);
+}
+
+.c-log-action {
+    font-weight: 600;
+}
+
+.c-log-project,
+.c-log-message,
+.c-log-date {
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.c-log-date {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+/* =========================
+BADGES
+========================= */
+
+.c-badge {
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.c-badge--success {
+    background: color-mix(in srgb, var(--success-color) 20%, transparent);
+    color: var(--success-color);
+}
+
+.c-badge--warning {
+    background: color-mix(in srgb, var(--warning-color) 20%, transparent);
+    color: var(--warning-color);
+}
+
+.c-badge--danger {
+    background: color-mix(in srgb, var(--danger-color) 20%, transparent);
+    color: var(--danger-color);
+}
+
+/* =========================
+DESKTOP BREAKPOINT
+========================= */
+
+@media (min-width: 768px) {
+
+    .c-settings-grid,
+    .c-profile-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .c-dashboard-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (min-width: 1024px) {
+
+    .c-layout {
+        display: grid;
+        grid-template-columns: 240px 1fr 260px;
+    }
+
+    .c-sidebar {
+        position: relative;
+        left: 0;
+        height: auto;
+    }
+
+    .c-sidebar-overlay {
+        display: none;
+    }
+    .c-content {
+        padding: 24px;
+    }
+
+    .c-settings-grid,
+    .c-profile-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .c-dashboard-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    }
+
+}
+/* =========================
+MOBILE SIDEBAR TOGGLE
+========================= */
+
+/* BOTOEs HAMBURGER */
+.c-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 36px;
+    height: 36px;
+
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+
+    background: var(--bg-card);
+    color: var(--text-primary);
+
+    cursor: pointer;
+}
+
+/* ESCONDER NO DESKTOP */
+@media (min-width: 1024px) {
+    .c-sidebar-toggle {
+        display: none;
+    }
+}
+
+/* SIDEBAR MOBILE (overlay) */
+.c-sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+
+    width: 240px;
+    height: 100vh;
+
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border-color);
+
+    padding: 20px;
+
+    z-index: 1000;
+    transition: var(--transition);
+}
+
+/* ATIVA */
+.c-sidebar.open {
+    left: 0;
+}
+
+/* OVERLAY FUNDO */
+.c-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(2px);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: var(--transition);
+    z-index: 999;
+}
+
+.c-sidebar-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* DESKTOP NORMAL */
+@media (min-width: 1024px) {
+
+    .c-sidebar {
+        position: relative;
+        left: 0;
+        height: auto;
+    }
+
+    .c-sidebar-overlay {
+        display: none;
+    }
+
+}
+
+/* =========================
+WRAPPER GERAL PREVIEW
+========================= */
+
+.c-preview-wrapper {
+    position: relative;
+    width: 100%;
+    height: 600px;
+    background: var(--bg-body);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+/* =========================
+TOPO (SIMULA BROWSER)
+========================= */
+
+.c-preview-topbar {
+    height: 36px;
+    background: var(--bg-body);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 6px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.c-preview-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.c-preview-dot.red { background: #ff5f56; }
+.c-preview-dot.yellow { background: #ffbd2e; }
+.c-preview-dot.green { background: #27c93f; }
+
+/* =========================
+IFRAME
+========================= */
+
+.c-preview-frame {
+    width: 100%;
+    height: calc(100% - 36px);
+    border: none;
+    background: #fff;
+}
+
+/* =========================
+RESPONSIVO (OPCIONAL)
+========================= */
+
+.c-preview-wrapper.mobile {
+    max-width: 375px;
+    margin: 0 auto;
+}
+
+.c-preview-wrapper.tablet {
+    max-width: 768px;
+    margin: 0 auto;
+}
+/* =========================
+BUILDER LIST
+========================= */
+
+.builder-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* ITEM */
+
+.builder-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 10px 12px;
+    margin-bottom: 8px;
+
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+
+    transition: all 0.2s ease;
+}
+
+.builder-item:hover {
+    background: rgba(255,255,255,0.06);
+}
+
+/* LEFT */
+
+.builder-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* HANDLE (drag) */
+
+.builder-handle {
+    cursor: grab;
+    opacity: 0.4;
+    font-size: 14px;
+}
+
+/* INFO */
+
+.builder-type {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+/* ACTIONS */
+
+.builder-actions {
+    display: flex;
+    gap: 6px;
+}
+
+/* BUTTONS */
+
+.btn-edit,
+.btn-delete {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-edit {
+    background: #2c3e50;
+    color: #fff;
+}
+
+.btn-delete {
+    background: #5c2b2b;
+    color: #fff;
+}
+
+/* DRAG EFFECT */
+
+.builder-item.sortable-chosen {
+    opacity: 0.6;
+}

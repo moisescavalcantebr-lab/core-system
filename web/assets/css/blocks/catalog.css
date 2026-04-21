@@ -1,0 +1,30 @@
+.block-catalog .catalog-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.block-catalog .catalog-card {
+    padding: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.block-catalog .catalog-images img {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.block-catalog .catalog-title {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.block-catalog .catalog-description {
+    font-size: 0.95rem;
+    opacity: 0.8;
+}
+
+@media (min-width: 768px) {
+    .block-catalog .catalog-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

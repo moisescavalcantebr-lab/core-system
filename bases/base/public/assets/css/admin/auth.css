@@ -1,0 +1,141 @@
+/* RESET BÁSICO */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--bg-body);
+    margin: 0;
+}
+
+
+.c-auth-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: linear-gradient(135deg, var(--bg-body), var(--card-bg));
+}
+
+/* CARD PRINCIPAL */
+.c-auth-card {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 380px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+}
+
+/* LOGO */
+.c-auth-logo img {
+    margin-bottom: 20px;
+}
+
+/* TÍTULO */
+.c-auth-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+/* SUBTÍTULO */
+.c-auth-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+}
+
+/* FORM */
+.c-auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.c-auth-form button {
+    margin-top: 10px;
+}
+
+/* INPUT */
+.c-auth-input input {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.c-auth-input input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* BOTÃO */
+.c-auth-btn {
+    margin-top: 10px;
+    padding: 12px;
+    background: var(--color-secondary);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.c-auth-btn:hover {
+    background: var(--color-primary-hover);
+}
+
+.c-btn-block {
+    width: 100%;
+}
+
+/* LINK */
+.c-auth-link {
+    margin-top: 18px;
+    font-size: 13px;
+}
+
+.c-auth-link a {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.c-auth-link a:hover {
+    text-decoration: underline;
+}
+
+/* ANIMAÇÃO */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* RESPONSIVO */
+@media (max-width: 480px) {
+    .c-auth-card {
+        padding: 30px 20px;
+        border-radius: 12px;
+    }
+}

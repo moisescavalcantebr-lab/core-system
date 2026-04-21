@@ -1,0 +1,13 @@
+/* CSS Document */
+
+/* BASE GLOBAL */
+@import url('./core_base.css');
+
+/* THEME ATIVO */
+@import url('./themes/dark.css');
+
+/* LAYOUT ADMIN */
+@import url('./admin/layout.css');
+
+/* COMPONENTES */
+@import url('./admin/auth.css');
