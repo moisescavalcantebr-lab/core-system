@@ -4,6 +4,7 @@
 RENDER FIELD
 ========================= */
 
+if (!function_exists('renderField')) {
 function renderField(string $name, array $config, $value = null): void
 {
     $type  = $config['type'] ?? 'text';
@@ -56,11 +57,13 @@ function renderField(string $name, array $config, $value = null): void
 
     echo "</div>";
 }
+}
 
 /* =========================
 RENDER GROUP (REPEATER)
 ========================= */
 
+if (!function_exists('renderGroup')) {
 function renderGroup(string $name, array $config, $value): void
 {
     $value = is_array($value) ? $value : [];
@@ -122,4 +125,5 @@ function renderGroup(string $name, array $config, $value): void
     echo "</div>";
 
     echo "</template>";
+}
 }

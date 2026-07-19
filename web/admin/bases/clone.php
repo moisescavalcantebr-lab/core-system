@@ -20,39 +20,60 @@ if (!$base) {
 ob_start();
 ?>
 
-<h1>Clonar Base: <?= htmlspecialchars($base['name']) ?></h1>
-<div>
+<div class="c-page">
 
-<a class="c-btn-secondary"
-href="/public/admin/bases/index.php">
-+ Voltar Para Bases
-</a>
-</div><br>
+    <div class="c-page-header">
+        <div>
+            <h1 class="c-page-title">Clonar Base: <?= htmlspecialchars($base['name']) ?></h1>
+            <p class="c-page-subtitle">Crie uma base limpa. Os módulos serão adicionados depois na base clonada.</p>
+        </div>
 
-<div class="c-card">
+        <a class="c-btn-secondary" href="/web/admin/bases/index.php">
+            Voltar Para Bases
+        </a>
+    </div>
 
-<form method="post" action="/app/actions/bases/base_clone_store.php">
+    <div class="c-page-content">
 
-<input type="hidden" name="base_id" value="<?= $base['id'] ?>">
+        <?php flash_show(); ?>
 
-<label>Nome da Nova Base</label>
-<input class="c-input-filter" name="name" required>
+        <form method="post" action="/app/actions/bases/base_clone_store.php">
 
-<label>Slug da Pasta</label>
-<input class="c-input-filter" name="slug" required>
+            <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
 
-<small style="color:#666;"><br>
+            <div class="c-card">
+                <h3>Dados da Nova Base</h3>
 
-Use apenas letras minúsculas, números e hífen.<br>
-Exemplo: <strong>loja-v2</strong><br>
-Evite nomes longos ou com espaços.
-</small>
+                <div class="c-form-grid">
+                    <div class="c-form-group">
+                        <label>Nome da Nova Base</label>
+                        <input class="c-input" name="name" placeholder="Ex: Gol Fut" required>
+                    </div>
 
-<br><br>
+                    <div class="c-form-group">
+                        <label>Slug da Pasta</label>
+                        <input class="c-input" name="slug" placeholder="Ex: gol-fut" required>
+                    </div>
+                </div>
 
-<button class="c-btn-secondary">Clonar Base</button>
+                <p class="c-page-subtitle">
+                    Use apenas letras minúsculas, números e hífen. Se o slug já existir, o sistema cria uma variação automaticamente.
+                </p>
+            </div>
 
-</form>
+            <div class="c-card">
+                <h3>Clonagem Limpa</h3>
+                <p>A nova base receberá apenas a estrutura principal: login, configurações, páginas, layout e banco base.</p>
+                <p>Pastas de módulos e arquivos temporários não serão copiados. Depois da clonagem, entre na base criada e adicione somente os módulos necessários.</p>
+            </div>
+
+            <button class="c-btn-primary">
+                Clonar Base
+            </button>
+
+        </form>
+
+    </div>
 
 </div>
 
@@ -60,25 +81,31 @@ Evite nomes longos ou com espaços.
 $content = ob_get_clean();
 $title = 'Clonar Base';
 
+$rightSidebarEnabled = true;
+
 $rightSidebarContent = '
 
-<div class="c-card sidebar-card">
-
-<h3>Informações</h3>
-
-Informações Aqui
-
+<div class="c-card">
+    <h3>Origem</h3>
+    <p><strong>Base:</strong> '.htmlspecialchars($base['name']).'</p>
+    <p><strong>Slug:</strong> '.htmlspecialchars($base['slug']).'</p>
 </div>
 
+<br>
+
+<div class="c-card">
+    <h3>Como funciona</h3>
+    <p>A base original permanece intocável. A nova base nasce limpa para evitar carregar módulos e arquivos desnecessários.</p>
+    <p>Depois, use a tela de módulos da própria base para montar o segmento.</p>
+</div>
+
+<br>
+
+<div class="c-card">
+    <h3>Módulos</h3>
+    <p>Não são adicionados na clonagem.</p>
+    <p>Isso deixa a base padrão mais segura e facilita manutenção.</p>
+</div>
 ';
-
-$page = [
-
-'title' => 'Editar Bloco',
-'content' => $content,
-'rightSidebar' => $rightSidebarContent
-
-];
-	
 	
 require APP_PATH . '/views/layout_admin.php';

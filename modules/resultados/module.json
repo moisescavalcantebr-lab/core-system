@@ -1,0 +1,43 @@
+﻿{
+    "name":  "resultados",
+    "label":  "Resultados",
+    "description":  "Registro neutro de resultados, decisões, métricas finais e histórico de eventos.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "geral",
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "resultados",
+                 "historico",
+                 "decisoes"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Resultados",
+                 "url":  "/admin/resultados/index.php",
+                 "key":  "resultados"
+             },
+    "requires":  [
+                     "partidas"
+                 ],
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "result_sets",
+                                    "result_entries"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/resultados",
+                     "to":  "web/admin/resultados"
+                 }
+             ]
+}

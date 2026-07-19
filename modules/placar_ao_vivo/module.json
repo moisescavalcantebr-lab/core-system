@@ -1,0 +1,38 @@
+﻿{
+    "name":  "placar_ao_vivo",
+    "label":  "Placar Ao Vivo",
+    "description":  "Tela cheia para registrar gols da partida e atualizar o placar em tempo real.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "placar",
+                 "ao vivo",
+                 "gol"
+             ],
+    "features":  [
+                     "advanced_live"
+                 ],
+    "requires":  [
+                     "partidas"
+                 ],
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "live_match_events"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/partidas",
+                     "to":  "web/admin/partidas"
+                 }
+             ]
+}

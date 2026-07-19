@@ -1,0 +1,44 @@
+﻿{
+    "name":  "classificacao",
+    "label":  "Classificacao",
+    "description":  "Tabelas de classificacao e rankings individuais com campos configuraveis por base.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Gestao",
+    "segments":  [
+                     "geral",
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "ranking",
+                 "classificacao",
+                 "tabela",
+                 "individual"
+             ],
+    "features":  [
+                     "individual_classification"
+                 ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Classificacao",
+                 "url":  "/admin/classificacao/index.php",
+                 "key":  "classificacao"
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "classification_tables",
+                                    "classification_rows"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/classificacao",
+                     "to":  "web/admin/classificacao"
+                 }
+             ]
+}

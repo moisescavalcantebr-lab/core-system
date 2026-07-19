@@ -1,0 +1,56 @@
+﻿{
+    "name":  "jogadores",
+    "label":  "Jogadores",
+    "description":  "Cadastro simples de jogadores para bases do segmento esportivo.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+                              "futebol"
+                          ],
+    "attach_to":  [
+                      "participantes"
+                  ],
+    "context":  {
+                    "base_module":  "participantes",
+                    "participant_context":  "jogador",
+                    "hide_base_menu":  true
+                },
+    "tags":  [
+                 "jogadores",
+                 "elenco",
+                 "atletas"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Jogadores",
+                 "url":  "/admin/jogadores/index.php",
+                 "key":  "jogadores"
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "player_positions",
+                                    "players",
+                                    "participants"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/jogadores",
+                     "to":  "web/admin/jogadores"
+                 },
+                 {
+                     "from":  "web/cadastro-jogador.php",
+                     "to":  "web/cadastro-jogador.php"
+                 },
+                 {
+                     "from":  "web/cadastro-jogador-store.php",
+                     "to":  "web/cadastro-jogador-store.php"
+                 }
+             ]
+}

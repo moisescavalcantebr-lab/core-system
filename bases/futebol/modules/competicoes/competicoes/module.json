@@ -1,0 +1,40 @@
+﻿{
+    "name":  "competicoes",
+    "label":  "Competicoes",
+    "description":  "Organize competicoes e partidas do futebol. No gratis, a base usa Amistoso como competicao simples.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+                              "futebol"
+                          ],
+    "tags":  [
+                 "competicoes",
+                 "torneios",
+                 "campeonatos"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Competicoes",
+                 "url":  "/admin/competicoes/index.php",
+                 "key":  "competicoes"
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "competitions",
+                                    "competition_participants",
+                                    "competition_rules"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/competicoes",
+                     "to":  "web/admin/competicoes"
+                 }
+             ]
+}

@@ -16,7 +16,7 @@ header('Location: /public/admin/projects/view.php?id='.$id);
 }
 
 /* Verificar se existe */
-$stmt = $pdo->prepare("SELECT id, status FROM projects WHERE id = :id");
+$stmt = $pdo->prepare("SELECT id, status, deletion_requested_at FROM projects WHERE id = :id");
 $stmt->execute(['id' => $id]);
 $project = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -25,26 +25,29 @@ header('Location: /public/admin/projects/view.php?id='.$id);
     exit;
 }
 
-/* Evitar deletar duas vezes */
-if ($project['status'] === 'deleted') {
-    header('Location: /public/admin/projects/view.php?id='.$id);
+/* Evitar agendar duas vezes */
+if (!empty($project['deletion_requested_at']) || $project['status'] === 'deleted') {
+    header('Location: /web/admin/projects/view.php?id='.$id);
     exit;
 }
 
-/* Soft delete */
+/* Agendar exclusão */
 $pdo->prepare("
     UPDATE projects
-    SET status = 'deleted'
+    SET status = 'blocked',
+        deletion_requested_at = NOW(),
+        deletion_scheduled_at = DATE_ADD(NOW(), INTERVAL 30 DAY),
+        deletion_canceled_at = NULL
     WHERE id = :id
 ")->execute(['id' => $id]);
 
 /* Log */
 $pdo->prepare("
     INSERT INTO project_logs (project_id, action, message, level)
-    VALUES (:project_id, 'deleted', 'Projeto marcado como deletado.', 'warning')
+    VALUES (:project_id, 'deletion_scheduled', 'Exclusão do projeto agendada para 30 dias.', 'warning')
 ")->execute([
     'project_id' => $id
 ]);
 
-header('Location: /public/admin/projects/view.php?id='.$id);
+header('Location: /web/admin/projects/view.php?id='.$id);
 exit;

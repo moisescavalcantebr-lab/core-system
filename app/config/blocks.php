@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 /* =========================
@@ -44,511 +45,520 @@ BLOCKS
 
 return [
 
-/* ================= PAGE ================= */
+    /* ================= PAGE ================= */
 
-'hero' => [
-    'label' => 'Hero',
-    'category' => 'layout',
-    'fields' => [
-        'title' => [
-            'type' => 'text',
-            'label' => 'Titulo',
-            'default' => 'Transforme visitantes em clientes'
-        ],
-        'subtitle' => [
-            'type' => 'textarea',
-            'label' => 'Subtitulo',
-            'default' => 'Uma landing page r�pida, profissional e focada em convers�o.'
-        ],
-        'cta_text' => [
-            'type' => 'text',
-            'label' => 'Texto do botão',
-            'default' => 'Começar agora'
-        ],
-    ]
-],
+    'hero' => [
+        'label' => 'Hero',
+        'category' => 'layout',
+        'fields' => [
+            'title' => [
+                'type' => 'text',
+                'label' => 'Titulo',
+                'default' => 'Transforme visitantes em clientes'
+            ],
+            'subtitle' => [
+                'type' => 'textarea',
+                'label' => 'Subtitulo',
+                'default' => 'Uma landing page rápida, profissional e focada em conversão.'
+            ],
+            'cta_text' => [
+                'type' => 'text',
+                'label' => 'Texto do botão',
+                'default' => 'Começar agora'
+            ],
+        ]
+    ],
 
-'benefits_cards' => [
-    'label' => 'Beneficios',
-    'fields' => [
+    'benefits_cards' => [
+        'label' => 'Beneficios',
+        'fields' => [
 
-        'title' => [
-            'type' => 'text',
-            'label' => 'Titulo da seção',
-            'default' => 'Por que escolher nossa solução?'
-        ],
+            'title' => [
+                'type' => 'text',
+                'label' => 'Titulo da seção',
+                'default' => 'Por que escolher nossa solução?'
+            ],
 
-        'cards' => [
-            'type' => 'group',
-            'label' => 'Cards',
-            'fields' => [
+            'cards' => [
+                'type' => 'group',
+                'label' => 'Cards',
+                'fields' => [
 
-                'icon' => [
-                    'type' => 'select',
-                    'label' => 'icone',
-                    'options' => [
-                        'star' => '⭐ Star',
-                        'check' => '✔ Check',
-                        'rocket' => '🚀 Rocket',
-                        'shield' => '🛡 Shield',
-                        'bolt' => '⚡ Bolt',
-                        'heart' => '❤️ Heart',
-                        'users' => '👥 Users',
-                        'chart' => '📊 Chart'
+                    'icon' => [
+                        'type' => 'select',
+                        'label' => 'icone',
+                        'options' => [
+                            'star' => '⭐ Star',
+                            'check' => '✔ Check',
+                            'rocket' => '🚀 Rocket',
+                            'shield' => '🛡 Shield',
+                            'bolt' => '⚡ Bolt',
+                            'heart' => '❤️ Heart',
+                            'users' => '👥 Users',
+                            'chart' => '📊 Chart'
+                        ]
+                    ],
+
+                    'title' => [
+                        'type' => 'text',
+                        'label' => 'Titulo'
+                    ],
+
+                    'text' => [
+                        'type' => 'textarea',
+                        'label' => 'Texto'
                     ]
+
                 ],
 
-                'title' => [
-                    'type' => 'text',
-                    'label' => 'Titulo'
-                ],
-
-                'text' => [
-                    'type' => 'textarea',
-                    'label' => 'Texto'
+                'default' => [
+                    [
+                        'icon' => 'star',
+                        'title' => 'Estrutura profissional',
+                        'text' => 'Layout pensado para gerar confiança e ação.'
+                    ],
+                    [
+                        'icon' => 'check',
+                        'title' => 'Contato imediato',
+                        'text' => 'WhatsApp e formulário integrados.'
+                    ],
+                    [
+                        'icon' => 'rocket',
+                        'title' => 'Totalmente configurável',
+                        'text' => 'Edite tudo diretamente pelo painel.'
+                    ]
                 ]
+            ]
 
+        ]
+    ],
+
+    'text' => [
+        'label' => 'Texto',
+        'category' => 'content',
+
+        'fields' => [
+
+            'title' => [
+                'label' => 'Título',
+                'type' => 'text',
+                'default' => ''
             ],
 
-            'default' => [
-                [
-                    'icon' => 'star',
-                    'title' => 'Estrutura profissional',
-                    'text' => 'Layout pensado para gerar confiança e ação.'
+            'content' => [
+                'label' => 'Conteúdo',
+                'type' => 'textarea',
+                'default' => ''
+            ],
+
+            'align' => [
+                'label' => 'Alinhamento',
+                'type' => 'select',
+                'options' => [
+                    'left' => 'Esquerda',
+                    'center' => 'Centro',
+                    'right' => 'Direita'
                 ],
-                [
-                    'icon' => 'check',
-                    'title' => 'Contato imediato',
-                    'text' => 'WhatsApp e formulário integrados.'
-                ],
-                [
-                    'icon' => 'rocket',
-                    'title' => 'Totalmente configurável',
-                    'text' => 'Edite tudo diretamente pelo painel.'
+                'default' => 'left'
+            ]
+        ]
+    ],
+
+    'catalog_products' => [
+        'label' => 'Catálogo',
+        'category' => 'content',
+
+        'fields' => [
+
+            'title' => [
+                'label' => 'Título',
+                'type' => 'text'
+            ],
+
+            'items' => [
+                'label' => 'Produtos',
+                'type' => 'group',
+
+                'fields' => [
+
+                    'name' => [
+                        'label' => 'Nome',
+                        'type' => 'text'
+                    ],
+
+                    'description' => [
+                        'label' => 'Descrição',
+                        'type' => 'textarea'
+                    ],
+
+                    'image' => [
+                        'label' => 'Imagem (URL)',
+                        'type' => 'text'
+                    ]
+
                 ]
             ]
         ]
+    ],
 
-    ]
-],
-    
-'text' => [
-    'label' => 'Texto',
-    'category' => 'content',
+    'cta_whatsapp' => [
+        'label' => 'Botão WhatsApp',
+        'category' => 'cta',
 
-    'fields' => [
+        'fields' => [
 
-        'title' => [
-            'label' => 'T�tulo',
-            'type' => 'text',
-            'default' => ''
-        ],
-
-        'content' => [
-            'label' => 'Conte�do',
-            'type' => 'textarea',
-            'default' => ''
-        ],
-
-        'align' => [
-            'label' => 'Alinhamento',
-            'type' => 'select',
-            'options' => [
-                'left' => 'Esquerda',
-                'center' => 'Centro',
-                'right' => 'Direita'
+            'phone' => [
+                'label' => 'Telefone (com DDD)',
+                'type' => 'text'
             ],
-            'default' => 'left'
-        ]
-    ]
-],
-    
-'catalog_products' => [
-    'label' => 'Cat�logo',
-    'category' => 'content',
 
-    'fields' => [
+            'text' => [
+                'label' => 'Texto do botão',
+                'type' => 'text',
+                'default' => 'Falar no WhatsApp'
+            ],
 
-        'title' => [
-            'label' => 'T�tulo',
-            'type' => 'text'
-        ],
+            'message' => [
+                'label' => 'Mensagem padrão',
+                'type' => 'textarea',
+                'default' => 'Olá, quero saber mais'
+            ],
 
-        'items' => [
-            'label' => 'Produtos',
-            'type' => 'group',
-
-            'fields' => [
-
-                'name' => [
-                    'label' => 'Nome',
-                    'type' => 'text'
+            'align' => [
+                'label' => 'Alinhamento',
+                'type' => 'select',
+                'options' => [
+                    'left' => 'Esquerda',
+                    'center' => 'Centro',
+                    'right' => 'Direita'
                 ],
-
-                'description' => [
-                    'label' => 'Descri��o',
-                    'type' => 'textarea'
-                ],
-
-                'image' => [
-                    'label' => 'Imagem (URL)',
-                    'type' => 'text'
-                ]
-
+                'default' => 'center'
             ]
+
         ]
-    ]
-],
-    
-'cta_whatsapp' => [
-    'label' => 'Bot�o WhatsApp',
-    'category' => 'cta',
+    ],
 
-    'fields' => [
+    'lead_form' => [
+        'label' => 'Formulário',
+        'category' => 'cta',
 
-        'phone' => [
-            'label' => 'Telefone (com DDD)',
-            'type' => 'text'
-        ],
+        'fields' => [
 
-        'text' => [
-            'label' => 'Texto do bot�o',
-            'type' => 'text',
-            'default' => 'Falar no WhatsApp'
-        ],
-
-        'message' => [
-            'label' => 'Mensagem padr�o',
-            'type' => 'textarea',
-            'default' => 'Ol�, quero saber mais'
-        ],
-
-        'align' => [
-            'label' => 'Alinhamento',
-            'type' => 'select',
-            'options' => [
-                'left' => 'Esquerda',
-                'center' => 'Centro',
-                'right' => 'Direita'
+            'title' => [
+                'label' => 'Título',
+                'type' => 'text',
+                'default' => 'Entre em contato'
             ],
-            'default' => 'center'
-        ]
 
-    ]
-],
-
-'lead_form' => [
-    'label' => 'Formul�rio',
-    'category' => 'cta',
-
-    'fields' => [
-
-        'title' => [
-            'label' => 'T�tulo',
-            'type' => 'text',
-            'default' => 'Entre em contato'
-        ],
-
-        'description' => [
-            'label' => 'Descri��o',
-            'type' => 'textarea',
-            'default' => 'Preencha o formul�rio e retornaremos rapidamente.'
-        ],
-
-        'align' => [
-            'label' => 'Alinhamento',
-            'type' => 'select',
-            'options' => [
-                'left' => 'Esquerda',
-                'center' => 'Centro',
-                'right' => 'Direita'
+            'description' => [
+                'label' => 'Descrição',
+                'type' => 'textarea',
+                'default' => 'Preencha o formulário e retornaremos rapidamente.'
             ],
-            'default' => 'center'
-        ]
 
-    ]
-],
-    
+            'base_id' => [
+                'label' => 'Produto/Base divulgada',
+                'type' => 'select',
+                'options' => [
+                    '' => 'Nenhuma'
+                ],
+                'default' => ''
+            ],
+
+            'align' => [
+                'label' => 'Alinhamento',
+                'type' => 'select',
+                'options' => [
+                    'left' => 'Esquerda',
+                    'center' => 'Centro',
+                    'right' => 'Direita'
+                ],
+                'default' => 'center'
+            ]
+
+        ]
+    ],
+
     'testimonials' => [
-    'label' => 'Depoimentos',
-    'category' => 'content',
+        'label' => 'Depoimentos',
+        'category' => 'content',
 
-    'fields' => [
+        'fields' => [
 
-        'title' => [
-            'label' => 'T�tulo',
-            'type' => 'text'
-        ],
+            'title' => [
+                'label' => 'Título',
+                'type' => 'text'
+            ],
 
-        'items' => [
-            'label' => 'Depoimentos',
-            'type' => 'group',
+            'items' => [
+                'label' => 'Depoimentos',
+                'type' => 'group',
 
-            'fields' => [
+                'fields' => [
 
-                'name' => [
-                    'label' => 'Nome',
-                    'type' => 'text'
-                ],
+                    'name' => [
+                        'label' => 'Nome',
+                        'type' => 'text'
+                    ],
 
-                'role' => [
-                    'label' => 'Cargo',
-                    'type' => 'text'
-                ],
+                    'role' => [
+                        'label' => 'Cargo',
+                        'type' => 'text'
+                    ],
 
-                'text' => [
-                    'label' => 'Depoimento',
-                    'type' => 'textarea'
-                ],
+                    'text' => [
+                        'label' => 'Depoimento',
+                        'type' => 'textarea'
+                    ],
 
-                'image' => [
-                    'label' => 'Imagem (URL)',
-                    'type' => 'text'
+                    'image' => [
+                        'label' => 'Imagem (URL)',
+                        'type' => 'text'
+                    ]
+
                 ]
-
             ]
         ]
-    ]
-],
+    ],
 
     'cta_button' => [
-    'label' => 'Bot�o',
-    'category' => 'cta',
+        'label' => 'Botão',
+        'category' => 'cta',
 
-    'fields' => [
+        'fields' => [
 
-        'text' => [
-            'label' => 'Texto',
-            'type' => 'text',
-            'default' => 'Acessar'
-        ],
-
-        'link' => [
-            'label' => 'Link',
-            'type' => 'text',
-            'default' => '#'
-        ],
-
-        'target' => [
-            'label' => 'Abrir em',
-            'type' => 'select',
-            'options' => [
-                '_self' => 'Mesma aba',
-                '_blank' => 'Nova aba'
+            'text' => [
+                'label' => 'Texto',
+                'type' => 'text',
+                'default' => 'Acessar'
             ],
-            'default' => '_self'
-        ],
 
-        'align' => [
-            'label' => 'Alinhamento',
-            'type' => 'select',
-            'options' => [
-                'left' => 'Esquerda',
-                'center' => 'Centro',
-                'right' => 'Direita'
+            'link' => [
+                'label' => 'Link',
+                'type' => 'text',
+                'default' => '#'
             ],
-            'default' => 'center'
-        ],
 
-        'style' => [
-            'label' => 'Cor do bot�o',
-            'type' => 'select',
-            'options' => [
-                'primary' => 'Primary',
-                'secondary' => 'Secondary',
-                'green' => 'Verde',
-                'red' => 'Vermelho',
-                'outline' => 'Outline'
+            'target' => [
+                'label' => 'Abrir em',
+                'type' => 'select',
+                'options' => [
+                    '_self' => 'Mesma aba',
+                    '_blank' => 'Nova aba'
+                ],
+                'default' => '_self'
             ],
-            'default' => 'primary'
-        ]
 
-    ]
-],
-/* ================= BLOG ================= */
-
-'blog_header' => [
-    'label' => 'Blog Header',
-    'category' => 'blog',
-
-    'fields' => [
-
-        'title' => [
-            'label' => 'T�tulo',
-            'type' => 'text'
-        ],
-
-        'subtitle' => [
-            'label' => 'Subt�tulo',
-            'type' => 'textarea'
-        ],
-
-        'author' => [
-            'label' => 'Autor',
-            'type' => 'text'
-        ],
-
-        'date' => [
-            'label' => 'Data',
-            'type' => 'text'
-        ]
-
-    ]
-],
-    
-  'blog_content' => [
-    'label' => 'Blog Conte�do',
-    'category' => 'blog',
-
-    'fields' => [
-
-        'title' => [
-            'label' => 'T�tulo',
-            'type' => 'text'
-        ],
-
-        'content' => [
-            'label' => 'Conte�do (HTML)',
-            'type' => 'textarea'
-        ],
-
-        'media_type' => [
-            'label' => 'Tipo de m�dia',
-            'type' => 'select',
-            'options' => [
-                'image' => 'Imagem',
-                'video' => 'V�deo (iframe)'
+            'align' => [
+                'label' => 'Alinhamento',
+                'type' => 'select',
+                'options' => [
+                    'left' => 'Esquerda',
+                    'center' => 'Centro',
+                    'right' => 'Direita'
+                ],
+                'default' => 'center'
             ],
-            'default' => 'image'
-        ],
 
-        'image' => [
-            'label' => 'URL da m�dia',
-            'type' => 'text'
-        ],
+            'style' => [
+                'label' => 'Cor do botão',
+                'type' => 'select',
+                'options' => [
+                    'primary' => 'Primary',
+                    'secondary' => 'Secondary',
+                    'green' => 'Verde',
+                    'red' => 'Vermelho',
+                    'outline' => 'Outline'
+                ],
+                'default' => 'primary'
+            ]
 
-        'link' => [
-            'label' => 'Link do bot�o',
-            'type' => 'text'
         ]
+    ],
+    /* ================= BLOG ================= */
 
-    ]
-],  
-    
-    
-'blog_text' => [
-    'label' => 'Texto',
-    'category' => 'blog',
+    'blog_header' => [
+        'label' => 'Blog Header',
+        'category' => 'blog',
 
-    'fields' => [
+        'fields' => [
 
-        'content' => [
-            'label' => 'Conte�do (HTML)',
-            'type' => 'textarea'
-        ]
-
-    ]
-],
-    
-'blog_image' => [
-    'label' => 'Imagem',
-    'category' => 'blog',
-
-    'fields' => [
-
-        'image' => [
-            'label' => 'URL da imagem',
-            'type' => 'text'
-        ],
-
-        'caption' => [
-            'label' => 'Legenda',
-            'type' => 'text'
-        ]
-
-    ]
-],
-    
-'blog_quote' => [
-    'label' => 'Cita��o',
-    'category' => 'blog',
-
-    'fields' => [
-
-        'text' => [
-            'label' => 'Texto',
-            'type' => 'textarea'
-        ],
-
-        'author' => [
-            'label' => 'Autor',
-            'type' => 'text'
-        ]
-
-    ]
-],
-    
-'blog_cta' => [
-    'label' => 'Blog CTA',
-    'category' => 'blog',
-
-    'fields' => [
-
-        'text' => [
-            'label' => 'Texto alternativo',
-            'type' => 'text'
-        ],
-
-        'button_text' => [
-            'label' => 'Texto do bot�o',
-            'type' => 'text'
-        ],
-
-        'link' => [
-            'label' => 'Link',
-            'type' => 'text',
-            'default' => '#'
-        ],
-
-        'align' => [
-            'label' => 'Alinhamento',
-            'type' => 'select',
-            'options' => [
-                'left' => 'Esquerda',
-                'center' => 'Centro',
-                'right' => 'Direita'
+            'title' => [
+                'label' => 'Título',
+                'type' => 'text'
             ],
-            'default' => 'center'
+
+            'subtitle' => [
+                'label' => 'Subtítulo',
+                'type' => 'textarea'
+            ],
+
+            'author' => [
+                'label' => 'Autor',
+                'type' => 'text'
+            ],
+
+            'date' => [
+                'label' => 'Data',
+                'type' => 'text'
+            ]
+
         ]
+    ],
 
-    ]
-],
-    
-'blog_video' => [
-    'label' => 'V�deo',
-    'category' => 'blog',
+    'blog_content' => [
+        'label' => 'Blog Conteúdo',
+        'category' => 'blog',
 
-    'fields' => [
+        'fields' => [
 
-        'url' => [
-            'label' => 'URL do v�deo (YouTube/Vimeo)',
-            'type' => 'text'
-        ],
+            'title' => [
+                'label' => 'Título',
+                'type' => 'text'
+            ],
 
-        'caption' => [
-            'label' => 'Legenda',
-            'type' => 'text'
+            'content' => [
+                'label' => 'Conteúdo (HTML)',
+                'type' => 'textarea'
+            ],
+
+            'media_type' => [
+                'label' => 'Tipo de mídia',
+                'type' => 'select',
+                'options' => [
+                    'image' => 'Imagem',
+                    'video' => 'Vídeo (iframe)'
+                ],
+                'default' => 'image'
+            ],
+
+            'image' => [
+                'label' => 'URL da mídia',
+                'type' => 'text'
+            ],
+
+            'link' => [
+                'label' => 'Link do botão',
+                'type' => 'text'
+            ]
+
         ]
+    ],
 
-    ]
-],
-    
-'blog_list' => [
-    'label' => 'Lista de Posts',
-    'category' => 'blog',
 
-    'fields' => [
-        // n�o precisa campos por enquanto (usa globalData)
-    ]
-],
+    'blog_text' => [
+        'label' => 'Texto',
+        'category' => 'blog',
+
+        'fields' => [
+
+            'content' => [
+                'label' => 'Conteúdo (HTML)',
+                'type' => 'textarea'
+            ]
+
+        ]
+    ],
+
+    'blog_image' => [
+        'label' => 'Imagem',
+        'category' => 'blog',
+
+        'fields' => [
+
+            'image' => [
+                'label' => 'URL da imagem',
+                'type' => 'text'
+            ],
+
+            'caption' => [
+                'label' => 'Legenda',
+                'type' => 'text'
+            ]
+
+        ]
+    ],
+
+    'blog_quote' => [
+        'label' => 'Citação',
+        'category' => 'blog',
+
+        'fields' => [
+
+            'text' => [
+                'label' => 'Texto',
+                'type' => 'textarea'
+            ],
+
+            'author' => [
+                'label' => 'Autor',
+                'type' => 'text'
+            ]
+
+        ]
+    ],
+
+    'blog_cta' => [
+        'label' => 'Blog CTA',
+        'category' => 'blog',
+
+        'fields' => [
+
+            'text' => [
+                'label' => 'Texto alternativo',
+                'type' => 'text'
+            ],
+
+            'button_text' => [
+                'label' => 'Texto do botão',
+                'type' => 'text'
+            ],
+
+            'link' => [
+                'label' => 'Link',
+                'type' => 'text',
+                'default' => '#'
+            ],
+
+            'align' => [
+                'label' => 'Alinhamento',
+                'type' => 'select',
+                'options' => [
+                    'left' => 'Esquerda',
+                    'center' => 'Centro',
+                    'right' => 'Direita'
+                ],
+                'default' => 'center'
+            ]
+
+        ]
+    ],
+
+    'blog_video' => [
+        'label' => 'Vídeo',
+        'category' => 'blog',
+
+        'fields' => [
+
+            'url' => [
+                'label' => 'URL do vídeo (YouTube/Vimeo)',
+                'type' => 'text'
+            ],
+
+            'caption' => [
+                'label' => 'Legenda',
+                'type' => 'text'
+            ]
+
+        ]
+    ],
+
+    'blog_list' => [
+        'label' => 'Lista de Posts',
+        'category' => 'blog',
+
+        'fields' => [
+            // não precisa campos por enquanto (usa globalData)
+        ]
+    ],
 ];

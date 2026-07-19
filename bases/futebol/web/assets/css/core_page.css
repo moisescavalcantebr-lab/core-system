@@ -1,0 +1,24 @@
+/* =========================
+CORE PAGE ENTRY
+========================= */
+
+@import url('./public/page.css');
+@import url('./public/blog.css');
+
+/* blocks */
+@import url('./blocks/benefits_cards.css');
+@import url('./blocks/text.css');
+@import url('./blocks/testimonials.css');
+@import url('./blocks/lead.css');
+@import url('./blocks/hero.css');
+@import url('./blocks/cta_whatszapp.css');
+@import url('./blocks/cta_button.css');
+@import url('./blocks/catalog.css');
+@import url('./blocks/blog_video.css');
+@import url('./blocks/blog_text.css');
+@import url('./blocks/blog_quote.css');
+@import url('./blocks/blog_list.css');
+@import url('./blocks/blog_image.css');
+@import url('./blocks/blog_header.css');
+@import url('./blocks/blog_cta.css');
+@import url('./blocks/blog_content.css');

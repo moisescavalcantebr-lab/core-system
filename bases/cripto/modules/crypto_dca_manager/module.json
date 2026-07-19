@@ -1,0 +1,37 @@
+{
+  "name": "crypto_dca_manager",
+  "label": "DCA Strategy",
+  "description": "Gestao pessoal de estrategia cripto DCA Spot por contas, grupos, ativos, ciclos e revisoes.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "category": "Cripto",
+  "segments": ["cripto", "investimentos", "pessoal"],
+  "recommended_bases": ["cripto"],
+  "tags": ["cripto", "dca", "spot", "bitcoin", "portfolio"],
+  "menu": {
+    "section": "Gestao",
+    "label": "DCA Strategy",
+    "url": "/admin/crypto_dca_manager/index.php",
+    "key": "crypto_dca_manager",
+    "order": 10
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "crypto_wallets",
+      "crypto_groups",
+      "crypto_assets",
+      "crypto_cycles",
+      "crypto_entries",
+      "crypto_monthly_reviews",
+      "crypto_asset_reviews"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/crypto_dca_manager",
+      "to": "web/admin/crypto_dca_manager"
+    }
+  ]
+}

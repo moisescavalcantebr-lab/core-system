@@ -9,19 +9,33 @@ requireAdmin();
 
 $projectId = (int)($_GET['id'] ?? 0);
 
-$stmt = $pdo->prepare("SELECT * FROM projects WHERE id = :id");
+$stmt = $pdo->prepare("
+    SELECT p.*, b.slug AS base_slug
+    FROM projects p
+    INNER JOIN bases b ON b.id = p.base_id
+    WHERE p.id = :id
+");
 $stmt->execute(['id' => $projectId]);
 $project = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$project || empty($project['path'])) {
+if (!$project || empty($project['path']) || empty($project['base_slug'])) {
     die('Projeto invÃ¡lido.');
 }
 
-$basePath    = ROOT_PATH . '/bases/base';
-$projectPath = ROOT_PATH . '/' . $project['path'];
+$baseSlug = trim((string)($project['base_slug'] ?? ''));
+$basePath = BASES_PATH . '/' . $baseSlug;
+$projectPath = ROOT_PATH . '/' . ltrim($project['path'], '/');
+
+if (!is_dir($basePath)) {
+    die('Base do projeto nÃ£o encontrada.');
+}
 
 function scanDifferences($baseDir, $projectDir, &$changes = [], $relative = '')
 {
+    if (!is_dir($baseDir)) {
+        return $changes;
+    }
+
     $files = scandir($baseDir);
 
     foreach ($files as $file) {
@@ -42,10 +56,10 @@ function scanDifferences($baseDir, $projectDir, &$changes = [], $relative = '')
             if (str_contains($relPath, 'project.json')) continue;
 
             if (!file_exists($projFile)) {
-                $changes[] = ['type'=>'novo','file'=>$relPath];
+                $changes[] = ['type' => 'novo', 'file' => $relPath];
             } else {
                 if (md5_file($baseFile) !== md5_file($projFile)) {
-                    $changes[] = ['type'=>'alterado','file'=>$relPath];
+                    $changes[] = ['type' => 'alterado', 'file' => $relPath];
                 }
             }
         }
@@ -56,28 +70,44 @@ function scanDifferences($baseDir, $projectDir, &$changes = [], $relative = '')
 
 $changes = [];
 scanDifferences($basePath . '/app', $projectPath . '/app', $changes, '/app');
-scanDifferences($basePath . '/public', $projectPath . '/public', $changes, '/public');
+scanDifferences($basePath . '/web', $projectPath . '/web', $changes, '/web');
 
 ob_start();
 ?>
 
-<h1>Pre-visualização da Sincronização</h1>
+<h1>Pre-visualizaÃ§Ã£o da SincronizaÃ§Ã£o</h1>
 
 <div class="card">
+    <p>
+        <strong>Base usada:</strong>
+        <?= htmlspecialchars((string)$project['base_slug']) ?>
+    </p>
+    <p>
+        <strong>Projeto:</strong>
+        <?= htmlspecialchars((string)$project['slug']) ?>
+    </p>
 
 <?php if (empty($changes)): ?>
 
-    <p>Nenhuma alteraçaoo detectada.</p>
+    <p>Nenhuma alteraÃ§Ã£o detectada.</p>
+
+    <form method="post" action="/app/actions/projects/sync.php">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= $projectId ?>">
+        <button class="btn-secondary">
+            Sincronizar Mesmo Assim
+        </button>
+    </form>
 
 <?php else: ?>
 
-    <p><strong>Arquivos que serão atualizados:</strong></p>
+    <p><strong>Arquivos que serÃ£o atualizados:</strong></p>
 
     <ul>
         <?php foreach ($changes as $change): ?>
             <li>
-                <?= $change['type'] === 'novo' ? 'ðŸ†• Novo' : 'âœ Alterado' ?>
-                â†’ <?= htmlspecialchars($change['file']) ?>
+                <?= $change['type'] === 'novo' ? 'Novo' : 'Alterado' ?>
+                - <?= htmlspecialchars($change['file']) ?>
             </li>
         <?php endforeach; ?>
     </ul>
@@ -88,22 +118,18 @@ ob_start();
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= $projectId ?>">
         <button class="btn-secondary">
-            Confirmar Sincronização
+            Confirmar SincronizaÃ§Ã£o
         </button>
-		
-    </form><br>
-
+    </form>
+    <br>
 
 <?php endif; ?>
 
-</div><br>
+</div>
+<br>
 
-<a class="btn-secondary"
-href="/public/admin/projects/view.php?id=<?= $project['id'] ?>
-target="_blank">
-
-Voltar
-
+<a class="btn-secondary" href="/web/admin/projects/view.php?id=<?= $project['id'] ?>">
+    Voltar
 </a>
 
 <?php

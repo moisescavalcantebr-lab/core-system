@@ -1,0 +1,14 @@
+{
+    "name":  "Base",
+    "slug":  "base",
+    "description":  "Base inicial do sistema (nao deletar)",
+    "allows_users":  1,
+    "max_admins":  1,
+    "status":  1,
+    "is_protected":  1,
+    "schema":  {
+                   "path":  "app/database/schema.sql",
+                   "hash":  "80c9c4d8e89ecf2bfa05b8ccc96aa2a4",
+                   "updated_at":  "2026-06-01 01:02:00"
+               }
+}

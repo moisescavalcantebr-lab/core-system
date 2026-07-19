@@ -1,0 +1,38 @@
+{
+  "name": "participantes",
+  "label": "Participantes",
+  "description": "Cadastro universal de participantes para projetos com usuarios vinculados.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "category": "Gestao",
+  "segments": ["geral", "esporte", "igreja", "loja", "financeiro"],
+  "recommended_bases": ["geral"],
+  "tags": ["participantes", "usuarios", "cadastro"],
+  "menu": {
+    "section": "Gestao",
+    "label": "Participantes",
+    "url": "/admin/participantes/index.php",
+    "key": "participantes"
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "participants"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/participantes",
+      "to": "web/admin/participantes"
+    },
+    {
+      "from": "web/cadastro-participante.php",
+      "to": "web/cadastro-participante.php"
+    },
+    {
+      "from": "web/cadastro-participante-store.php",
+      "to": "web/cadastro-participante-store.php"
+    }
+  ]
+}

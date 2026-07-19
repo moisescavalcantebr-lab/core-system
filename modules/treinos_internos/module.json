@@ -1,0 +1,32 @@
+﻿{
+    "name":  "treinos_internos",
+    "label":  "Treinos Internos",
+    "description":  "Libera competicoes internas, partidas entre jogadores e escalação de treino em dois times.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "treino",
+                 "partida interna",
+                 "racha",
+                 "times internos"
+             ],
+    "features":  [
+                     "internal_competitions"
+                 ],
+    "database":  {
+                     "tables":  [
+
+                                ]
+                 },
+    "copy":  [
+
+             ]
+}

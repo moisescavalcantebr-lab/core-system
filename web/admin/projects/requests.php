@@ -1,162 +1,151 @@
 <?php
 declare(strict_types=1);
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
 
-/* =========================
-BUSCAR REQUESTS
-========================= */
+/*
+|--------------------------------------------------------------------------
+| BUSCAR REQUESTS
+|--------------------------------------------------------------------------
+*/
 
 $stmt = $pdo->query("
-SELECT
-l.id,
-l.name,
-l.email,
-l.site_name,
-l.slug,
-l.created_at,
-b.name AS base_name
-FROM leads l
-LEFT JOIN bases b ON b.id = l.base_id
-WHERE l.implementation_status = 'ready'
-ORDER BY l.id DESC
+    SELECT
+        l.id,
+        l.name,
+        l.email,
+        l.phone,
+        l.state,
+        l.city,
+        l.site_name,
+        l.slug,
+        l.created_at,
+        b.name AS base_name
+    FROM leads l
+    LEFT JOIN bases b ON b.id = l.base_id
+    WHERE l.implementation_status = 'ready'
+    ORDER BY l.id DESC
 ");
 
 $requests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-/* =========================
-PAGE CONTENT
-========================= */
+$title = 'Solicitações';
 
 ob_start();
 ?>
 
-<h1 class="page-title">Solicitações de Projetos</h1>
+<div class="c-page">
 
-<div>
+    <div class="c-page-header">
 
-<a class="c-btn-secondary"
-href="/public/admin/projects/index.php">
-Voltar para Projetos
-</a>
+        <div>
+            <h1 class="c-page-title">Solicitações de Projetos</h1>
+            <p class="c-page-subtitle">Leads qualificados aguardando criação</p>
+        </div>
 
-</div>
+        <div class="c-page-actions">
+            <a class="c-btn-secondary" href="/web/admin/projects/index.php">
+                Voltar para Projetos
+            </a>
+        </div>
 
+    </div>
 
-<br>
+    <div class="c-page-content">
 
-<div class="c-card">
+        <?php if (empty($requests)): ?>
 
-<?php if(empty($requests)): ?>
+            <div class="c-card">
+                Nenhuma solicitação aguardando criação.
+            </div>
 
-<p>Nenhuma solicitação aguardando criação.</p>
+        <?php else: ?>
 
-<?php else: ?>
+            <div class="c-table-wrapper">
 
-<div class="table-wrapper">
+                <table class="c-table">
 
-<table class="core-table">
+                    <thead>
+                        <tr>
+                            <th>Projeto</th>
+                            <th>Cliente</th>
+                            <th>Contato</th>
+                            <th>Base</th>
+                            <th>Slug</th>
+                            <th>Data</th>
+                            <th style="text-align:right;">Ação</th>
+                        </tr>
+                    </thead>
 
-<thead>
-<tr>
-<th>ID</th>
-<th>Projeto</th>
-<th>Cliente</th>
-<th>Base</th>
-<th>Slug</th>
-<th>Data</th>
-<th>Ação</th>
-</tr>
-</thead>
+                    <tbody>
 
-<tbody>
+                    <?php foreach ($requests as $request): ?>
 
-<?php foreach($requests as $req): ?>
+                        <tr>
 
-<tr>
+                            <td>
+                                <strong><?= htmlspecialchars($request['site_name'] ?: '-') ?></strong>
+                            </td>
 
-<td><?= $req['id'] ?></td>
+                            <td>
+                                <?= htmlspecialchars($request['name'] ?: '-') ?>
+                                <br>
+                                <span><?= htmlspecialchars(trim(($request['city'] ?? '') . ' / ' . ($request['state'] ?? ''), ' /')) ?></span>
+                            </td>
 
-<td>
-<strong><?= htmlspecialchars($req['site_name']) ?></strong>
-<br>
-<span><?= htmlspecialchars($req['email']) ?></span>
-</td>
+                            <td>
+                                <?= htmlspecialchars($request['email'] ?: '-') ?>
+                                <br>
+                                <span><?= htmlspecialchars($request['phone'] ?: '-') ?></span>
+                            </td>
 
-<td><?= htmlspecialchars($req['name']) ?></td>
+                            <td><?= htmlspecialchars($request['base_name'] ?: 'Definir no painel') ?></td>
 
-<td><?= htmlspecialchars($req['base_name'] ?? '-') ?></td>
+                            <td><?= htmlspecialchars($request['slug'] ?: '-') ?></td>
 
-<td><?= htmlspecialchars($req['slug']) ?></td>
+                            <td><?= $request['created_at'] ?? '-' ?></td>
 
-<td><?= $req['created_at'] ?? '-' ?></td>
+                            <td style="text-align:right;">
+                                <a class="c-btn-secondary"
+                                   href="/web/admin/projects/create.php?lead_id=<?= $request['id'] ?>">
+                                    Criar Projeto
+                                </a>
+                            </td>
 
-<td>
+                        </tr>
 
-<a
-class="btn-secondary"
-href="/public/admin/projects/project_create.php?lead_id=<?= $req['id'] ?>"
->
-Criar Projeto
-</a>
+                    <?php endforeach; ?>
 
-</td>
+                    </tbody>
 
-</tr>
+                </table>
 
-<?php endforeach ?>
+            </div>
 
-</tbody>
+        <?php endif; ?>
 
-</table>
-
-</div>
-
-<?php endif ?>
+    </div>
 
 </div>
 
 <?php
-
 $content = ob_get_clean();
 
-/* =========================
-SIDEBAR
-========================= */
+$rightSidebarEnabled = true;
 
 $rightSidebarContent = '
-
-<div class="sidebar-card">
-
-<h3 class="sidebar-title">
-Informações
-</h3>
-
-<p>
-Aqui ficam as solicitações de projetos enviadas
-pelos usuários durante a implementação.
-</p>
-
-<p>
-O administrador revisa os dados e cria o projeto
-definitivo no sistema.
-</p>
-
+<div class="c-card">
+    <h3>Informações</h3>
+    <p>
+        Aqui ficam as solicitações enviadas pela landing page.
+    </p>
+    <p>
+        O cliente informa os dados iniciais. A base do projeto é definida pelo administrador na criação.
+    </p>
 </div>
-
 ';
-
-$page = [
-
-'title' => 'Solicitações de Projetos',
-'content' => $content,
-'rightSidebar' => $rightSidebarContent
-
-];
 
 require APP_PATH . '/views/layout_admin.php';

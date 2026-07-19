@@ -1,0 +1,48 @@
+/* =========================
+BLOG TEXT
+========================= */
+
+.block-blog-text {
+}
+
+.blog-text-inner {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* TIPOGRAFIA */
+.blog-text-body {
+    line-height: 1.7;
+    font-size: 1rem;
+}
+
+/* PARÁGRAFOS */
+.blog-text-body p {
+    margin-bottom: 15px;
+}
+
+/* TÍTULOS */
+.blog-text-body h2 {
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+}
+
+.blog-text-body h3 {
+    margin-top: 20px;
+    margin-bottom: 8px;
+    font-size: 1.2rem;
+}
+
+/* LISTAS */
+.blog-text-body ul,
+.blog-text-body ol {
+    margin: 15px 0;
+    padding-left: 20px;
+}
+
+/* LINKS */
+.blog-text-body a {
+    color: var(--color-primary);
+    text-decoration: underline;
+}

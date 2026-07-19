@@ -1,0 +1,41 @@
+{
+  "name": "divulgacao",
+  "label": "Divulgacao",
+  "description": "Landing pages simples para divulgacao, captura de leads e validacao de ofertas.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "kind": "main",
+  "category": "Marketing",
+  "segments": ["geral", "servicos", "infoprodutos", "eventos", "produtos"],
+  "recommended_bases": ["divulgacao"],
+  "tags": ["landing", "leads", "captura", "campanhas"],
+  "menu": {
+    "section": "Gestao",
+    "label": "Divulgacao",
+    "url": "/admin/divulgacao/index.php",
+    "key": "divulgacao",
+    "order": 20
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "divulgacao_pages",
+      "divulgacao_leads"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/divulgacao",
+      "to": "web/admin/divulgacao"
+    },
+    {
+      "from": "web/divulgacao.php",
+      "to": "web/divulgacao.php"
+    },
+    {
+      "from": "web/divulgacao-lead.php",
+      "to": "web/divulgacao-lead.php"
+    }
+  ]
+}

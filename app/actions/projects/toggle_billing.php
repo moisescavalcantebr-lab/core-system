@@ -22,9 +22,10 @@ if (!$id) {
 ========================= */
 
 $stmt = $pdo->prepare("
-SELECT p.billing_status, p.plan_id, pl.billing_cycle
+SELECT p.billing_status, p.plan_id, COALESCE(pp.billing_cycle, pl.billing_cycle) AS billing_cycle
 FROM projects p
 JOIN plans pl ON pl.id = p.plan_id
+LEFT JOIN plan_prices pp ON pp.id = p.plan_price_id
 WHERE p.id = :id
 ");
 

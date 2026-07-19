@@ -19,11 +19,11 @@ $pageId = (int)($_GET['page_id'] ?? 0);
 $index  = (int)($_GET['index'] ?? 0);
 
 if (!$pageId) {
-    exit('P·gina inv·lida');
+    exit('P√°gina inv√°lida');
 }
 
 /* =========================
-BUSCAR P¡GINA
+BUSCAR P√ÅGINA
 ========================= */
 
 $stmt = $pdo->prepare("SELECT * FROM core_page_contents WHERE id=:id");
@@ -31,7 +31,7 @@ $stmt->execute(['id'=>$pageId]);
 $page = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$page) {
-    exit('P·gina n„o encontrada');
+    exit('P√°gina n√£o encontrada');
 }
 
 /* =========================
@@ -49,7 +49,7 @@ $blocks = $data['blocks'] ?? [];
 $block = $blocks[$index] ?? null;
 
 if (!$block) {
-    exit('Bloco inv·lido');
+    exit('Bloco inv√°lido');
 }
 
 $type = $block['type'];
@@ -61,7 +61,7 @@ VIEW DO BLOCO
 $viewPath = APP_PATH . "/views/blocks/edit/{$type}.php";
 
 if (!file_exists($viewPath)) {
-    exit("Editor n„o encontrado para: {$type}");
+    exit("Editor n√£o encontrado para: {$type}");
 }
 
 /* =========================
@@ -83,7 +83,7 @@ $rightSidebarEnabled = true;
 $rightSidebarContent = '
 <div class="c-card">
     <h3>Dica</h3>
-    <p>Edite o bloco e salve.<br>VocÍ voltar· para a p·gina.</p>
+    <p>Edite o bloco e salve.<br>Voc√™ voltar√° para a p√°gina.</p>
 </div>
 ';
 

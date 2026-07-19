@@ -1,0 +1,53 @@
+/* =========================
+BLOG LIST
+========================= */
+
+.block-blog-list {
+}
+
+/* HEADER */
+.blog-list-header {
+    margin-bottom: 20px;
+}
+
+.blog-list-title {
+    font-size: 1.8rem;
+}
+
+/* GRID */
+.blog-list-grid {
+    display: grid;
+    gap: 20px;
+}
+
+/* CARD */
+.blog-card {
+    border: 1px solid var(--border-color);
+}
+
+.blog-card-media img {
+    width: 100%;
+    display: block;
+}
+
+.blog-card-body {
+    padding: 15px;
+}
+
+.blog-card-title {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.blog-card-excerpt {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    opacity: 0.85;
+}
+
+/* RESPONSIVO */
+@media (min-width: 768px) {
+    .blog-list-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}

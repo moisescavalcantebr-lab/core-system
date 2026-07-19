@@ -1,0 +1,22 @@
+{
+  "name": "categorias",
+  "label": "Categorias",
+  "description": "Categorias, subcategorias e tags acoplaveis para organizar dados de modulos.",
+  "version": "0.1.0",
+  "type": "project",
+  "kind": "addon",
+  "attach_to": ["financeiro"],
+  "status": "draft",
+  "category": "Organizacao",
+  "segments": ["geral", "esporte", "igreja", "loja"],
+  "recommended_bases": [],
+  "tags": ["categorias", "subcategorias", "tags", "organizacao"],
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "finance_tags",
+      "finance_entry_tags"
+    ]
+  },
+  "copy": []
+}

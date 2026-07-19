@@ -4,6 +4,7 @@ $stmt = $pdo->query("
     FROM core_page_contents
     WHERE type='blog'
     AND status='published'
+    AND area='public'
     ORDER BY category, sub_category, created_at DESC
 ");
 
@@ -17,8 +18,8 @@ $tree = [];
 
 foreach($posts as $p){
 
-    $cat = $p['category'] ?? 'Sem categoria';
-    $sub = $p['sub_category'] ?? 'Geral';
+    $cat = trim((string)($p['category'] ?? '')) ?: 'Sem categoria';
+    $sub = trim((string)($p['sub_category'] ?? '')) ?: 'Geral';
 
     $tree[$cat][$sub][] = $p;
 }
@@ -51,7 +52,7 @@ foreach($posts as $p){
 
                 <li>
                     <a 
-href="/public/p.php?slug=<?= urlencode($post['slug']) ?>"
+href="/web/p.php?slug=<?= urlencode($post['slug']) ?>"
 class="<?= $currentSlug === $post['slug'] ? 'active' : '' ?>"
 >
                         <?= htmlspecialchars($post['title']) ?>

@@ -94,7 +94,7 @@ $title = 'Páginas';
 ob_start();
 ?>
 
-<div class="c-page">
+<div class="c-page c-pages-admin">
 
     <div class="c-page-header">
 
@@ -104,7 +104,7 @@ ob_start();
         </div>
 
         <div class="c-page-actions">
-            <a class="c-btn-secondary" href="/public/admin/pages/create.php">
+            <a class="c-btn-secondary" href="/web/admin/pages/create.php">
                 + Nova Página
             </a>
         </div>
@@ -114,9 +114,9 @@ ob_start();
     <div class="c-page-content">
 
         <!-- FILTROS -->
-        <div class="c-card">
+        <div class="c-card c-pages-filter-card">
 
-            <div class="c-page-actions">
+            <div class="c-page-actions c-pages-filter-actions">
 
                 <a class="c-btn-secondary" href="?type=all">Todos</a>
                 <a class="c-btn-secondary" href="?type=page">Páginas</a>
@@ -161,7 +161,7 @@ ob_start();
 
         <?php else: ?>
 
-            <div class="c-table-wrapper">
+            <div class="c-table-wrapper c-pages-table-wrapper">
 
                 <table class="c-table">
 
@@ -183,54 +183,42 @@ ob_start();
 
                         <tr>
 
-                            <td><?= htmlspecialchars($p['title']) ?></td>
+                            <td data-label="Título"><?= htmlspecialchars($p['title']) ?></td>
 
-                            <td><?= htmlspecialchars($p['slug']) ?></td>
+                            <td data-label="Slug"><?= htmlspecialchars($p['slug']) ?></td>
 
-                            <td>
+                            <td data-label="Tipo">
                                 <span class="c-badge <?= $p['type']==='blog' ? 'c-badge--info' : 'c-badge--neutral' ?>">
                                     <?= $p['type']==='blog' ? 'Blog' : 'Página' ?>
                                 </span>
                             </td>
 
-                            <td><?= $p['model_slug'] ?: '-' ?></td>
+                            <td data-label="Modelo"><?= $p['model_slug'] ?: '-' ?></td>
 
-                            <td>
+                            <td data-label="Categoria">
                                 <?= $p['category']
                                     ? '<span class="c-badge c-badge--neutral">'.htmlspecialchars($p['category']).'</span>'
                                     : '-' ?>
                             </td>
 
-                            <td>
+                            <td data-label="Status">
                                 <span class="c-badge <?= $p['status']==='published' ? 'c-badge--success' : 'c-badge--warning' ?>">
                                     <?= $p['status'] ?>
                                 </span>
                             </td>
 
-                            <td style="text-align:right;">
+                            <td data-label="Ações" class="c-pages-row-actions" style="text-align:right;">
 
                                 <a class="c-btn-secondary btn-sm"
-                                   href="/public/admin/pages/edit.php?id=<?= $p['id'] ?>">
-                                    Editar
+                                   href="/web/admin/pages/edit.php?id=<?= $p['id'] ?>">
+                                    Configurar
                                 </a>
 
                                 <a class="c-btn-secondary btn-sm"
-                                   href="<?= $baseUrl ?>/public/p.php?slug=<?= urlencode($p['slug']) ?>"
+                                   href="<?= $baseUrl ?>/web/p.php?slug=<?= urlencode($p['slug']) ?>"
                                    target="_blank">
                                     Ver
                                 </a>
-
-                                <button class="c-btn-secondary btn-sm"
-                                        onclick="toggleStatus(<?= $p['id'] ?>)">
-                                    <?= $p['status']==='published'?'Despublicar':'Publicar' ?>
-                                </button>
-
-                                <?php if ($p['status'] !== 'published'): ?>
-                                    <button class="c-btn-secondary btn-sm"
-                                            onclick="deletePage(<?= $p['id'] ?>)">
-                                        Excluir
-                                    </button>
-                                <?php endif; ?>
 
                             </td>
 
@@ -250,20 +238,162 @@ ob_start();
 
 </div>
 
-<script>
-function toggleStatus(id){
-    fetch('/app/actions/pages/toggle_status.php?id=' + id)
-    .then(() => location.reload())
-    .catch(() => alert('Erro'));
+<style>
+@media (max-width: 760px) {
+    .c-pages-admin .c-page-header {
+        align-items: flex-start;
+    }
+
+    .c-pages-admin .c-page-header > div:first-child {
+        min-width: 0;
+        flex: 1 1 170px;
+    }
+
+    .c-pages-admin .c-page-header > .c-page-actions {
+        flex: 0 0 auto;
+    }
+
+    .c-pages-filter-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .c-pages-filter-actions .c-btn-secondary,
+    .c-pages-filter-card select {
+        width: 100%;
+    }
+
+    .c-pages-table-wrapper {
+        overflow: visible;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .c-pages-table-wrapper table,
+    .c-pages-table-wrapper thead,
+    .c-pages-table-wrapper tbody,
+    .c-pages-table-wrapper tr,
+    .c-pages-table-wrapper td {
+        display: block;
+        width: 100%;
+    }
+
+    .c-pages-table-wrapper thead {
+        display: none;
+    }
+
+    .c-pages-table-wrapper tr {
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+    }
+
+    .c-pages-table-wrapper td {
+        display: grid;
+        grid-template-columns: 88px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        padding: 7px 0;
+        border: 0;
+        word-break: break-word;
+    }
+
+    .c-pages-table-wrapper td::before {
+        content: attr(data-label);
+        color: var(--text-secondary);
+        font-weight: 700;
+    }
+
+    .c-pages-row-actions {
+        display: block !important;
+        text-align: left !important;
+    }
+
+    .c-pages-row-actions::before {
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    .c-pages-row-actions .btn-sm {
+        width: calc(50% - 4px);
+        margin: 0 4px 8px 0;
+        justify-content: center;
+        min-height: 38px;
+    }
 }
 
-function deletePage(id){
-    if(!confirm('Excluir página?')) return;
-    fetch('/app/actions/pages/delete.php?id=' + id)
-    .then(() => location.reload())
-    .catch(() => alert('Erro'));
+@media (min-width: 761px) {
+    .c-pages-table-wrapper table {
+        table-layout: fixed;
+    }
+
+    .c-pages-table-wrapper th:nth-child(1),
+    .c-pages-table-wrapper td:nth-child(1) {
+        width: 34%;
+    }
+
+    .c-pages-table-wrapper th:nth-child(2),
+    .c-pages-table-wrapper td:nth-child(2) {
+        width: 18%;
+    }
+
+    .c-pages-table-wrapper th:nth-child(3),
+    .c-pages-table-wrapper td:nth-child(3) {
+        width: 8%;
+    }
+
+    .c-pages-table-wrapper th:nth-child(4),
+    .c-pages-table-wrapper td:nth-child(4) {
+        width: 10%;
+    }
+
+    .c-pages-table-wrapper th:nth-child(5),
+    .c-pages-table-wrapper td:nth-child(5) {
+        width: 12%;
+    }
+
+    .c-pages-table-wrapper th:nth-child(6),
+    .c-pages-table-wrapper td:nth-child(6) {
+        width: 9%;
+    }
+
+    .c-pages-table-wrapper th:nth-child(7),
+    .c-pages-table-wrapper td:nth-child(7) {
+        width: 115px;
+    }
+
+    .c-pages-table-wrapper td {
+        vertical-align: middle;
+        white-space: normal;
+        word-break: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .c-pages-row-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .c-pages-row-actions .btn-sm {
+        margin: 0;
+        white-space: nowrap;
+    }
 }
-</script>
+
+@media (max-width: 420px) {
+    .c-pages-filter-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .c-pages-row-actions .btn-sm {
+        width: 100%;
+        margin-right: 0;
+    }
+}
+</style>
 
 <?php
 $content = ob_get_clean();

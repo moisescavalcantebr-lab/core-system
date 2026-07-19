@@ -1,0 +1,41 @@
+{
+  "name": "tips_survivor",
+  "label": "Tips Survivor",
+  "description": "Competicoes de palpites esportivos em modo survivor com vidas, pontos, tokens internos e ranking.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "category": "Entretenimento",
+  "segments": ["esporte", "entretenimento", "palpites"],
+  "recommended_bases": ["tips-survivor"],
+  "tags": ["palpites", "survivor", "ranking", "tokens", "competicao"],
+  "plan": "start",
+  "menu": {
+    "section": "Gestao",
+    "label": "Tips Survivor",
+    "url": "/admin/tips_survivor/index.php",
+    "key": "tips_survivor",
+    "order": 10
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "tips_settings",
+      "tips_competitions",
+      "tips_competition_users",
+      "tips_matches",
+      "tips_predictions",
+      "tips_user_wallets",
+      "tips_token_transactions",
+      "tips_prizes",
+      "tips_store_items",
+      "tips_user_items"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/tips_survivor",
+      "to": "web/admin/tips_survivor"
+    }
+  ]
+}

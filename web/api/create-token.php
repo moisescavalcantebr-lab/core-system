@@ -87,7 +87,7 @@ if (!$project) {
 
 /* Montar link */
 
-$resetLink = "https://lojasmarim.com{$project['path']}/public/create-password.php?token={$token}";
+$resetLink = "https://lojasmarim.com{$project['path']}/web/create-password.php?token={$token}";
 
 /* =========================
    ENVIAR EMAIL

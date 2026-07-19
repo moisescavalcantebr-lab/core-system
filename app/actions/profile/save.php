@@ -6,6 +6,11 @@ requireAdmin();
 csrf_verify();
 
 $userId = $_SESSION['core_user']['id'];
+$redirectTo = (string)($_POST['redirect_to'] ?? '/web/admin/profile/index.php');
+
+if (!str_starts_with($redirectTo, '/web/admin/')) {
+    $redirectTo = '/web/admin/profile/index.php';
+}
 
 /* =========================
 DADOS
@@ -32,13 +37,13 @@ if (!empty($_POST['new_password'])) {
 
     if (!password_verify($_POST['current_password'], $user['password'])) {
         flash('error', 'Senha atual incorreta');
-        redirect('/public/admin/profile/index.php');
+        redirect($redirectTo);
         exit;
     }
 
     if ($_POST['new_password'] !== $_POST['confirm_password']) {
         flash('error', 'As senhas não coincidem');
-        redirect('/public/admin/profile/index.php');
+        redirect($redirectTo);
         exit;
     }
 
@@ -63,7 +68,7 @@ $current = $stmt->fetchColumn();
 if (!empty($_POST['remove_avatar'])) {
 
     if ($current) {
-        $path = STORAGE_PATH . '/storage/uploads/' . $current;
+        $path = STORAGE_PATH . '/uploads/avatars/' . $current;
         if (file_exists($path)) unlink($path);
     }
 
@@ -78,7 +83,7 @@ if (!empty($_FILES['avatar']['name'])) {
 
     if (!in_array($_FILES['avatar']['type'], $allowed)) {
         flash('error', 'Formato inválido.');
-        redirect('/public/admin/profile/index.php');
+        redirect($redirectTo);
         exit;
     }
 
@@ -105,5 +110,10 @@ $stmt->execute([$userId]);
 
 $_SESSION['core_user'] = $stmt->fetch(PDO::FETCH_ASSOC);
 }
+
+$stmt = $pdo->prepare("SELECT * FROM core_users WHERE id = ?");
+$stmt->execute([$userId]);
+$_SESSION['core_user'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
 flash('success', 'Perfil atualizado');
-redirect('/public/admin/profile/index.php');
+redirect($redirectTo);

@@ -17,14 +17,14 @@ $index  = (int)($_POST['index'] ?? 0);
 $type   = $_POST['type'] ?? '';
 
 if (!$pageId || trim($type) === '') {
-    exit('Dados inválidos');
+    exit('Dados invï¿½lidos');
 }
 
 /* sanitizar */
 $type = preg_replace('/[^a-z0-9_\-]/i', '', $type);
 
 if ($type === '') {
-    exit('Tipo inválido');
+    exit('Tipo invï¿½lido');
 }
 
 /* =========================
@@ -34,11 +34,11 @@ VALIDAR SCHEMA
 $schema = require APP_PATH . '/config/blocks.php';
 
 if (!isset($schema[$type])) {
-    exit('Tipo de bloco inválido');
+    exit('Tipo de bloco invï¿½lido');
 }
 
 /* =========================
-BUSCAR PÁGINA
+BUSCAR Pï¿½GINA
 ========================= */
 
 $stmt = $pdo->prepare("
@@ -52,7 +52,7 @@ $stmt->execute(['id' => $pageId]);
 $contentPath = $stmt->fetchColumn();
 
 if (!$contentPath) {
-    exit('Página não encontrada');
+    exit('Pï¿½gina nï¿½o encontrada');
 }
 
 /* =========================
@@ -97,7 +97,7 @@ VALIDAR INDEX
 ========================= */
 
 if (!isset($blocks[$index])) {
-    exit('Bloco inválido');
+    exit('Bloco invï¿½lido');
 }
 
 $oldBlock = $blocks[$index];
@@ -119,7 +119,7 @@ foreach ($fields as $fieldName => $fieldConfig) {
     $typeField = $fieldConfig['type'] ?? 'text';
 
     /* =========================
-    NÃO EDITÁVEL
+    Nï¿½O EDITï¿½VEL
     ========================= */
 
     if (!$editable) {
@@ -222,13 +222,34 @@ foreach ($fields as $fieldName => $fieldConfig) {
 
     $newBlock[$fieldName] = $value;
 }
-/* =========================
+
+if ($type === 'lead_form') {
+    $selectedBaseId = (int)($newBlock['base_id'] ?? 0);
+
+    if ($selectedBaseId > 0) {
+        $stmt = $pdo->prepare("
+            SELECT slug
+            FROM bases
+            WHERE id = :id
+            AND status = 1
+            LIMIT 1
+        ");
+        $stmt->execute(['id' => $selectedBaseId]);
+        $baseSlug = $stmt->fetchColumn();
+
+        if ($baseSlug) {
+            $newBlock['base_slug'] = (string)$baseSlug;
+        }
+    } elseif (!empty($oldBlock['base_slug'])) {
+        $newBlock['base_slug'] = (string)$oldBlock['base_slug'];
+    }
+}/* =========================
 ATUALIZAR
 ========================= */
 
 $blocks[$index] = $newBlock;
 
-/* ?? CRÍTICO: normalizar índices */
+/* ?? CRï¿½TICO: normalizar ï¿½ndices */
 $blocks = array_values($blocks);
 
 $data['blocks'] = $blocks;
@@ -250,5 +271,5 @@ file_put_contents($jsonPath, $json);
 REDIRECT
 ========================= */
 
-header("Location: {$baseUrl}/public/admin/pages/edit.php?id={$pageId}");
+header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$pageId}");
 exit;

@@ -9,12 +9,26 @@
 <!-- BASE -->
 
 <!-- css -->
-<link rel="stylesheet" href="/public/assets/css/core_admin.css">
+<?php
+$adminCssFiles = [
+    ROOT_PATH . '/web/assets/css/core_admin.css',
+    ROOT_PATH . '/web/assets/css/admin/layout.css',
+    ROOT_PATH . '/web/assets/css/admin/components.css',
+];
+$adminCssVersion = time();
 
-<link rel="stylesheet" href="<?= '/public/assets/css/themes/' . htmlspecialchars($theme) . '.css?v=' . time() ?>">
+foreach ($adminCssFiles as $adminCssFile) {
+    if (is_file($adminCssFile)) {
+        $adminCssVersion = max($adminCssVersion, (int)filemtime($adminCssFile));
+    }
+}
+?>
+<link rel="stylesheet" href="/web/assets/css/core_admin.css?v=<?= $adminCssVersion ?>">
+
+<link rel="stylesheet" href="<?= '/web/assets/css/themes/' . htmlspecialchars($theme) . '.css?v=' . time() ?>">
 <!-- FAVICON -->
 <?php if (!empty($coreSettings['app_favicon'])): ?>
-<link rel="icon" href="/public/assets/uploads/<?= htmlspecialchars($coreSettings['app_favicon']) ?>">
+<link rel="icon" href="/web/assets/uploads/<?= htmlspecialchars($coreSettings['app_favicon']) ?>">
 <?php endif; ?>
 
 </head>
@@ -38,16 +52,21 @@
     </aside>
 
     <!-- CONTENT -->
-    <main class="c-content">
+    <main class="c-content <?= !empty($rightSidebarEnabled) ? 'c-content--has-page-info' : '' ?>">
+        <?php if (!empty($rightSidebarEnabled)): ?>
+            <div class="c-page-info-popover" data-page-info-popover>
+                <button class="c-page-info-button" type="button" aria-label="Informações da página" data-page-info-toggle>
+                    ?
+                </button>
+
+                <div class="c-page-info-panel" data-page-info-panel>
+                    <?= $rightSidebarContent ?? '' ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <?= $content ?>
     </main>
-
-    <!-- RIGHT SIDEBAR -->
-    <?php if (!empty($rightSidebarEnabled)): ?>
-    <aside class="c-sidebar-right">
-        <?= $rightSidebarContent ?? '' ?>
-    </aside>
-    <?php endif; ?>
 
 </div>
 
@@ -78,6 +97,39 @@ document.addEventListener('keydown', function(e) {
         document.querySelector('.c-sidebar')?.classList.remove('open');
         document.querySelector('.c-sidebar-overlay')?.classList.remove('active');
     }
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-page-info-popover]').forEach(function (popover) {
+        const toggle = popover.querySelector('[data-page-info-toggle]');
+        const pageHeader = document.querySelector('.c-page-header');
+        let pageActions = pageHeader?.querySelector('.c-page-actions');
+
+        if (!toggle) {
+            return;
+        }
+
+        if (pageHeader) {
+            if (!pageActions) {
+                pageActions = document.createElement('div');
+                pageActions.className = 'c-page-actions';
+                pageHeader.appendChild(pageActions);
+            }
+
+            pageActions.appendChild(popover);
+        }
+
+        toggle.addEventListener('click', function (event) {
+            event.stopPropagation();
+            popover.classList.toggle('is-open');
+        });
+
+        document.addEventListener('click', function (event) {
+            if (!popover.contains(event.target)) {
+                popover.classList.remove('is-open');
+            }
+        });
+    });
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>

@@ -1,0 +1,35 @@
+{
+  "name": "financeiro",
+  "label": "Financeiro",
+  "description": "Controle financeiro simples com entradas, saidas, categorias e status.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "category": "Financeiro",
+  "segments": ["geral", "esporte", "igreja", "loja"],
+  "recommended_bases": ["geral"],
+  "tags": ["financeiro", "pagamentos", "caixa"],
+  "menu": {
+    "section": "Gestao",
+    "label": "Financeiro",
+    "url": "/admin/financeiro/index.php",
+    "key": "financeiro"
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "finance_categories",
+      "finance_entries",
+      "finance_wallet_requests",
+      "finance_settings",
+      "finance_tags",
+      "finance_entry_tags"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/financeiro",
+      "to": "web/admin/financeiro"
+    }
+  ]
+}

@@ -53,7 +53,7 @@ $subCategory = trim($_POST['sub_category'] ?? '') ?: null;
 
 if (!$title || !$slug) {
     flash('error', 'Título e slug são obrigatórios.');
-    header('Location: /public/admin/pages/create.php');
+    header('Location: /web/admin/pages/create.php');
     exit;
 }
 
@@ -76,6 +76,49 @@ TIPO
 ========================= */
 
 $type = ($modelSlug === 'model_blog') ? 'blog' : 'page';
+
+if ($type !== 'blog') {
+    $category = $modelSlug === 'model_page' ? ($category ?: 'Produtos') : null;
+    $subCategory = null;
+}
+
+function resolvePageModelPath(PDO $pdo, string $modelSlug): ?string
+{
+    $modelSlug = preg_replace('/[^a-z0-9_\-]/', '', strtolower($modelSlug));
+
+    if ($modelSlug === '') {
+        return null;
+    }
+
+    $paths = [
+        STORAGE_PATH . '/paginas/models/' . $modelSlug . '.json',
+    ];
+
+    $stmt = $pdo->prepare("
+        SELECT content_path
+        FROM core_page_contents
+        WHERE slug = :slug
+        AND type = 'model'
+        LIMIT 1
+    ");
+
+    $stmt->execute(['slug' => $modelSlug]);
+    $contentPath = trim((string)$stmt->fetchColumn());
+
+    if ($contentPath !== '') {
+        $paths[] = STORAGE_PATH . '/paginas/models/' . basename($contentPath);
+        $paths[] = STORAGE_PATH . '/paginas/' . ltrim($contentPath, '/\\');
+        $paths[] = STORAGE_PATH . '/paginas/pages/' . basename($contentPath);
+    }
+
+    foreach (array_unique($paths) as $path) {
+        if (is_file($path)) {
+            return $path;
+        }
+    }
+
+    return null;
+}
 
 /* =========================
 BASE URL
@@ -110,32 +153,18 @@ $data = [];
 /* CLONAR MODELO */
 if ($modelSlug) {
 
-    $stmt = $pdo->prepare("
-        SELECT content_path
-        FROM core_page_contents
-        WHERE slug = :slug
-        AND type = 'model'
-        LIMIT 1
-    ");
+    $modelJsonPath = resolvePageModelPath($pdo, $modelSlug);
 
-    $stmt->execute(['slug' => $modelSlug]);
-
-    $modelPath = $stmt->fetchColumn();
-
-    if (!$modelPath) {
+    if (!$modelJsonPath) {
         flash('error', 'Modelo não encontrado.');
-        header("Location: {$baseUrl}/public/admin/pages/create.php");
+        header("Location: {$baseUrl}/web/admin/pages/create.php");
         exit;
     }
 
-    $modelJsonPath = $jsonDir . $modelPath;
+    $json = file_get_contents($modelJsonPath);
+    $decoded = json_decode((string)$json, true);
 
-    if (file_exists($modelJsonPath)) {
-        $json = file_get_contents($modelJsonPath);
-        $decoded = json_decode($json, true);
-
-        $data = is_array($decoded) ? $decoded : [];
-    }
+    $data = is_array($decoded) ? $decoded : [];
 }
 
 /* =========================
@@ -188,5 +217,5 @@ flash('success', 'Página criada com sucesso.');
 REDIRECT
 ========================= */
 
-header("Location: {$baseUrl}/public/admin/pages/edit.php?id={$newId}");
+header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$newId}");
 exit;

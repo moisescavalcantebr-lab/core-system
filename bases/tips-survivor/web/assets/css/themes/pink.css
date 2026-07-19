@@ -1,0 +1,31 @@
+:root {
+    --bg-body: #1a0f14;
+    --bg-card: #2a1a22;
+    --bg-sidebar: #140c10;
+    --bg-header: #120a0d;
+    --bg-hover: #3a2430;
+    --bg-input: #1a0f14;
+
+
+    --text-primary: #ffe4ec;
+    --text-secondary: #d4a1b5;
+    --text-inverse: #1a0f14;
+
+    --border-color: #5a3a4a;
+
+    --primary-color: #ec4899;
+    --primary-hover: #db2777;
+
+    --success-color: #4ade80;
+    --warning-color: #facc15;
+    --danger-color: #ef4444;
+    --info-color: #38bdf8;
+
+    --shadow-card: 0 5px 20px rgba(0,0,0,0.4);
+
+    --card-bg: var(--bg-card);
+    --card-border: var(--border-color);
+
+    --input-bg: #140c10;
+    --input-border: var(--border-color);
+}

@@ -90,7 +90,7 @@ ob_start();
 					<?php if (!empty($user['avatar'])): ?>
 
     <div class="c-avatar-preview">
-        <img src="/storage/uploads/avatars/<?= htmlspecialchars($user['avatar']) ?>?v=<?= time() ?>" style="width:100%;height:100%;border-radius:50%;">
+        <img src="/storage/uploads/avatars/<?= htmlspecialchars($user['avatar']) ?>?v=<?= time() ?>" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">
     </div>
 
 <?php else: ?>

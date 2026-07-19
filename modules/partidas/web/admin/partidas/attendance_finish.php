@@ -1,0 +1,144 @@
+<?php
+declare(strict_types=1);
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
+require __DIR__ . '/lineup_helpers.php';
+
+$classificationFieldsPath = __DIR__ . '/../classificacao/fields.php';
+$classificationEnabled = function_exists('projectModuleProvides')
+    && projectModuleProvides('individual_classification')
+    && is_file($classificationFieldsPath);
+
+if ($classificationEnabled) {
+    require_once $classificationFieldsPath;
+}
+
+requireProjectAdmin();
+matchLineupEnsureSchema($pdo);
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    exit('Metodo invalido');
+}
+
+csrf_verify();
+
+$id = (int)($_GET['id'] ?? 0);
+$action = (string)($_POST['action'] ?? 'save');
+
+$stmt = $pdo->prepare("SELECT id, competition_id FROM matches WHERE id = ? LIMIT 1");
+$stmt->execute([$id]);
+$match = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$match) {
+    flash('error', 'Partida nao encontrada.');
+    redirect(PROJECT_URL . '/admin/partidas/index.php');
+}
+
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS match_attendance (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        match_id INT NOT NULL,
+        player_id INT NOT NULL,
+        status ENUM('present','excused_absence','no_response','confirmed_absent','justified_absent') NOT NULL DEFAULT 'no_response',
+        points DECIMAL(4,1) NOT NULL DEFAULT 0.0,
+        notes TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_match_player_attendance (match_id, player_id),
+        INDEX(match_id),
+        INDEX(player_id),
+        INDEX(status),
+        INDEX(points)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+");
+
+function attendanceFinishPoints(string $status): string
+{
+    return match ($status) {
+        'present' => '1.0',
+        'excused_absence' => '0.5',
+        'confirmed_absent' => '-1.0',
+        default => '0.0',
+    };
+}
+
+function attendanceFinishDefaultStatus(?string $confirmationStatus): string
+{
+    return match ($confirmationStatus) {
+        'confirmed' => 'present',
+        'declined' => 'excused_absence',
+        default => 'no_response',
+    };
+}
+
+function attendanceFinishSaveDefaults(PDO $pdo, int $matchId): void
+{
+    $stmt = $pdo->prepare("
+        SELECT p.id AS player_id, mc.status AS confirmation_status
+        FROM players p
+        LEFT JOIN match_confirmations mc ON mc.match_id = ? AND mc.player_id = p.id
+        WHERE p.status = 'active'
+    ");
+    $stmt->execute([$matchId]);
+    $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $insert = $pdo->prepare("
+        INSERT INTO match_attendance (match_id, player_id, status, points, notes)
+        VALUES (?, ?, ?, ?, NULL)
+        ON DUPLICATE KEY UPDATE
+            status = VALUES(status),
+            points = VALUES(points),
+            updated_at = CURRENT_TIMESTAMP
+    ");
+
+    foreach ($players as $player) {
+        $status = attendanceFinishDefaultStatus($player['confirmation_status'] ?? null);
+        $insert->execute([$matchId, (int)$player['player_id'], $status, attendanceFinishPoints($status)]);
+    }
+}
+
+$attendance = is_array($_POST['attendance'] ?? null) ? $_POST['attendance'] : [];
+$allowedStatuses = ['present', 'excused_absence', 'no_response', 'confirmed_absent', 'justified_absent'];
+
+attendanceFinishSaveDefaults($pdo, $id);
+
+$insert = $pdo->prepare("
+    INSERT INTO match_attendance (match_id, player_id, status, points, notes)
+    VALUES (?, ?, ?, ?, ?)
+    ON DUPLICATE KEY UPDATE
+        status = VALUES(status),
+        points = VALUES(points),
+        notes = VALUES(notes),
+        updated_at = CURRENT_TIMESTAMP
+");
+
+foreach ($attendance as $playerId => $data) {
+    $playerId = (int)$playerId;
+    $status = is_array($data) ? (string)($data['status'] ?? 'no_response') : 'no_response';
+    $notes = is_array($data) ? trim((string)($data['notes'] ?? '')) : '';
+
+    if ($playerId <= 0 || !in_array($status, $allowedStatuses, true)) {
+        continue;
+    }
+
+    $insert->execute([$id, $playerId, $status, attendanceFinishPoints($status), $notes !== '' ? $notes : null]);
+}
+
+if ($action === 'finish') {
+    matchLineupSaveFieldSnapshot($pdo, $id);
+
+    $stmt = $pdo->prepare("UPDATE matches SET status = 'finished' WHERE id = ?");
+    $stmt->execute([$id]);
+
+    if (!empty($match['competition_id']) && $classificationEnabled && function_exists('classificationRebuildInternalCompetition')) {
+        classificationRebuildInternalCompetition($pdo, (int)$match['competition_id']);
+    }
+
+    unset($_SESSION['flash']);
+    redirect(PROJECT_URL . '/admin/partidas/index.php?notice=finished');
+}
+
+redirect(PROJECT_URL . '/admin/partidas/attendance.php?id=' . $id . '&notice=saved');

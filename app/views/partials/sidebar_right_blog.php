@@ -5,6 +5,7 @@ $stmt = $pdo->query("
     FROM core_page_contents
     WHERE type='blog'
     AND status='published'
+    AND area='public'
     ORDER BY created_at DESC
     LIMIT 5
 ");
@@ -22,7 +23,7 @@ $recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php foreach($recent as $post): ?>
 
 <li>
-    <a href="/public/p.php?slug=<?= urlencode($post['slug']) ?>">
+    <a href="/web/p.php?slug=<?= urlencode($post['slug']) ?>">
         <?= htmlspecialchars($post['title']) ?>
     </a>
 </li>

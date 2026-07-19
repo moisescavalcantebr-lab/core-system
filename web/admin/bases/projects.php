@@ -46,6 +46,8 @@ id,
 name,
 slug,
 status,
+owner_email,
+path,
 created_at
 FROM projects
 WHERE base_id = ?
@@ -71,10 +73,12 @@ Projetos da Base: <?= htmlspecialchars($base['name']) ?>
 <div>
 
 <a class="c-btn-secondary"
-href="/public/admin/bases/index.php">
+href="/web/admin/bases/index.php">
 + Voltar Para Bases
 </a>
 </div><br>
+
+<?php flash_show(); ?>
 
 <div class="c-card">
 <p>
@@ -131,9 +135,24 @@ Nenhum projeto utiliza esta base ainda.
 <td style="text-align:right">
 
 <a class="c-btn-secondary"
-   href="/public/admin/projects/view.php?id=<?= $project['id'] ?>">
+   href="/web/admin/projects/view.php?id=<?= $project['id'] ?>">
 Ver
 </a>
+
+<form method="post"
+      action="/app/actions/projects/send_access.php"
+      style="display:inline-block">
+
+    <?= csrf_field() ?>
+
+    <input type="hidden" name="id" value="<?= $project['id'] ?>">
+    <input type="hidden" name="redirect_to" value="/web/admin/bases/projects.php?id=<?= $baseId ?>">
+
+    <button class="c-btn-secondary">
+        Reenviar acesso
+    </button>
+
+</form>
 
 <?php if ($project['status'] === 'deleted'): ?>
 
@@ -153,6 +172,11 @@ Ver
 </form>
 
 <?php endif; ?>
+
+<a class="c-btn-danger"
+   href="/web/admin/projects/force_delete.php?id=<?= $project['id'] ?>">
+    Excluir por completo
+</a>
 
 </td>
 </tr>

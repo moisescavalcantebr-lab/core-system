@@ -1,11 +1,27 @@
+.block-text {
+    padding: 72px 0;
+}
+
+.block-text .c-container {
+    max-width: 980px;
+}
+
 .block-text .block-title {
-    font-size: 1.8rem;
-    margin-bottom: 20px;
+    font-size: 2rem;
+    margin-bottom: 18px;
 }
 
 .block-text .block-content {
-    font-size: 1rem;
+    font-size: 1.04rem;
     line-height: 1.7;
-    max-width: 700px;
+    max-width: 740px;
+    color: var(--text-secondary);
+}
+
+.block-text .text-center .block-content {
     margin: 0 auto;
+}
+
+.block-text .text-right .block-content {
+    margin-left: auto;
 }

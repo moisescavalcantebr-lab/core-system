@@ -64,7 +64,7 @@ ob_start();
         </div>
 
         <div class="c-page-actions">
-            <a class="c-btn-secondary" href="/public/admin/projects/index.php">
+            <a class="c-btn-secondary" href="/web/admin/projects/index.php">
                 Voltar
             </a>
         </div>
@@ -74,7 +74,7 @@ ob_start();
     <div class="c-page-content">
 
         <div class="c-card">
-            <p>Preencha os dados para criar um novo projeto.</p>
+            <p>Revise os dados antes de criar. Ao confirmar, o sistema clona a base selecionada, cria um banco exclusivo para o projeto e executa o schema automaticamente.</p>
         </div>
 
         <form method="post" action="/app/actions/projects/store.php">
@@ -148,7 +148,7 @@ ob_start();
 
                 <div style="margin-top:20px;">
                     <button class="c-btn-secondary">
-                        Criar Projeto
+                        Criar e Instalar Projeto
                     </button>
                 </div>
 

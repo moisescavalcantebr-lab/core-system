@@ -1,8 +1,10 @@
 .block-cta-button {
     text-align: center;
+    padding: 28px 0;
 }
 
 .block-cta-button .btn {
     padding: 14px 28px;
     font-size: 1rem;
+    min-width: 148px;
 }

@@ -5,6 +5,10 @@ class ImageService
 {
     public static function createThumbnail(string $source, string $dest, int $maxWidth = 400): bool
     {
+        if (!extension_loaded('gd')) {
+            return false;
+        }
+
         if (!file_exists($source) || !is_readable($source)) {
             return false;
         }
@@ -30,14 +34,17 @@ class ImageService
 
         switch ($mime) {
             case 'image/jpeg':
+                if (!function_exists('imagecreatefromjpeg')) return false;
                 $src = imagecreatefromjpeg($source);
                 break;
 
             case 'image/png':
+                if (!function_exists('imagecreatefrompng')) return false;
                 $src = imagecreatefrompng($source);
                 break;
 
             case 'image/webp':
+                if (!function_exists('imagecreatefromwebp')) return false;
                 $src = imagecreatefromwebp($source);
                 break;
 

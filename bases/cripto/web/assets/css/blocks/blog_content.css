@@ -1,0 +1,57 @@
+/* =========================
+BLOG CONTENT
+========================= */
+
+.block-blog-content {
+}
+
+.blog-content-inner {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* HEADER */
+.blog-content-header {
+    margin-bottom: 15px;
+}
+
+.blog-content-title {
+    font-size: 1.6rem;
+}
+
+/* MEDIA */
+.blog-content-media {
+    margin: 20px 0;
+}
+
+.blog-content-media img {
+    width: 100%;
+    display: block;
+}
+
+/* VIDEO */
+.blog-video {
+    position: relative;
+    padding-top: 56.25%;
+}
+
+.blog-video iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+/* BODY */
+.blog-content-body {
+    line-height: 1.7;
+}
+
+.blog-content-body p {
+    margin-bottom: 15px;
+}
+
+/* FOOTER */
+.blog-content-footer {
+    margin-top: 25px;
+}

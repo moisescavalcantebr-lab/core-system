@@ -174,5 +174,5 @@ try {
     die('Erro ao ativar projeto: ' . $e->getMessage());
 }
 
-header("Location: public/admin/projects/view.php?id={$id}");
+header("Location: /web/admin/projects/view.php?id={$id}");
 exit;

@@ -1,4 +1,4 @@
-/* =========================
+﻿/* =========================
 HEADER COMPONENTS
 ========================= */
 
@@ -24,6 +24,18 @@ HEADER COMPONENTS
     color: var(--text-secondary);
 }
 
+.c-user-profile-link {
+    color: inherit;
+    text-decoration: none;
+    border: 0;
+}
+
+.c-user-profile-link:hover {
+    color: var(--text-primary);
+    opacity: .9;
+    text-decoration: none;
+}
+
 .c-user-logout {
     font-size: 12px;
     color: var(--primary-color);
@@ -33,6 +45,33 @@ HEADER COMPONENTS
 .c-user-logout:hover {
     text-decoration: underline;
     opacity: 0.8;
+}
+
+.c-header-user a.c-header-action,
+.c-header-user a.c-header-action:visited {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.c-header-user a.c-header-action:hover,
+.c-header-user a.c-header-action.is-active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    opacity: .95;
 }
 
 /* AVATAR */
@@ -74,27 +113,30 @@ HEADER COMPONENTS
 .c-sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 9px;
 }
 
 .c-sidebar-section {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 3px;
 }
 
 .c-sidebar-title {
     font-size: 11px;
     text-transform: uppercase;
     color: var(--text-secondary);
-    padding: 6px 10px;
+    padding: 3px 8px 4px;
     opacity: 0.7;
 }
 
 .c-sidebar-link {
-    display: block;
-    padding: 8px 10px;
-    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 32px;
+    padding: 6px 8px;
+    border-radius: 7px;
     color: var(--text-secondary);
     text-decoration: none;
     transition: var(--transition);
@@ -111,27 +153,57 @@ HEADER COMPONENTS
     font-weight: 500;
 }
 
+.c-sidebar-link-icon {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 18px;
+    color: currentColor;
+    opacity: .92;
+}
+
+.c-sidebar-link-icon svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
 /* BADGES */
 .c-badge {
     padding: 4px 8px;
     font-size: 11px;
     border-radius: 6px;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.2;
 }
 
 .c-badge--success {
-    background: color-mix(in srgb, var(--success-color) 20%, transparent);
-    color: var(--success-color);
+    background: rgba(34, 197, 94, 0.16);
+    color: var(--success-color, var(--color-success, #22c55e));
 }
 
 .c-badge--warning {
-    background: color-mix(in srgb, var(--warning-color) 20%, transparent);
-    color: var(--warning-color);
+    background: rgba(245, 158, 11, 0.16);
+    color: var(--warning-color, var(--color-warning, #f59e0b));
 }
 
 .c-badge--danger {
-    background: color-mix(in srgb, var(--danger-color) 20%, transparent);
-    color: var(--danger-color);
+    background: rgba(239, 68, 68, 0.16);
+    color: var(--danger-color, var(--color-danger, #ef4444));
+}
+
+.c-badge--info {
+    background: rgba(6, 182, 212, 0.16);
+    color: var(--info-color, var(--color-info, #06b6d4));
+}
+
+.c-badge--neutral {
+    background: rgba(148, 163, 184, 0.16);
+    color: var(--text-secondary, #94a3b8);
 }
 
 /* LOG TABLE */
@@ -143,17 +215,17 @@ HEADER COMPONENTS
 
 .c-log-project {
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .c-log-message {
     max-width: 400px;
     color: var(--text-secondary);
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .c-log-date {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
     white-space: nowrap;
 }
@@ -164,7 +236,7 @@ HEADER COMPONENTS
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 13px;
     transition: var(--transition);
 }
 
@@ -173,8 +245,8 @@ HEADER COMPONENTS
 }
 
 .c-card h3 {
-    margin-bottom: 10px;
-    font-size: 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
 }
 
 /* DASHBOARD CARD */
@@ -183,7 +255,7 @@ HEADER COMPONENTS
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 13px;
     transition: var(--transition);
 }
 
@@ -192,9 +264,9 @@ HEADER COMPONENTS
 }
 
 .c-dashboard-card h4 {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
-    margin-bottom: 6px;
+    margin-bottom: 5px;
 }
 
 .c-dashboard-card--wide {
@@ -202,7 +274,7 @@ HEADER COMPONENTS
 }
 
 .c-metric {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 600;
 }
 
@@ -218,18 +290,18 @@ HEADER COMPONENTS
 /* TEXT */
 
 .c-page-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
 }
 
 .c-page-subtitle {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-secondary);
 }
 
 .c-section-title {
-    font-size: 14px;
-    margin-bottom: 8px;
+    font-size: 13px;
+    margin-bottom: 7px;
     color: var(--text-secondary);
 }
 
@@ -242,7 +314,7 @@ HEADER COMPONENTS
 }
 
 .c-table td {
-    padding: 10px 8px;
+    padding: 8px 7px;
 }
 
 /* MEDIA */
@@ -270,7 +342,7 @@ HEADER COMPONENTS
 /* FORM */
 
 .c-form-group label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-secondary);
     margin-bottom: 4px;
     display: block;
@@ -278,14 +350,14 @@ HEADER COMPONENTS
 
 .c-input {
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 8px 10px;
+    border-radius: 7px;
     border: 1px solid var(--border-color);
     background: var(--bg-input);
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 13px;
     transition: var(--transition);
-	margin-bottom: 10px;
+	margin-bottom: 8px;
 }
 
 .c-input::placeholder {
@@ -309,7 +381,7 @@ background:var(--bg-hover);
 border:1px solid var(--border-color);
 padding:6px 10px;
 border-radius:6px;
-font-size:12px;
+font-size:11px;
 color:var(--text-primary);
 text-decoration:none;
 transition:.15s;
@@ -328,7 +400,7 @@ background:var(--bg-hover);
 border:1px solid var(--border-color);
 padding:6px 10px;
 border-radius:6px;
-font-size:12px;
+font-size:11px;
 color:var(--text-primary);
 text-decoration:none;
 transition:.15s;

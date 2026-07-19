@@ -8,6 +8,8 @@
 # STORAGE (arquivos gerados)
 /storage/*
 !/storage/.gitkeep
+/web/assets/uploads/*
+!/web/assets/uploads/.gitkeep
 
 # =========================
 # PROJECTS (instâncias dinâmicas)
@@ -36,6 +38,11 @@ docker/**/*.pid
 # VS CODE
 .vscode/
 
+# DEPLOY LOCAL
+/scripts/deploy.local.ps1
+/_deploy/
+/_backups/
+
 # =========================
 # SISTEMA
 node_modules/
@@ -43,6 +50,8 @@ vendor/
 
 # =========================
 # TEMP
+/tmp/
+/output/
 *.tmp
 *.bak
 *.swp

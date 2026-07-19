@@ -1,4 +1,4 @@
-<?php require APP_PATH . '/helpers/form_renderer.php'; ?>
+<?php require_once APP_PATH . '/helpers/form_renderer.php'; ?>
 
 <div class="c-page">
 
@@ -18,8 +18,33 @@
             $schema = require APP_PATH . '/config/blocks.php';
             $fields = $schema['lead_form']['fields'];
 
+            $baseOptions = ['' => 'Nenhuma'];
+
+            $stmt = $pdo->query("
+                SELECT id, name, slug
+                FROM bases
+                WHERE status = 1
+                AND slug != 'base'
+                ORDER BY name ASC
+            ");
+
+            $selectedBaseId = (string)($block['base_id'] ?? '');
+            $selectedBaseSlug = (string)($block['base_slug'] ?? '');
+
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $base) {
+                $baseOptions[(string)$base['id']] = $base['name'];
+
+                if ($selectedBaseId === '' && $selectedBaseSlug !== '' && $selectedBaseSlug === (string)$base['slug']) {
+                    $selectedBaseId = (string)$base['id'];
+                }
+            }
+
+            $fields['base_id']['options'] = $baseOptions;
+
             foreach ($fields as $name => $config) {
-                $value = $block[$name] ?? null;
+                $value = $name === 'base_id'
+                    ? $selectedBaseId
+                    : ($block[$name] ?? null);
                 renderField($name, $config, $value);
             }
             ?>

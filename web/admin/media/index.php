@@ -51,7 +51,7 @@ ob_start();
                 <?= csrf_field(); ?>
 
                 <div class="c-form-group">
-                    <input type="file" name="image" class="c-input" required>
+                    <input type="file" name="images[]" class="c-input" accept="image/*" multiple required>
                 </div>
 
                 <button class="c-btn-secondary">
@@ -77,7 +77,8 @@ ob_start();
 
                     <div class="c-media-card">
 
-                        <img src="/storage/media/<?= htmlspecialchars($img['file_name']) ?>" alt="">
+                        <img src="/web/media.php?id=<?= (int)$img['id'] ?>&thumb=1"
+                             alt="<?= htmlspecialchars($img['file_name']) ?>">
 
                         <div class="c-media-actions">
 

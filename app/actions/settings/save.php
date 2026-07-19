@@ -62,7 +62,7 @@ if (!empty($_FILES['app_logo']['name'])) {
 
     if (!in_array($_FILES['app_logo']['type'], $allowed)) {
         flash('error', 'Formato inválido. Use PNG, JPG ou WEBP.');
-        redirect('/public/admin/settings/index.php');
+        redirect('/web/admin/settings/index.php');
         exit;
     }
 
@@ -112,7 +112,7 @@ if (!empty($_FILES['app_favicon']['name'])) {
 
     if (!in_array($_FILES['app_favicon']['type'], $allowed)) {
         flash('error', 'Favicon deve ser PNG ou ICO.');
-        redirect('/public/admin/settings/index.php');
+        redirect('/web/admin/settings/index.php');
         exit;
     }
 
@@ -133,4 +133,4 @@ if (!empty($_FILES['app_favicon']['name'])) {
 
 
 flash('success', 'Configurações salvas com sucesso.');
-    redirect('/public/admin/settings/index.php');
+    redirect('/web/admin/settings/index.php');

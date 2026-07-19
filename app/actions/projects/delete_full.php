@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../../bootstrap/bootstrap.php';
+require __DIR__ . '/../../../app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
@@ -28,33 +28,58 @@ if (!$project) {
 SEGURANÇA: só deletado
 ========================= */
 
-if ($project['status'] !== 'deleted') {
-    die('Projeto precisa estar como DELETED.');
+if (empty($project['deletion_scheduled_at']) || strtotime((string)$project['deletion_scheduled_at']) > time()) {
+    die('Projeto ainda não completou o prazo de exclusão.');
+}
+
+$projectPath = ROOT_PATH . '/' . ltrim($project['path'], '/');
+$dbName = null;
+$configPath = $projectPath . '/app/config/database.php';
+
+if (file_exists($configPath)) {
+    $dbConf = require $configPath;
+    $dbName = $dbConf['name'] ?? null;
 }
 
 /* =========================
 REMOVER ARQUIVOS
 ========================= */
 
-$projectPath = ROOT_PATH . '/' . ltrim($project['path'], '/');
-
 if (is_dir($projectPath)) {
 
-    function deleteFolder($dir) {
-        $files = array_diff(scandir($dir), ['.', '..']);
+    function deleteFolder(string $dir): void {
+        @chmod($dir, 0775);
+
+        $files = array_diff(scandir($dir) ?: [], ['.', '..']);
 
         foreach ($files as $file) {
-            $path = "$dir/$file";
+            $path = $dir . DIRECTORY_SEPARATOR . $file;
 
-            is_dir($path)
-                ? deleteFolder($path)
-                : unlink($path);
+            if (is_dir($path) && !is_link($path)) {
+                deleteFolder($path);
+                continue;
+            }
+
+            @chmod($path, 0664);
+
+            if (!@unlink($path)) {
+                throw new RuntimeException('Não foi possível remover o arquivo: ' . $path);
+            }
         }
 
-        return rmdir($dir);
+        @chmod($dir, 0775);
+
+        if (!@rmdir($dir)) {
+            throw new RuntimeException('Não foi possível remover a pasta: ' . $dir);
+        }
     }
 
-    deleteFolder($projectPath);
+    try {
+        deleteFolder($projectPath);
+    } catch (Throwable $e) {
+        flash('error', 'Não foi possível remover os arquivos do projeto. Verifique permissões no servidor. Detalhe: ' . $e->getMessage());
+        redirect('/web/admin/projects/view.php?id=' . $id);
+    }
 }
 
 /* =========================
@@ -63,13 +88,8 @@ REMOVER BANCO (SE EXISTIR)
 
 try {
 
-    $configPath = $projectPath . '/app/config/database.php';
-
-    if (file_exists($configPath)) {
-
-        $dbConf = require $configPath;
-
-        $pdo->exec("DROP DATABASE `{$dbConf['name']}`");
+    if ($dbName) {
+        $pdo->exec("DROP DATABASE `{$dbName}`");
     }
 
 } catch (Throwable $e) {
@@ -80,7 +100,13 @@ try {
 REMOVER DO CORE
 ========================= */
 
+$pdo->prepare("DELETE FROM plan_refund_requests WHERE project_id = ?")->execute([$id]);
+$pdo->prepare("DELETE FROM plan_upgrade_requests WHERE project_id = ?")->execute([$id]);
+$pdo->prepare("DELETE FROM project_wallet_movements WHERE project_id = ?")->execute([$id]);
+$pdo->prepare("DELETE FROM project_wallet_requests WHERE project_id = ?")->execute([$id]);
+$pdo->prepare("DELETE FROM project_access_tokens WHERE project_id = ?")->execute([$id]);
+$pdo->prepare("DELETE FROM project_logs WHERE project_id = ?")->execute([$id]);
 $pdo->prepare("DELETE FROM projects WHERE id = ?")->execute([$id]);
 
 flash('success', 'Projeto removido completamente.');
-redirect('/public/admin/bases/projects.php?id='.$project['base_id']);
+redirect('/web/admin/projects/index.php');

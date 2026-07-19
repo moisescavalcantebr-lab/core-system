@@ -1,0 +1,14 @@
+{
+    "name":  "Base Tips Survivor",
+    "slug":  "tips-survivor",
+    "description":  "Base para competicoes de palpites survivor com vidas, pontos e tokens internos.",
+    "allows_users":  1,
+    "max_admins":  1,
+    "status":  1,
+    "is_protected":  0,
+    "schema":  {
+                   "path":  "app/database/schema.sql",
+                   "hash":  "80c9c4d8e89ecf2bfa05b8ccc96aa2a4",
+                   "updated_at":  "2026-06-01 01:02:00"
+               }
+}

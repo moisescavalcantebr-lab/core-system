@@ -1,0 +1,52 @@
+﻿{
+    "name":  "partidas",
+    "label":  "Partidas",
+    "description":  "Motor de partidas usado pelas competicoes para criar amistosos e jogos vinculados.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "kind":  "addon",
+    "attach_to":  [
+                      "competicoes"
+                  ],
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "geral",
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+                              "futebol"
+                          ],
+    "tags":  [
+                 "partidas",
+                 "eventos",
+                 "confrontos"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Partidas",
+                 "url":  "/admin/partidas/index.php",
+                 "key":  "partidas",
+                 "order":  5
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "match_events",
+                                    "matches",
+                                    "match_confirmations",
+                                    "match_confirmation_logs",
+                                    "match_lineup"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/partidas",
+                     "to":  "web/admin/partidas"
+                 },
+                 {
+                     "from":  "web/admin/player",
+                     "to":  "web/admin/player"
+                 }
+             ]
+}

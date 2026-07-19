@@ -1,0 +1,28 @@
+/* =========================
+BLOG HEADER
+========================= */
+
+.block-blog-header {
+    text-align: center;
+}
+
+.blog-header-inner {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.blog-title {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.blog-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.85;
+    margin-bottom: 15px;
+}
+
+.blog-meta {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}

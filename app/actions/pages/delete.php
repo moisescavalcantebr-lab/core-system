@@ -19,7 +19,7 @@ $id = (int)($_GET['id'] ?? 0);
 
 if (!$id) {
     flash('error', 'Página inválida.');
-    header('Location: /public/admin/pages/index.php');
+    header('Location: /web/admin/pages/index.php');
     exit;
 }
 
@@ -54,5 +54,5 @@ try {
 REDIRECT PADRÃO
 ========================= */
 
-header("Location: {$baseUrl}/public/admin/pages/index.php");
+header("Location: {$baseUrl}/web/admin/pages/index.php");
 exit;

@@ -23,7 +23,7 @@ $model = trim($_POST['model_slug'] ?? '');
 
 if (!$id) {
     flash('error', 'Página inválida.');
-    header('Location: /public/admin/pages/index.php');
+    header('Location: /web/admin/pages/index.php');
     exit;
 }
 
@@ -31,7 +31,7 @@ if (!$id) {
 
 if ($title === '' || $slug === '') {
     flash('error', 'Título e slug são obrigatórios.');
-    header('Location: /public/admin/pages/edit.php?id=' . $id);
+    header('Location: /web/admin/pages/edit.php?id=' . $id);
     exit;
 }
 
@@ -66,5 +66,5 @@ try {
 REDIRECT PADRÃO
 ========================= */
 
-header("Location: {$baseUrl}/public/admin/pages/edit.php?id={$id}");
+header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$id}");
 exit;

@@ -1,0 +1,44 @@
+﻿{
+    "name":  "competicoes",
+    "label":  "Competicoes",
+    "description":  "Addon do Meu Time para centralizar amistosos e, nos planos acima, treinos e campeonatos.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "kind":  "addon",
+    "attach_to":  [
+                      "meu_time"
+                  ],
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+                              "futebol"
+                          ],
+    "tags":  [
+                 "competicoes",
+                 "torneios",
+                 "campeonatos"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Competicoes",
+                 "url":  "/admin/competicoes/index.php",
+                 "key":  "competicoes"
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "competitions",
+                                    "competition_participants",
+                                    "competition_rules"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/competicoes",
+                     "to":  "web/admin/competicoes"
+                 }
+             ]
+}

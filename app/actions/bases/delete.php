@@ -7,6 +7,56 @@ require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
 
+function baseDeleteBlocked(string $message, int $id): void
+{
+    flash('error', $message);
+    redirect('/app/actions/bases/delete.php?id=' . $id);
+}
+
+function baseDeleteRedirect(string $status = ''): void
+{
+    $url = '/web/admin/bases/index.php';
+
+    if ($status !== '') {
+        $url .= '?' . $status . '=1';
+    }
+
+    header('Location: ' . $url);
+    exit;
+}
+
+function baseDeleteRecursive(string $dir): void
+{
+    if (!is_dir($dir)) {
+        return;
+    }
+
+    @chmod($dir, 0775);
+
+    $files = array_diff(scandir($dir) ?: [], ['.', '..']);
+
+    foreach ($files as $file) {
+        $path = $dir . DIRECTORY_SEPARATOR . $file;
+
+        if (is_dir($path) && !is_link($path)) {
+            baseDeleteRecursive($path);
+            continue;
+        }
+
+        @chmod($path, 0664);
+
+        if (!@unlink($path)) {
+            throw new RuntimeException('Não foi possível remover o arquivo: ' . $path);
+        }
+    }
+
+    @chmod($dir, 0775);
+
+    if (!@rmdir($dir)) {
+        throw new RuntimeException('Não foi possível remover a pasta: ' . $dir);
+    }
+}
+
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 
 $stmt = $pdo->prepare("SELECT * FROM bases WHERE id = :id");
@@ -46,54 +96,44 @@ $totalClones = $stmt->fetchColumn();
 ===================================== */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verify();
 
     if ($base['is_protected']) {
-        die('Esta base está protegida e não pode ser excluída.');
+        baseDeleteBlocked('Esta base está protegida. Desbloqueie antes de excluir.', $id);
     }
 
     if ($totalProjects > 0) {
-        die("Não é possível excluir esta base. Existem {$totalProjects} projeto(s) vinculados.");
+        baseDeleteBlocked("Não é possível excluir esta base. Existem {$totalProjects} projeto(s) vinculado(s).", $id);
     }
 
     if ($totalClones > 0) {
-        die("Não é possível excluir esta base. Existem {$totalClones} base(s) derivada(s) vinculada(s).");
+        baseDeleteBlocked("Não é possível excluir esta base. Existem {$totalClones} base(s) derivada(s) vinculada(s).", $id);
     }
 
     /* Remover pasta física */
     $folder = BASES_PATH . '/' . $base['slug'];
 
     if (is_dir($folder)) {
-
-        function deleteRecursive($dir) {
-            foreach (scandir($dir) as $file) {
-
-                if ($file === '.' || $file === '..') continue;
-
-                $path = $dir . '/' . $file;
-
-                if (is_dir($path)) {
-                    deleteRecursive($path);
-                } else {
-                    unlink($path);
-                }
-            }
-            rmdir($dir);
+        try {
+            baseDeleteRecursive($folder);
+        } catch (Throwable $e) {
+            flash('error', 'Não foi possível remover os arquivos da base. Verifique permissões no servidor. Detalhe: ' . $e->getMessage());
+            redirect('/app/actions/bases/delete.php?id=' . $id);
         }
-
-        deleteRecursive($folder);
     }
 
     $pdo->prepare("DELETE FROM bases WHERE id = :id")
         ->execute(['id' => $id]);
 
-    header("Location: /public/admin/bases/index.php");
-    exit;
+    baseDeleteRedirect('deleted');
 }
 
 ob_start();
 ?>
 
 <h1>Excluir Base</h1>
+
+<?php flash_show(); ?>
 
 <div class="c-card">
 
@@ -107,7 +147,7 @@ ob_start();
         </div>
 
         <br>
-        <a href="/public/admin/bases/index.php" class="c-btn-secondary">Voltar</a>
+        <a href="/web/admin/bases/index.php" class="c-btn-secondary">Voltar</a>
 
     <?php elseif ($totalProjects > 0): ?>
 
@@ -118,7 +158,7 @@ ob_start();
         </div>
 
         <br>
-        <a href="/public/admin/bases/index.php" class="c-btn-secondary">Voltar</a>
+        <a href="/web/admin/bases/index.php" class="c-btn-secondary">Voltar</a>
 
     <?php elseif ($totalClones > 0): ?>
 
@@ -129,7 +169,7 @@ ob_start();
         </div>
 
         <br>
-        <a href="/public/admin/bases/index.php" class="c-btn-secondary">Voltar</a>
+        <a href="/web/admin/bases/index.php" class="c-btn-secondary">Voltar</a>
 
     <?php else: ?>
 
@@ -138,11 +178,12 @@ ob_start();
         </div>
 
         <form method="post" style="margin-top:20px;">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= $id ?>">
             <button class="c-btn-danger">
                 Confirmar Exclusão
             </button>
-            <a href="/public/admin/bases/index.php" class="c-btn-secondary">Cancelar</a>
+            <a href="/web/admin/bases/index.php" class="c-btn-secondary">Cancelar</a>
         </form>
 
     <?php endif; ?>

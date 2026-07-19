@@ -1,0 +1,26 @@
+:root {
+
+    /* PRIMARY */
+    --color-primary: #3b82f6;
+    --color-primary-hover: #2563eb;
+
+    /* SECONDARY */
+    --color-secondary: #64748b;
+
+    /* STATUS */
+    --color-success: #22c55e;
+    --color-danger: #ef4444;
+    --color-warning: #f59e0b;
+
+    /* BACKGROUND */
+    --bg-body: #0f172a;
+    --bg-card: #1e293b;
+
+    /* TEXT */
+    --text-primary: #ffffff;
+    --text-secondary: #94a3b8;
+
+    /* BORDER */
+    --border-color: #334155;
+
+}

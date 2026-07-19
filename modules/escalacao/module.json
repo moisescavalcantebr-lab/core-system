@@ -1,0 +1,42 @@
+﻿{
+    "name":  "escalacao",
+    "label":  "Escalacao",
+    "description":  "Montagem neutra de escalações, listas de participantes ou equipes por partida/evento.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "escalacao",
+                 "participantes",
+                 "partidas"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Escalacao",
+                 "url":  "/admin/escalacao/index.php",
+                 "key":  "escalacao"
+             },
+    "requires":  [
+                     "partidas"
+                 ],
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "lineup_sheets",
+                                    "lineup_members"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/escalacao",
+                     "to":  "web/admin/escalacao"
+                 }
+             ]
+}

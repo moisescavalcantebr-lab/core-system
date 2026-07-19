@@ -4,25 +4,30 @@ BLOG HEADER
 
 .block-blog-header {
     text-align: center;
+    padding: 96px 0 54px;
+    background:
+        radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 36%),
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-card) 36%, transparent), transparent 82%);
 }
 
 .blog-header-inner {
-    max-width: 800px;
+    max-width: 860px;
     margin: 0 auto;
 }
 
 .blog-title {
-    font-size: 2rem;
-    margin-bottom: 10px;
+    max-width: 760px;
+    margin: 0 auto 18px;
+    font-weight: 800;
 }
 
 .blog-subtitle {
-    font-size: 1.1rem;
-    opacity: 0.85;
-    margin-bottom: 15px;
+    max-width: 620px;
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    margin: 0 auto 22px;
 }
 
 .blog-meta {
-    font-size: 0.85rem;
-    opacity: 0.7;
+    font-size: 0.9rem;
 }

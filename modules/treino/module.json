@@ -1,0 +1,34 @@
+{
+  "name": "treino",
+  "label": "Treino",
+  "description": "Organiza treinos internos com dois times usando o elenco do projeto.",
+  "version": "0.1.0",
+  "type": "project",
+  "kind": "addon",
+  "attach_to": ["meu_time"],
+  "status": "draft",
+  "category": "Esporte",
+  "segments": ["esporte"],
+  "recommended_bases": ["futebol"],
+  "tags": ["treino", "time 1", "time 2", "elenco"],
+  "plan": "start",
+  "menu": {
+    "section": "Gestao",
+    "label": "Treino",
+    "url": "/admin/treino/index.php",
+    "key": "treino",
+    "order": 2
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "training_roster"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/treino",
+      "to": "web/admin/treino"
+    }
+  ]
+}

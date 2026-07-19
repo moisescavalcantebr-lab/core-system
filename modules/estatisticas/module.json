@@ -1,0 +1,39 @@
+﻿{
+    "name":  "estatisticas",
+    "label":  "Estatisticas",
+    "description":  "Registro basico de estatisticas por jogador, contexto, competicao e partida.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "estatisticas",
+                 "desempenho",
+                 "jogadores"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Estatisticas",
+                 "url":  "/admin/estatisticas/index.php",
+                 "key":  "estatisticas"
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "statistic_types",
+                                    "statistic_records"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/estatisticas",
+                     "to":  "web/admin/estatisticas"
+                 }
+             ]
+}

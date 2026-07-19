@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit('Método inválido');
 }
 
-if (!isset($_FILES['image'])) {
+if (!isset($_FILES['images']) && !isset($_FILES['image'])) {
     exit('Nenhum arquivo enviado');
 }
 
@@ -26,10 +26,28 @@ $service = new MediaService($pdo);
 
 try {
 
-    $service->upload($_FILES['image']);
+    if (isset($_FILES['images']) && is_array($_FILES['images']['name'])) {
+        $total = count($_FILES['images']['name']);
+
+        for ($i = 0; $i < $total; $i++) {
+            if ($_FILES['images']['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                continue;
+            }
+
+            $service->upload([
+                'name' => $_FILES['images']['name'][$i],
+                'type' => $_FILES['images']['type'][$i],
+                'tmp_name' => $_FILES['images']['tmp_name'][$i],
+                'error' => $_FILES['images']['error'][$i],
+                'size' => $_FILES['images']['size'][$i],
+            ]);
+        }
+    } else {
+        $service->upload($_FILES['image']);
+    }
 
     /* redirect padrão */
-    header('Location: /public/admin/media/');
+    header('Location: /web/admin/media/');
     exit;
 
 } catch (Throwable $e) {

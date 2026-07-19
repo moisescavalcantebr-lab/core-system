@@ -1,0 +1,42 @@
+﻿{
+    "name":  "placar",
+    "label":  "Placar",
+    "description":  "Controle neutro de placares para partidas, disputas ou acompanhamentos em tempo real.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+
+                          ],
+    "tags":  [
+                 "placar",
+                 "ao vivo",
+                 "pontos"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Placar",
+                 "url":  "/admin/placar/index.php",
+                 "key":  "placar"
+             },
+    "requires":  [
+                     "partidas"
+                 ],
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "scoreboards",
+                                    "scoreboard_items"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/placar",
+                     "to":  "web/admin/placar"
+                 }
+             ]
+}

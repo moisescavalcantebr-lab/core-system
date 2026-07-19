@@ -103,5 +103,5 @@ file_put_contents(
 REDIRECT (PADRÃO CORE)
 ========================= */
 
-header("Location: {$baseUrl}/public/admin/pages/edit.php?id={$pageId}");
+header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$pageId}");
 exit;

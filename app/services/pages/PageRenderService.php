@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -13,81 +14,81 @@ class PageRenderService
     }
 
     /* =========================
-    RENDER PáGINA
+    RENDER PÃ¡GINA
     ========================= */
 
-public function render(array $blocks, array $globalData = []): void
-{
-    if (empty($blocks)) {
-        return;
-    }
-
-    $media = $globalData['media'] ?? [];
-
-    foreach ($blocks as $block) {
-
-        if (!is_array($block)) {
-            continue;
+    public function render(array $blocks, array $globalData = []): void
+    {
+        if (empty($blocks)) {
+            return;
         }
 
-        if (empty($block['enabled'])) {
-            continue;
-        }
+        $media = $globalData['media'] ?? [];
 
-        $type = $block['type'] ?? null;
+        foreach ($blocks as $block) {
 
-        if (!$type) {
-            continue;
-        }
+            if (!is_array($block)) {
+                continue;
+            }
 
-        $file = $this->getBlockFile($type);
+            if (empty($block['enabled'])) {
+                continue;
+            }
 
-        if (!$file) {
-            echo "<!-- bloco {$type} não encontrado -->";
-            continue;
-        }
+            $type = $block['type'] ?? null;
 
-        $config = $block;
-        unset($config['type'], $config['enabled']);
+            if (!$type) {
+                continue;
+            }
 
-        //  RESOLVE MEDIA
-        $config = $this->parsePlaceholders($config, $media);
+            $file = $this->getBlockFile($type);
 
-        $this->renderBlock($file, $type, $config, $media);
-    }
-}
-	private function parsePlaceholders(array $config, array $media): array
-{
-    foreach ($config as $key => $value) {
+            if (!$file) {
+                echo "<!-- bloco {$type} nÃ£o encontrado -->";
+                continue;
+            }
 
-        // string simples
-        if (is_string($value)) {
-            $config[$key] = $this->replaceMedia($value, $media);
-        }
+            $config = $block;
+            unset($config['type'], $config['enabled']);
 
-        // array (ex: cards, items)
-        elseif (is_array($value)) {
-            $config[$key] = $this->parsePlaceholders($value, $media);
+            //  RESOLVE MEDIA
+            $config = $this->parsePlaceholders($config, $media);
+
+            $this->renderBlock($file, $type, $config, $media);
         }
     }
+    private function parsePlaceholders(array $config, array $media): array
+    {
+        foreach ($config as $key => $value) {
 
-    return $config;
-}
-	
-	
-	private function replaceMedia(string $value, array $media): string
-{
-    return preg_replace_callback(
-        '/\{\{media\.([a-z0-9_\-]+)\}\}/i',
-        function ($matches) use ($media) {
+            // string simples
+            if (is_string($value)) {
+                $config[$key] = $this->replaceMedia($value, $media);
+            }
 
-            $key = $matches[1];
+            // array (ex: cards, items)
+            elseif (is_array($value)) {
+                $config[$key] = $this->parsePlaceholders($value, $media);
+            }
+        }
 
-            return $media[$key] ?? '';
-        },
-        $value
-    );
-}
+        return $config;
+    }
+
+
+    private function replaceMedia(string $value, array $media): string
+    {
+        return preg_replace_callback(
+            '/\{\{media\.([a-z0-9_\-]+)\}\}/i',
+            function ($matches) use ($media) {
+
+                $key = $matches[1];
+
+                return $media[$key] ?? '';
+            },
+            $value
+        );
+    }
     /* =========================
     RESOLVER BLOCO
     ========================= */

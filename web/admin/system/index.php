@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 requireAdmin();
 
 $checks = [];
+$databaseHealthy = false;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +17,7 @@ $checks = [];
 
 try {
     $pdo->query("SELECT 1");
+    $databaseHealthy = true;
 
     $checks[] = [
         'label' => 'Banco de dados',
@@ -101,11 +103,16 @@ PROJECTS_PATH=>'Projects',
 ROOT_PATH.'/storage'=>'Storage'
 ];
 
+$foldersHealthy = true;
+
 foreach($folders as $path=>$label){
+
+$folderExists = is_dir($path);
+$foldersHealthy = $foldersHealthy && $folderExists;
 
 $checks[]=[
 'label'=>$label,
-'status'=>is_dir($path)?'OK':'Faltando'
+'status'=>$folderExists?'OK':'Faltando'
 ];
 
 }
@@ -152,10 +159,20 @@ if($exists) $installedTables++;
 }
 
 $systemHealthy = (
-$installedTables === $expectedTables &&
+$databaseHealthy &&
+$totalTables > 0 &&
 $badEngine == 0 &&
-$badCharset == 0
+$badCharset == 0 &&
+$foldersHealthy
 );
+
+$tablesHealthy = (
+    $totalTables > 0 &&
+    $badEngine == 0 &&
+    $badCharset == 0
+);
+
+$environmentHealthy = $foldersHealthy && version_compare(PHP_VERSION, '8.0.0', '>=');
 
 $title = 'Sistema';
 
@@ -267,19 +284,19 @@ ob_start();
                     <div class="c-metric"><?= $systemHealthy ? 'OK' : 'Problema' ?></div>
                 </div>
 
-                <div class="c-dashboard-card c-card--neutral">
+                <div class="c-dashboard-card <?= $databaseHealthy ? 'c-card--success' : 'c-card--danger' ?>">
                     <h4>Banco</h4>
-                    <div class="c-metric">Conectado</div>
+                    <div class="c-metric"><?= $databaseHealthy ? 'Conectado' : 'Falha' ?></div>
                 </div>
 
-                <div class="c-dashboard-card <?= $installedTables==$expectedTables ? 'c-card--success' : 'c-card--danger' ?>">
+                <div class="c-dashboard-card <?= $tablesHealthy ? 'c-card--success' : 'c-card--danger' ?>">
                     <h4>Tabelas</h4>
-                    <div class="c-metric"><?= $installedTables ?>/<?= $expectedTables ?></div>
+                    <div class="c-metric"><?= $tablesHealthy ? (int)$totalTables . ' OK' : 'Problema' ?></div>
                 </div>
 
-                <div class="c-dashboard-card c-card--neutral">
+                <div class="c-dashboard-card <?= $environmentHealthy ? 'c-card--success' : 'c-card--danger' ?>">
                     <h4>Ambiente</h4>
-                    <div class="c-metric">Produção</div>
+                    <div class="c-metric"><?= $environmentHealthy ? 'OK' : 'Atenção' ?></div>
                 </div>
 
             </div>

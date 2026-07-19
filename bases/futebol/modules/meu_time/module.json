@@ -1,0 +1,40 @@
+﻿{
+    "name":  "meu_time",
+    "label":  "Meu Time",
+    "description":  "Identidade do time, elenco ativo e base para escalações.",
+    "version":  "0.1.0",
+    "type":  "project",
+    "status":  "draft",
+    "category":  "Esporte",
+    "segments":  [
+                     "esporte"
+                 ],
+    "recommended_bases":  [
+                              "futebol"
+                          ],
+    "tags":  [
+                 "time",
+                 "elenco",
+                 "identidade"
+             ],
+    "menu":  {
+                 "section":  "Gestao",
+                 "label":  "Meu Time",
+                 "url":  "/admin/meu_time/index.php",
+                 "key":  "meu_time",
+                 "order":  1
+             },
+    "database":  {
+                     "schema":  "database/schema.sql",
+                     "tables":  [
+                                    "team_profile",
+                                    "team_roster"
+                                ]
+                 },
+    "copy":  [
+                 {
+                     "from":  "web/admin/meu_time",
+                     "to":  "web/admin/meu_time"
+                 }
+             ]
+}

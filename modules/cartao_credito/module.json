@@ -1,0 +1,40 @@
+{
+  "name": "cartao_credito",
+  "label": "Cartao de Credito",
+  "description": "Addon do financeiro para organizar cartoes, compras, parcelas e faturas antes de lancar no caixa.",
+  "version": "0.1.0",
+  "type": "project",
+  "kind": "addon",
+  "attach_to": ["financeiro"],
+  "minimum_plan": "start",
+  "availability": "start_plus",
+  "finance_modes": ["personal"],
+  "visibility_note": "Disponivel apenas para bases com Financeiro em modo pessoal nesta etapa.",
+  "status": "draft",
+  "category": "Financeiro",
+  "segments": ["geral", "financeiro"],
+  "recommended_bases": ["geral"],
+  "tags": ["cartao", "fatura", "compras", "parcelas", "financeiro"],
+  "menu": {
+    "section": "Gestao",
+    "label": "Cartoes",
+    "url": "/admin/cartao_credito/index.php",
+    "key": "cartao_credito",
+    "order": 55
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "finance_credit_cards",
+      "finance_credit_card_purchases",
+      "finance_credit_card_invoices",
+      "finance_credit_card_installments"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/cartao_credito",
+      "to": "web/admin/cartao_credito"
+    }
+  ]
+}

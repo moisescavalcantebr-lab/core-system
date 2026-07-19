@@ -6,7 +6,7 @@ CSS CORE (ESTRUTURA APENAS)
 ========================= */
 
 $extraCss = '
-<link rel="stylesheet" href="/public/assets/css/core_page.css">
+<link rel="stylesheet" href="/web/assets/css/core_page.css">
 ';
 
 /* =========================
@@ -23,13 +23,7 @@ ob_start();
 <?php endif; ?>
 
 <main class="c-page">
-
-    <div class="c-container">
-
-        <?= $content ?>
-
-    </div>
-
+    <?= $content ?>
 </main>
 
 <?php

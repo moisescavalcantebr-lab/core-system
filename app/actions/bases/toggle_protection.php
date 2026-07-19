@@ -4,6 +4,7 @@ error_reporting(E_ALL);
 
 require dirname(__DIR__, 3) . '/app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
+require APP_PATH . '/helpers/base_manifest.php';
 
 requireAdmin();
 
@@ -44,5 +45,13 @@ $pdo->prepare("
     'id'     => $id
 ]);
 
-header("Location: /public/admin/bases/index.php");
+$base['is_protected'] = $newStatus;
+
+try {
+    base_write_manifest($base, BASES_PATH . '/' . $base['slug']);
+} catch (Throwable $e) {
+    flash('warning', 'Protecao alterada, mas o manifesto da base nao foi atualizado: ' . $e->getMessage());
+}
+
+header("Location: /web/admin/bases/index.php");
 exit;

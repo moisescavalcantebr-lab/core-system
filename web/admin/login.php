@@ -9,9 +9,6 @@ if (isset($_SESSION['core_user'])) {
     exit;
 }
 
-$settingsService = new SettingsService($pdo);
-$coreSettings = $settingsService->all();
-
 ob_start();
 ?>
 
@@ -21,7 +18,7 @@ ob_start();
         
         <?php if (!empty($coreSettings['app_logo'])): ?>
 <div class="c-auth-logo">
-    <img src="/public/assets/uploads/<?= htmlspecialchars($coreSettings['app_logo']) ?>" 
+    <img src="/web/assets/uploads/<?= htmlspecialchars($coreSettings['app_logo']) ?>"
          style="height:120px;width:auto;">
 </div>
         <?php else: ?>
@@ -55,7 +52,21 @@ ob_start();
         </form>
 
         <div class="c-auth-link">
-            <a href="/public/admin/register.php">Criar conta</a>
+            <a href="/web/admin/register.php">Criar conta</a>
+        </div>
+
+        <div class="c-auth-install">
+            <button type="button"
+                    class="c-auth-install-btn c-auth-btn c-btn-block"
+                    data-install-app
+                    data-project-url="/web"
+                    hidden>
+                Adicionar à tela inicial
+            </button>
+
+            <p class="c-auth-install-hint" data-install-hint hidden>
+                No celular, use o menu do navegador e escolha Adicionar à tela inicial.
+            </p>
         </div>
 
     </div>

@@ -27,22 +27,22 @@ $passwordConfirm = $_POST['password_confirm'] ?? '';
 
 if (!$name || !$email || !$password) {
     flash('error', 'Preencha todos os campos.');
-    redirect('/public/admin/register.php');
+    redirect('/web/admin/register.php');
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     flash('error', 'E-mail inválido.');
-    redirect('/public/admin/register.php');
+    redirect('/web/admin/register.php');
 }
 
 if ($password !== $passwordConfirm) {
     flash('error', 'As senhas não coincidem.');
-    redirect('/public/admin/register.php');
+    redirect('/web/admin/register.php');
 }
 
 if (strlen($password) < 6) {
     flash('error', 'Senha deve ter no mínimo 6 caracteres.');
-    redirect('/public/admin/register.php');
+    redirect('/web/admin/register.php');
 }
 
 /*
@@ -56,7 +56,7 @@ $stmt->execute(['email' => $email]);
 
 if ($stmt->fetch()) {
     flash('error', 'E-mail já cadastrado.');
-    redirect('/public/admin/register.php');
+    redirect('/web/admin/register.php');
 }
 
 /*
@@ -65,15 +65,20 @@ if ($stmt->fetch()) {
 |--------------------------------------------------------------------------
 */
 
+$role = 'USER';
+$status = 0;
+
 $stmt = $pdo->prepare("
-    INSERT INTO core_users (name, email, password, role)
-    VALUES (:name, :email, :password, 'USER')
+    INSERT INTO core_users (name, email, password, role, status)
+    VALUES (:name, :email, :password, :role, :status)
 ");
 
 $stmt->execute([
     'name' => $name,
     'email' => $email,
     'password' => password_hash($password, PASSWORD_DEFAULT),
+    'role' => $role,
+    'status' => $status,
 ]);
 
 /*
@@ -82,5 +87,5 @@ $stmt->execute([
 |--------------------------------------------------------------------------
 */
 
-flash('success', 'Conta criada. Aguarde ativação pelo administrador.');
-redirect('/public/admin/login.php');
+flash('success', 'Conta criada. Aguarde liberação pelo administrador.');
+redirect('/web/admin/login.php');
