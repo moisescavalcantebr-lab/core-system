@@ -692,11 +692,13 @@ ob_start();
     }
 
     .dash-module--finance,
+    .dash-module--divulgacao,
     .dash-module--football {
         grid-column: 1 / -1;
     }
 
     .dash-module--finance .dash-finance-layout,
+    .dash-module--divulgacao .dash-finance-layout,
     .dash-module--football .dash-football-layout {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }

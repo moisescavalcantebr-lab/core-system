@@ -6,6 +6,7 @@ require __DIR__ . '/../../../app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
+coreRequireLaboratory('/web/admin/bases/index.php', 'Clonagem de bases fica disponivel apenas no laboratorio.');
 
 $baseId = (int)($_GET['base_id'] ?? 0);
 

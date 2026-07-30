@@ -9,6 +9,7 @@ require APP_PATH . '/helpers/base_manifest.php';
 
 requireAdmin();
 csrf_verify();
+coreRequireLaboratory('/web/admin/bases/index.php', 'Registro manual de bases fica disponivel apenas no laboratorio.');
 
 $slug = strtolower(trim((string)($_POST['slug'] ?? '')));
 

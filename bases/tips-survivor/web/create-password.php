@@ -23,7 +23,7 @@ if (!$token) {
 
 $coreConfigPath = dirname(__DIR__, 3) . '/env/env.production.php';
 $coreConfig = file_exists($coreConfigPath) ? require $coreConfigPath : [];
-$coreUrl = rtrim($coreConfig['app_url'] ?? 'https://lojasmarim.com', '/');
+$coreUrl = rtrim((string)($coreConfig['app_url'] ?? 'https://meuprojetoweb.com'), '/');
 $coreApiUrl = str_replace('http://localhost:8000', 'http://127.0.0.1', $coreUrl);
 
 $response = file_get_contents(

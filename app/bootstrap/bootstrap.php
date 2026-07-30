@@ -46,6 +46,7 @@ define('STORAGE_PATH', ROOT_PATH . '/storage');
 
 require_once APP_PATH . '/helpers/csrf.php';
 require_once APP_PATH . '/helpers/flash.php';
+require_once APP_PATH . '/helpers/environment.php';
 require_once APP_PATH . '/helpers/http.php';
 require_once APP_PATH . '/helpers/ui_helper.php';
 require_once APP_PATH . '/helpers/url_helper.php';

@@ -8,6 +8,7 @@ require APP_PATH . '/helpers/auth.php';
 require APP_PATH . '/helpers/base_manifest.php';
 
 requireAdmin();
+coreRequireLaboratory('/web/admin/bases/index.php', 'Clonagem de bases fica disponivel apenas no laboratorio.');
 
 $newName = trim($_POST['name'] ?? '');
 $newSlug = strtolower(trim($_POST['slug'] ?? ''));

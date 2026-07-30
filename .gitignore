@@ -38,6 +38,11 @@ docker/**/*.pid
 # VS CODE
 .vscode/
 
+# =========================
+# DREAMWEAVER / METADADOS LOCAIS
+**/_notes/
+**/dwsync.xml
+
 # DEPLOY LOCAL
 /scripts/deploy.local.ps1
 /_deploy/

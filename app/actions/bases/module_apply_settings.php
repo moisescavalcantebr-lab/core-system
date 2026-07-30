@@ -8,6 +8,7 @@ require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
 csrf_verify();
+coreRequireLaboratory('/web/admin/bases/index.php', 'Aplicar modulos aos projetos a partir da base fica disponivel apenas no laboratorio.');
 
 $baseId = (int)($_POST['base_id'] ?? 0);
 $moduleSlug = preg_replace('/[^a-z0-9\-_]/', '', strtolower((string)($_POST['module'] ?? '')));

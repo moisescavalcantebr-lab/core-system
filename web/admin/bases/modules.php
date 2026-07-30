@@ -8,6 +8,8 @@ require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
 
+$laboratoryEnabled = coreLaboratoryEnabled();
+$environmentLabel = coreEnvironmentLabel();
 $baseId = (int)($_GET['id'] ?? 0);
 
 $stmt = $pdo->prepare("
@@ -37,7 +39,7 @@ $search = trim((string)($_GET['search'] ?? ''));
 $categoryFilter = trim((string)($_GET['category'] ?? ''));
 $segmentFilter = trim((string)($_GET['segment'] ?? ''));
 $stateFilter = trim((string)($_GET['state'] ?? ''));
-$showAvailableModules = (string)($_GET['show'] ?? '') === 'available';
+$showAvailableModules = $laboratoryEnabled && (string)($_GET['show'] ?? '') === 'available';
 $moduleConfigs = [];
 
 $modulePriceColumns = $pdo->query("SHOW COLUMNS FROM base_module_prices")->fetchAll(PDO::FETCH_COLUMN);
@@ -176,22 +178,53 @@ usort($modules, function(array $a, array $b): int {
         <=> [$groupRank($b), $bKind, $b['display_order'], $b['label']];
 });
 
+function moduleSectionKey(array $module): string
+{
+    $kind = ($module['kind'] ?? 'main') === 'addon' ? 'addon' : 'main';
+
+    if (!empty($module['installed'])) {
+        return $kind === 'addon' ? 'installed_addon' : 'installed_main';
+    }
+
+    return $kind === 'addon' ? 'available_addon' : 'available_main';
+}
+
 function moduleSectionMeta(string $group): array
 {
     return match ($group) {
-        'addon' => [
+        'installed_addon' => [
             'title' => 'Addons instalados',
-            'description' => 'Recursos acoplados aos módulos principais desta base.',
+            'description' => 'Complementos acoplados aos modulos principais desta base.',
         ],
-        'available' => [
-            'title' => 'Disponíveis para instalar',
-            'description' => 'Módulos e addons recomendados que ainda não fazem parte desta base.',
+        'available_main' => [
+            'title' => 'Modulos principais disponiveis',
+            'description' => 'Recursos centrais recomendados para esta base.',
+        ],
+        'available_addon' => [
+            'title' => 'Addons disponiveis',
+            'description' => 'Complementos recomendados para os modulos desta base.',
         ],
         default => [
-            'title' => 'Módulos principais',
+            'title' => 'Modulos principais instalados',
             'description' => 'Recursos centrais que estruturam a base.',
         ],
     };
+}
+
+function moduleItemGroupClass(string $sectionKey): string
+{
+    return match ($sectionKey) {
+        'installed_addon' => 'addon',
+        'available_main' => 'available',
+        'available_addon' => 'available-addon',
+        default => 'main',
+    };
+}
+
+$moduleSectionCounts = [];
+foreach ($modules as $moduleForSectionCount) {
+    $moduleSectionKey = moduleSectionKey($moduleForSectionCount);
+    $moduleSectionCounts[$moduleSectionKey] = ($moduleSectionCounts[$moduleSectionKey] ?? 0) + 1;
 }
 
 function moduleCommercialCategoryLabel(string $category): string
@@ -319,14 +352,18 @@ ob_start();
         </div>
 
         <div class="c-page-actions">
-            <?php if ($showAvailableModules): ?>
-                <a class="c-btn-secondary c-btn-lock" href="/web/admin/bases/modules.php?id=<?= (int)$base['id'] ?>">
-                    Ocultar disponíveis
-                </a>
+            <?php if ($laboratoryEnabled): ?>
+                <?php if ($showAvailableModules): ?>
+                    <a class="c-btn-secondary c-btn-lock" href="/web/admin/bases/modules.php?id=<?= (int)$base['id'] ?>">
+                        Ocultar disponiveis
+                    </a>
+                <?php else: ?>
+                    <a class="c-btn-secondary c-btn-unlock" href="/web/admin/bases/modules.php?id=<?= (int)$base['id'] ?>&show=available">
+                        Ver disponiveis
+                    </a>
+                <?php endif; ?>
             <?php else: ?>
-                <a class="c-btn-secondary c-btn-unlock" href="/web/admin/bases/modules.php?id=<?= (int)$base['id'] ?>&show=available">
-                    Ver disponíveis
-                </a>
+                <span class="c-badge c-badge--neutral"><?= htmlspecialchars($environmentLabel) ?></span>
             <?php endif; ?>
 
             <a class="c-btn-secondary" href="/web/admin/bases/index.php">
@@ -339,8 +376,14 @@ ob_start();
 
         <?php if (!$showAvailableModules): ?>
             <div class="c-card c-module-protection">
-                <strong>Edição protegida</strong>
-                <p>A tela mostra apenas módulos instalados. Para instalar outro módulo, use Ver disponíveis. Cada módulo precisa ser aberto individualmente para editar.</p>
+                <strong><?= $laboratoryEnabled ? 'Edicao protegida' : 'Publicacao protegida' ?></strong>
+                <p>
+                    <?php if ($laboratoryEnabled): ?>
+                        A tela mostra apenas modulos instalados. Para instalar outro modulo, use Ver disponiveis. Cada modulo precisa ser aberto individualmente para editar.
+                    <?php else: ?>
+                        Em producao, esta tela mostra apenas os modulos publicados nesta base oficial. Ajustes estruturais devem ser feitos no laboratorio e enviados por deploy.
+                    <?php endif; ?>
+                </p>
             </div>
         <?php endif; ?>
 
@@ -407,8 +450,16 @@ ob_start();
                     <?php $currentModuleGroup = null; ?>
                     <?php foreach ($modules as $module): ?>
                         <?php
-                            $moduleGroup = !$module['installed'] ? 'available' : ((($module['kind'] ?? 'main') === 'addon') ? 'addon' : 'main');
-                            $sectionMeta = moduleSectionMeta($moduleGroup);
+                            $moduleSectionKey = moduleSectionKey($module);
+                            $moduleGroup = moduleItemGroupClass($moduleSectionKey);
+                            $sectionClass = str_replace('_', '-', $moduleSectionKey);
+                            $moduleItemClass = match ($moduleGroup) {
+                                'addon' => 'c-module-item--addon',
+                                'available-addon' => 'c-module-item--available-addon',
+                                'available' => 'c-module-item--available',
+                                default => 'c-module-item--main',
+                            };
+                            $sectionMeta = moduleSectionMeta($moduleSectionKey);
                             $formId = 'module-commerce-' . preg_replace('/[^a-z0-9\-_]/', '-', (string)$module['slug']);
                             $panelId = $formId . '-panel';
                             $settings = $module['settings'] ?? [];
@@ -446,15 +497,18 @@ ob_start();
                             $missingRequiredModules = array_values(array_filter($requiredModules, fn(string $requiredModule) => !is_file($baseModulesPath . '/' . $requiredModule . '/module.json')));
                         ?>
 
-                        <?php if ($currentModuleGroup !== $moduleGroup): ?>
-                            <?php $currentModuleGroup = $moduleGroup; ?>
-                            <div class="c-module-section c-module-section--<?= htmlspecialchars($moduleGroup) ?>">
-                                <strong><?= htmlspecialchars($sectionMeta['title']) ?></strong>
-                                <span><?= htmlspecialchars($sectionMeta['description']) ?></span>
+                        <?php if ($currentModuleGroup !== $moduleSectionKey): ?>
+                            <?php $currentModuleGroup = $moduleSectionKey; ?>
+                            <div class="c-module-section c-module-section--<?= htmlspecialchars($sectionClass) ?>">
+                                <div>
+                                    <strong><?= htmlspecialchars($sectionMeta['title']) ?></strong>
+                                    <span><?= htmlspecialchars($sectionMeta['description']) ?></span>
+                                </div>
+                                <span class="c-module-section__count"><?= (int)($moduleSectionCounts[$moduleSectionKey] ?? 0) ?></span>
                             </div>
                         <?php endif; ?>
 
-                        <div class="c-module-item <?= $moduleGroup === 'addon' ? 'c-module-item--addon' : ($moduleGroup === 'available' ? 'c-module-item--available' : 'c-module-item--main') ?>">
+                        <div class="c-module-item <?= htmlspecialchars($moduleItemClass) ?>">
                             <div class="c-module-main">
                                 <div>
                                     <strong><?= htmlspecialchars($module['label']) ?></strong>
@@ -503,11 +557,16 @@ ob_start();
                             </div>
 
                             <div class="c-module-actions">
-                                <button class="c-btn-secondary" type="button" data-module-config="<?= htmlspecialchars($panelId) ?>">
-                                    Editar módulo
-                                </button>
+                                <?php if ($laboratoryEnabled): ?>
+                                    <button class="c-btn-secondary" type="button" data-module-config="<?= htmlspecialchars($panelId) ?>">
+                                        Editar modulo
+                                    </button>
+                                <?php else: ?>
+                                    <span class="c-badge c-badge--neutral">Somente leitura</span>
+                                <?php endif; ?>
                             </div>
 
+                            <?php if ($laboratoryEnabled): ?>
                             <div class="c-module-config" id="<?= htmlspecialchars($panelId) ?>" hidden>
                                 <div class="c-module-panel-actions">
                                     <?php if ($module['installed'] && in_array($module['slug'], ['participantes', 'financeiro'], true)): ?>
@@ -648,6 +707,7 @@ ob_start();
                                     <button class="c-btn-secondary">Salvar configuração</button>
                                 </form>
                             </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -668,16 +728,22 @@ ob_start();
 
 .c-module-section {
     display: flex;
-    align-items: baseline;
-    gap: 10px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
     margin-top: 4px;
-    padding: 9px 12px;
+    padding: 10px 12px;
     border: 1px solid rgba(148, 163, 184, .22);
     background: rgba(15, 23, 42, .28);
 }
 
 .c-module-section:first-child {
     margin-top: 0;
+}
+
+.c-module-section > div {
+    display: grid;
+    gap: 3px;
 }
 
 .c-module-section strong {
@@ -689,14 +755,31 @@ ob_start();
     font-size: .82rem;
 }
 
-.c-module-section--addon {
+.c-module-section__count {
+    min-width: 26px;
+    border: 1px solid rgba(148, 163, 184, .22);
+    border-radius: 6px;
+    color: #e5e7eb;
+    font-size: .78rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 6px 8px;
+    text-align: center;
+}
+
+.c-module-section--installed-addon {
     border-color: rgba(14, 165, 233, .28);
     background: rgba(14, 165, 233, .06);
 }
 
-.c-module-section--available {
+.c-module-section--available-main {
     border-color: rgba(245, 158, 11, .3);
     background: rgba(245, 158, 11, .06);
+}
+
+.c-module-section--available-addon {
+    border-color: rgba(14, 165, 233, .3);
+    background: rgba(14, 165, 233, .05);
 }
 
 .c-page-actions {
@@ -746,6 +829,12 @@ ob_start();
     border-color: rgba(245, 158, 11, .26);
     border-left: 3px solid rgba(245, 158, 11, .62);
     background: linear-gradient(90deg, rgba(245, 158, 11, .07), rgba(15, 23, 42, .42) 34%);
+}
+
+.c-module-item--available-addon {
+    border-color: rgba(14, 165, 233, .3);
+    border-left: 3px solid rgba(14, 165, 233, .68);
+    background: linear-gradient(90deg, rgba(14, 165, 233, .07), rgba(15, 23, 42, .42) 34%);
 }
 
 .c-module-main,
@@ -872,6 +961,15 @@ ob_start();
 }
 
 @media (max-width: 980px) {
+    .c-module-section {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .c-module-section__count {
+        align-self: flex-start;
+    }
+
     .c-module-item {
         grid-template-columns: 1fr;
     }
@@ -935,9 +1033,11 @@ document.querySelectorAll('.c-module-config').forEach(syncParticipantCustomField
 $content = ob_get_clean();
 
 $rightSidebarEnabled = true;
-$moduleRuleText = $showAvailableModules
-    ? '<p>Os módulos disponíveis aparecem na lista, mas cada alteração fica dentro do painel do próprio módulo.</p><p>Projetos já criados devem receber a atualização pelo botão Sincronizar Módulos no projeto ou Aplicar aos projetos quando disponível.</p>'
-    : '<p>A tela mostra apenas módulos instalados. Use Ver disponíveis somente quando precisar instalar outro módulo.</p><p>Configuração, instalação e desinstalação ficam dentro do painel individual de cada módulo.</p>';
+$moduleRuleText = !$laboratoryEnabled
+    ? '<p>Em producao, esta tela mostra os modulos publicados nesta base oficial. Ajustes estruturais devem ser feitos no laboratorio e enviados por deploy.</p>'
+    : ($showAvailableModules
+        ? '<p>Os modulos disponiveis aparecem na lista, mas cada alteracao fica dentro do painel do proprio modulo.</p><p>Projetos ja criados devem receber a atualizacao pelo botao Sincronizar Modulos no projeto ou Aplicar aos projetos quando disponivel.</p>'
+        : '<p>A tela mostra apenas modulos instalados. Use Ver disponiveis somente quando precisar instalar outro modulo.</p><p>Configuracao, instalacao e desinstalacao ficam dentro do painel individual de cada modulo.</p>');
 
 $rightSidebarContent = '
 <div class="c-card">

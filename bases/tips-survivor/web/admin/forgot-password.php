@@ -28,10 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $payload = [
                 'email'      => $email,
-                'project_id' => $project['id']
+                'project_id' => $project['id'],
+                'purpose'    => 'reset',
             ];
 
-$ch = curl_init('https://lojasmarim.com/web/api/create-token.php');
+            $coreConfigPath = dirname(__DIR__, 4) . '/env/env.production.php';
+            $coreConfig = file_exists($coreConfigPath) ? require $coreConfigPath : [];
+            $coreUrl = rtrim((string)($coreConfig['app_url'] ?? 'https://meuprojetoweb.com'), '/');
+            $ch = curl_init($coreUrl . '/web/api/create-token.php');
 
             curl_setopt_array($ch, [
                 CURLOPT_POST => true,
@@ -43,8 +47,19 @@ $ch = curl_init('https://lojasmarim.com/web/api/create-token.php');
                 CURLOPT_POSTFIELDS => json_encode($payload),
             ]);
 
-            curl_exec($ch);
+            $response = curl_exec($ch);
+            $curlError = curl_error($ch);
+            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
+
+            if ($curlError || $httpCode < 200 || $httpCode >= 300) {
+                error_log('Falha ao solicitar token no Core: HTTP ' . $httpCode . ' ' . $curlError);
+            } else {
+                $apiResult = json_decode((string)$response, true);
+                if (!is_array($apiResult) || empty($apiResult['success']) || empty($apiResult['mail_sent'])) {
+                    error_log('Token solicitado, mas email nao foi confirmado pelo Core: ' . substr((string)$response, 0, 500));
+                }
+            }
         }
 
         $success = true;

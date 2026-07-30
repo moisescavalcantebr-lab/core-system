@@ -220,6 +220,7 @@ class ProjectInstaller
             'plan_price_id'  => isset($project['plan_price_id']) ? (int)$project['plan_price_id'] : null,
             'plan_name'      => $project['plan_name'] ?? null,
             'billing_cycle'  => $project['billing_cycle'] ?? null,
+            'core_api_key'   => self::coreApiKey(),
             'version'        => 1,
             'created_at'     => $project['created_at'] ?? date('c'),
             'synced_at'      => date('c'),
@@ -232,5 +233,22 @@ class ProjectInstaller
                 JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
             )
         );
+    }
+
+    private static function coreApiKey(): string
+    {
+        $envPath = ROOT_PATH . '/env/env.production.php';
+
+        if (!is_file($envPath)) {
+            return '';
+        }
+
+        $config = require $envPath;
+
+        if (!is_array($config)) {
+            return '';
+        }
+
+        return (string)($config['api_key'] ?? '');
     }
 }

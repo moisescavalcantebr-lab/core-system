@@ -130,7 +130,8 @@ if (!function_exists('base_register_manifests')) {
                     description = VALUES(description),
                     allows_users = VALUES(allows_users),
                     max_admins = VALUES(max_admins),
-                    status = VALUES(status)
+                    status = VALUES(status),
+                    is_protected = VALUES(is_protected)
             ");
             $stmt->execute([
                 'name' => $name,

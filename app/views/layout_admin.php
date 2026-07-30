@@ -65,6 +65,12 @@ foreach ($adminCssFiles as $adminCssFile) {
             </div>
         <?php endif; ?>
 
+        <?php if (function_exists('flash_show')): ?>
+            <div class="c-flash-wrap">
+                <?php flash_show(); ?>
+            </div>
+        <?php endif; ?>
+
         <?= $content ?>
     </main>
 

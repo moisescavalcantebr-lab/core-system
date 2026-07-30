@@ -4,7 +4,8 @@ param(
     [string]$User = "",
     [string]$RemoteZip = "",
     [string]$RemotePath = "",
-    [switch]$PackageOnly
+    [switch]$PackageOnly,
+    [switch]$SkipProtectedBasesGuard
 )
 
 $ErrorActionPreference = "Stop"
@@ -113,6 +114,35 @@ if ($RemotePath -eq "") {
     $RemotePath = "/opt/workspace"
 }
 
+if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
+    Write-Host "[guard] Validando bases protegidas antes do deploy..." -ForegroundColor Cyan
+    $ProtectedBasesGuard = Join-Path $ScriptDir "servidor-validar-bases-protegidas.ps1"
+    if (Test-Path $ProtectedBasesGuard) {
+        $GuardArgs = @(
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            $ProtectedBasesGuard,
+            "-Server",
+            $Server,
+            "-User",
+            $User,
+            "-RemotePath",
+            $RemotePath
+        )
+        if ($Config -ne "") {
+            $GuardArgs += @("-Config", $Config)
+        }
+
+        & powershell @GuardArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw "Validacao de bases protegidas falhou. Sincronize as bases protegidas do servidor com o VS Code/GitHub antes do deploy. Use -SkipProtectedBasesGuard apenas para primeira instalacao ou emergencia."
+        }
+    }
+} elseif (!$PackageOnly -and $SkipProtectedBasesGuard) {
+    Write-Host "[guard] Validacao de bases protegidas ignorada por parametro." -ForegroundColor Yellow
+}
+
 $DeployDir = Join-Path $Workspace "_deploy"
 $Stage = Join-Path $DeployDir "workspace-update"
 $Zip = Join-Path $DeployDir "workspace-update.zip"
@@ -135,8 +165,10 @@ $IncludeDirs = @(
     "app",
     "bases",
     "cron",
+    "docs",
     "docker",
     "modules",
+    "scripts",
     "storage\paginas",
     "web"
 )
@@ -169,7 +201,10 @@ $BlockedPatterns = @(
     "\storage\logs",
     "\storage\cache",
     "\env",
-    "\.git"
+    "\.git",
+    "\.codex",
+    "\.agents",
+    "\.vscode"
 )
 
 foreach ($Pattern in $BlockedPatterns) {
@@ -180,12 +215,35 @@ foreach ($Pattern in $BlockedPatterns) {
 }
 
 $BlockedRootDirs = @(
+    ".agents",
+    ".codex",
+    ".git",
+    ".vscode",
+    "_backups",
+    "_deploy",
+    "_notes",
+    "output",
     "projects",
-    "env"
+    "env",
+    "tmp"
 )
 
 foreach ($Dir in $BlockedRootDirs) {
     $BlockedPath = Join-Path $Stage $Dir
+    if (Test-Path $BlockedPath) {
+        Remove-Item -LiteralPath $BlockedPath -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+$BlockedRelativePaths = @(
+    "bases\futebol-amador",
+    "scripts\deploy.local.ps1",
+    "backup.sql",
+    "Docker MySQL.session.sql"
+)
+
+foreach ($RelativePath in $BlockedRelativePaths) {
+    $BlockedPath = Join-Path $Stage $RelativePath
     if (Test-Path $BlockedPath) {
         Remove-Item -LiteralPath $BlockedPath -Recurse -Force -ErrorAction SilentlyContinue
     }
@@ -230,6 +288,47 @@ foreach ($File in $RequiredDeployFiles) {
     if (!(Test-Path $RequiredPath)) {
         throw "Arquivo obrigatorio ausente no pacote: $File"
     }
+}
+
+$StageRoot = [System.IO.Path]::GetFullPath($Stage).TrimEnd('\', '/')
+$PackagedEntries = Get-ChildItem -Path $Stage -Recurse -Force | ForEach-Object {
+    $_.FullName.Substring($StageRoot.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')
+}
+
+$ForbiddenPackagePrefixes = @(
+    "projects/",
+    "env/",
+    "_deploy/",
+    "_backups/",
+    "_notes/",
+    "output/",
+    "tmp/",
+    ".git/",
+    ".codex/",
+    ".agents/",
+    ".vscode/",
+    "bases/futebol-amador/",
+    "storage/uploads/",
+    "storage/logs/",
+    "storage/cache/"
+)
+
+$ForbiddenPackageFiles = @(
+    "scripts/deploy.local.ps1",
+    "backup.sql",
+    "Docker MySQL.session.sql"
+)
+
+$ForbiddenEntries = $PackagedEntries | Where-Object {
+    $Entry = $_
+    ($ForbiddenPackageFiles -contains $Entry) -or
+    ($ForbiddenPackagePrefixes | Where-Object {
+        $Entry.StartsWith($_, [System.StringComparison]::OrdinalIgnoreCase)
+    } | Select-Object -First 1)
+} | Select-Object -First 20
+
+if ($ForbiddenEntries) {
+    throw ("Pacote contem arquivos/pastas fora do padrao de producao:`n" + ($ForbiddenEntries -join "`n"))
 }
 
 New-DeployZip -SourceDir $Stage -DestinationZip $Zip
@@ -311,7 +410,7 @@ if ! docker exec app_php test -f /tmp/workspace-release/app/actions/projects/syn
   exit 1
 fi
 echo "[host] aplicando release validada"
-rm -rf "$RemotePath/app" "$RemotePath/bases" "$RemotePath/cron" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web" "$RemotePath/storage/paginas"
+rm -rf "$RemotePath/app" "$RemotePath/bases" "$RemotePath/cron" "$RemotePath/docs" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web" "$RemotePath/storage/paginas"
 if [ -d "$RemoteRelease/app" ]; then
   cp -a "$RemoteRelease/app" "$RemotePath/app"
 fi
@@ -322,12 +421,18 @@ fi
 if [ -d "$RemoteRelease/cron" ]; then
   cp -a "$RemoteRelease/cron" "$RemotePath/cron"
 fi
+if [ -d "$RemoteRelease/docs" ]; then
+  cp -a "$RemoteRelease/docs" "$RemotePath/docs"
+fi
 if [ -d "$RemoteRelease/docker" ]; then
   mkdir -p "$RemotePath/docker"
   cp -a "$RemoteRelease/docker/." "$RemotePath/docker"
 fi
 if [ -d "$RemoteRelease/modules" ]; then
   cp -a "$RemoteRelease/modules" "$RemotePath/modules"
+fi
+if [ -d "$RemoteRelease/scripts" ]; then
+  cp -a "$RemoteRelease/scripts" "$RemotePath/scripts"
 fi
 if [ -d "$RemoteRelease/web" ]; then
   cp -a "$RemoteRelease/web" "$RemotePath/web"
@@ -346,11 +451,13 @@ if [ -f "$RemoteRelease/README.md" ]; then
   cp -a "$RemoteRelease/README.md" "$RemotePath/README.md"
 fi
 echo "[container] aplicando release validada"
-docker exec app_php rm -rf /var/www/html/app /var/www/html/bases /var/www/html/cron /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
+docker exec app_php rm -rf /var/www/html/app /var/www/html/bases /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases && cp -a /tmp/workspace-release/bases/. /var/www/html/bases; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/cron ]; then cp -a /tmp/workspace-release/cron /var/www/html/cron; fi'
+docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/docs ]; then cp -a /tmp/workspace-release/docs /var/www/html/docs; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/modules ]; then cp -a /tmp/workspace-release/modules /var/www/html/modules; fi'
+docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/scripts ]; then cp -a /tmp/workspace-release/scripts /var/www/html/scripts; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/web ]; then cp -a /tmp/workspace-release/web /var/www/html/web; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/storage/paginas ]; then mkdir -p /var/www/html/storage && cp -a /tmp/workspace-release/storage/paginas /var/www/html/storage/paginas; fi'
 docker exec app_php sh -lc 'if [ -f /tmp/workspace-release/.htaccess ]; then cp -a /tmp/workspace-release/.htaccess /var/www/html/.htaccess; fi'
@@ -361,9 +468,9 @@ if ! docker exec app_php test -f /var/www/html/index.php; then
   exit 1
 fi
 echo "[fix] permissao das pastas mutaveis"
-docker exec app_php sh -lc 'for path in app bases cron modules web; do if [ -e "/var/www/html/$path" ]; then chown -R www-data:www-data "/var/www/html/$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/$path"; fi; done'
+docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/$path" ]; then chown -R www-data:www-data "/var/www/html/$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/$path"; fi; done'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'
-echo "[db] deploy de arquivos concluido; schema do Core fica no instalador/reparo dedicado"
+echo "[db] deploy de arquivos concluido - schema do Core fica no instalador/reparo dedicado"
 echo "[check] host sync_preview.php"
 if ! grep -n base_slug $RemotePath/app/actions/projects/sync_preview.php; then
   echo "ERRO: sync_preview.php no host nao contem base_slug"
@@ -468,6 +575,7 @@ done
 echo "[done] release aplicada e verificada"
 "@
 
+$RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
 $SshArgs = @("-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 $Applied = Invoke-DeployNative "ssh" { & ssh.exe @SshArgs } 3 10
 if (!$Applied) {

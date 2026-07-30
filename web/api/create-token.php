@@ -1,7 +1,6 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../../app/bootstrap/bootstrap.php';
-file_put_contents(__DIR__.'/api_called.txt', date('Y-m-d H:i:s'));
 header('Content-Type: application/json');
 
 /* =========================
@@ -28,20 +27,27 @@ if (!$input) {
     exit;
 }
 
-$email     = trim($input['email'] ?? '');
+$email     = trim((string)($input['email'] ?? ''));
 $projectId = (int)($input['project_id'] ?? 0);
+$purpose = strtolower(trim((string)($input['purpose'] ?? $input['mode'] ?? 'reset')));
 
-if (!$email || !$projectId) {
+if (!$email || !$projectId || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     http_response_code(400);
     echo json_encode(['error' => 'Dados inválidos']);
     exit;
 }
+
+if (!in_array($purpose, ['access', 'reset'], true)) {
+    $purpose = 'reset';
+}
+
 /* =========================
    GERAR TOKEN
 ========================= */
 
 $token   = bin2hex(random_bytes(32));
-$expires = date('Y-m-d H:i:s', time() + 3600);
+$ttlSeconds = $purpose === 'access' ? 86400 : 3600;
+$expires = date('Y-m-d H:i:s', time() + $ttlSeconds);
 
 /* Invalidar tokens antigos */
 
@@ -73,9 +79,9 @@ $stmt->execute([
     'expires_at' => $expires
 ]);
 
-/* Buscar path do projeto */
+/* Buscar projeto */
 
-$stmt = $pdo->prepare("SELECT path FROM projects WHERE id = :id LIMIT 1");
+$stmt = $pdo->prepare("SELECT name, path FROM projects WHERE id = :id LIMIT 1");
 $stmt->execute(['id' => $projectId]);
 $project = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -87,35 +93,62 @@ if (!$project) {
 
 /* Montar link */
 
-$resetLink = "https://lojasmarim.com{$project['path']}/web/create-password.php?token={$token}";
+$baseUrl = rtrim((string)($config['app_url'] ?? ''), '/');
+if ($baseUrl === '') {
+    http_response_code(500);
+    echo json_encode(['error' => 'URL do sistema não configurada']);
+    exit;
+}
+
+$resetLink = $baseUrl . '/' . ltrim((string)$project['path'], '/') . '/web/create-password.php?token=' . rawurlencode($token);
 
 /* =========================
    ENVIAR EMAIL
 ========================= */
 
-if (!class_exists('MailService')) {
-    file_put_contents(__DIR__.'/mail_error.txt', 'Classe não carregou');
+$safeLink = htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8');
+$projectName = htmlspecialchars((string)($project['name'] ?? 'seu projeto'), ENT_QUOTES, 'UTF-8');
+$expiresText = $purpose === 'access' ? '24 horas' : '1 hora';
+
+if ($purpose === 'access') {
+    $subject = 'Acesso ao seu projeto';
+    $heading = 'Acesso ao seu projeto';
+    $intro = "Seu projeto <strong>{$projectName}</strong> foi criado. Clique abaixo para criar sua senha e acessar o painel.";
+    $button = 'Criar senha';
+} else {
+    $subject = 'Recuperação de senha';
+    $heading = 'Recuperação de senha';
+    $intro = "Recebemos uma solicitação para redefinir a senha do projeto <strong>{$projectName}</strong>.";
+    $button = 'Redefinir senha';
 }
 
 $html = "
-<h2>Recuperação de Senha</h2>
-<p>Clique abaixo para redefinir sua senha:</p>
+<h2>{$heading}</h2>
+<p>{$intro}</p>
 <p>
-    <a href='{$resetLink}'
+    <a href='{$safeLink}'
        style='background:#2563eb;color:#fff;padding:10px 20px;
               text-decoration:none;border-radius:6px;'>
-        Redefinir Senha
+        {$button}
     </a>
 </p>
-<p>Este link expira em 1 hora.</p>
+<p>Este link expira em {$expiresText}.</p>
+<p>Se o botão não abrir, copie este link:</p>
+<p>{$safeLink}</p>
 ";
 
 $result = MailService::send(
     $email,
-    'Recuperação de Senha',
+    $subject,
     $html
 );
 
 if (!$result) {
-    file_put_contents(__DIR__.'/mail_failed.txt', 'Falhou envio');
-}echo json_encode(['success' => true]);
+    error_log("Falha ao enviar email {$purpose} para {$email} no projeto {$projectId}");
+}
+
+echo json_encode([
+    'success' => true,
+    'mail_sent' => (bool)$result,
+    'purpose' => $purpose,
+]);

@@ -3,7 +3,7 @@
   "slug": "projeto-exemplo",
   "owner_email": "cliente@email.com",
   "env": "production",
-  "core_api_key": "core_Zx92kLmPqW84VbT6yR3",
+  "core_api_key": "CONFIGURADO_NA_CRIACAO_DO_PROJETO",
 
   "plan": {
     "type": "monthly",

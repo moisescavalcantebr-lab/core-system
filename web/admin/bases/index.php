@@ -7,6 +7,9 @@ require APP_PATH . '/helpers/auth.php';
 
 requireAdmin();
 
+$laboratoryEnabled = coreLaboratoryEnabled();
+$environmentLabel = coreEnvironmentLabel();
+
 /*
 |--------------------------------------------------------------------------
 | FILTRO
@@ -65,10 +68,31 @@ function baseInstalledModulesCount(string $slug): int
 |--------------------------------------------------------------------------
 */
 
-$baseFolders = array_filter(
-    scandir(BASES_PATH),
-    fn($f) => $f !== '.' && $f !== '..' && is_dir(BASES_PATH . '/' . $f)
-);
+$baseFolders = [];
+if (is_dir(BASES_PATH)) {
+    $baseFolders = array_values(array_filter(
+        scandir(BASES_PATH) ?: [],
+        fn($f) => $f !== '.' && $f !== '..' && is_dir(BASES_PATH . '/' . $f)
+    ));
+}
+
+$baseFolderMap = array_fill_keys($baseFolders, true);
+$baseSlugs = array_values(array_unique(array_merge($baseFolders, array_keys($registeredMap))));
+
+usort($baseSlugs, function ($a, $b) use ($registeredMap) {
+    $aRegistered = isset($registeredMap[$a]);
+    $bRegistered = isset($registeredMap[$b]);
+
+    if ($aRegistered && $bRegistered) {
+        return ((int)$registeredMap[$a]['id']) <=> ((int)$registeredMap[$b]['id']);
+    }
+
+    if ($aRegistered !== $bRegistered) {
+        return $aRegistered ? -1 : 1;
+    }
+
+    return strnatcasecmp((string)$a, (string)$b);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -77,12 +101,16 @@ $baseFolders = array_filter(
 */
 
 if ($search) {
-    $baseFolders = array_filter($baseFolders, function($folder) use ($search) {
-        return str_contains(strtolower($folder), strtolower($search));
-    });
+    $baseSlugs = array_values(array_filter($baseSlugs, function($folder) use ($search, $registeredMap) {
+        $needle = strtolower($search);
+        $name = strtolower((string)($registeredMap[$folder]['name'] ?? ''));
+
+        return str_contains(strtolower($folder), $needle)
+            || ($name !== '' && str_contains($name, $needle));
+    }));
 }
 
-$totalBases = count($baseFolders);
+$totalBases = count($baseSlugs);
 
 /*
 |--------------------------------------------------------------------------
@@ -150,7 +178,7 @@ ob_start();
 
                 <tbody>
 
-                <?php if (empty($baseFolders)): ?>
+                <?php if (empty($baseSlugs)): ?>
 
                     <tr>
                         <td colspan="5" class="c-text-center">
@@ -160,16 +188,24 @@ ob_start();
 
                 <?php else: ?>
 
-                    <?php foreach ($baseFolders as $folder): ?>
+                    <?php foreach ($baseSlugs as $folder): ?>
 
                         <?php
                         $isRegistered = isset($registeredMap[$folder]);
                         $baseData = $registeredMap[$folder] ?? null;
-                        $installedModulesCount = $isRegistered ? baseInstalledModulesCount($folder) : 0;
+                        $hasFolder = isset($baseFolderMap[$folder]) && is_dir(BASES_PATH . '/' . $folder);
+                        $installedModulesCount = ($isRegistered && $hasFolder) ? baseInstalledModulesCount($folder) : 0;
                         $actionsPanelId = 'base-actions-' . preg_replace('/[^a-z0-9\-_]/', '-', strtolower((string)$folder));
+                        $rowClasses = [];
+                        if (!$isRegistered) {
+                            $rowClasses[] = 'c-row-highlight';
+                        }
+                        if ($isRegistered && !$hasFolder) {
+                            $rowClasses[] = 'c-row-missing';
+                        }
                         ?>
 
-                        <tr class="<?= !$isRegistered ? 'c-row-highlight' : '' ?>">
+                        <tr class="<?= htmlspecialchars(implode(' ', $rowClasses)) ?>">
 
                             <td><strong><?= htmlspecialchars($folder) ?></strong></td>
 
@@ -188,9 +224,13 @@ ob_start();
                             </td>
 
                             <td>
-                                <?php if ($isRegistered): ?>
+                                <?php if ($isRegistered && $hasFolder): ?>
                                     <span class="c-badge c-badge--success">
                                         Pronta
+                                    </span>
+                                <?php elseif ($isRegistered): ?>
+                                    <span class="c-badge c-badge--warning">
+                                        Pasta ausente
                                     </span>
                                 <?php else: ?>
                                     <span class="c-badge c-badge--warning">
@@ -212,15 +252,37 @@ ob_start();
                         <tr class="c-base-actions-panel-row" id="<?= htmlspecialchars($actionsPanelId) ?>" hidden>
                             <td colspan="5">
 
-                                <?php if ($isRegistered): ?>
+                                <?php if ($isRegistered && !$hasFolder): ?>
+
+                                    <div class="c-bases-actions c-bases-actions-missing">
+                                        <div class="c-bases-actions-row c-bases-actions-main">
+                                            <span class="c-badge c-badge--warning">
+                                                Arquivos ausentes em /bases/<?= htmlspecialchars($folder) ?>
+                                            </span>
+
+                                            <a class="c-btn-secondary"
+                                               href="/web/admin/bases/projects.php?id=<?= $baseData['id'] ?>">
+                                                Projetos: <?= $baseData['total_projects'] ?>
+                                            </a>
+                                        </div>
+
+                                        <p class="c-bases-missing-note">
+                                            Esta base existe no banco, mas a pasta da base não foi encontrada no servidor.
+                                            Restaure ou recrie a pasta antes de sincronizar, clonar ou instalar módulos.
+                                        </p>
+                                    </div>
+
+                                <?php elseif ($isRegistered): ?>
 
                                     <div class="c-bases-actions">
                                         <div class="c-bases-actions-row c-bases-actions-main">
 
-                                            <a class="c-btn-secondary"
-                                               href="/web/admin/bases/clone.php?base_id=<?= $baseData['id'] ?>">
-                                                Clonar
-                                            </a>
+                                            <?php if ($laboratoryEnabled): ?>
+                                                <a class="c-btn-secondary"
+                                                   href="/web/admin/bases/clone.php?base_id=<?= $baseData['id'] ?>">
+                                                    Clonar
+                                                </a>
+                                            <?php endif; ?>
 
                                             <a class="c-btn-secondary"
                                                href="/web/admin/bases/projects.php?id=<?= $baseData['id'] ?>">
@@ -249,7 +311,18 @@ ob_start();
 
                                         <div class="c-bases-actions-row c-bases-actions-maintenance">
 
-                                        <?php if ($folder !== 'base'): ?>
+                                        <?php if (!$laboratoryEnabled): ?>
+
+                                            <span class="c-badge c-badge--neutral">
+                                                <?= htmlspecialchars($environmentLabel) ?>
+                                            </span>
+
+                                            <span class="c-bases-readonly-note">
+                                                Base oficial. Ajustes estruturais ficam no laboratorio e chegam pelo deploy.
+                                            </span>
+
+                                        <?php elseif ($folder !== 'base'): ?>
+
 
                                             <?php if ((int)$baseData['total_projects'] > 0): ?>
                                                 <form method="post" action="/app/actions/bases/sync_projects.php" class="c-inline-form">
@@ -331,13 +404,20 @@ ob_start();
 
                                     <div class="c-bases-actions">
                                         <div class="c-bases-actions-row c-bases-actions-main">
-                                            <form method="post" action="/app/actions/bases/base_register.php" class="c-inline-form">
-                                                <?= csrf_field() ?>
-                                                <input type="hidden" name="slug" value="<?= htmlspecialchars($folder) ?>">
-                                                <button class="c-btn-register" title="Registra esta pasta como base pronta e desbloqueada no Core">
-                                                    Registrar
-                                                </button>
-                                            </form>
+                                            <?php if ($laboratoryEnabled): ?>
+                                                <form method="post" action="/app/actions/bases/base_register.php" class="c-inline-form">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="slug" value="<?= htmlspecialchars($folder) ?>">
+                                                    <button class="c-btn-register" title="Registra esta pasta como base pronta e desbloqueada no Core">
+                                                        Registrar
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="c-badge c-badge--warning">Nao registrada</span>
+                                                <span class="c-bases-readonly-note">
+                                                    Registre esta base no laboratorio e publique pelo deploy.
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
 
@@ -389,6 +469,10 @@ $content .= '
     margin-left: auto;
 }
 
+.c-row-missing td {
+    background: rgba(245, 158, 11, .045);
+}
+
 .c-bases-actions {
     display: flex;
     flex-direction: column;
@@ -396,6 +480,28 @@ $content .= '
     justify-content: flex-end;
     align-items: stretch;
     min-width: min(100%, 720px);
+}
+
+.c-bases-actions-missing {
+    border: 1px solid rgba(245, 158, 11, .22);
+    background: rgba(245, 158, 11, .06);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.c-bases-missing-note {
+    margin: 4px 0 0;
+    color: var(--muted-color);
+    font-size: 12px;
+    line-height: 1.45;
+    text-align: right;
+}
+
+.c-bases-readonly-note {
+    color: #9fb0c8;
+    font-size: 12px;
+    line-height: 1.35;
+    max-width: 280px;
 }
 
 .c-bases-actions-row {
@@ -593,6 +699,10 @@ $content .= '
     .c-bases-actions-maintenance {
         padding-top: 0;
         border-top: 0;
+    }
+
+    .c-bases-readonly-note {
+        max-width: none;
     }
 
     .c-bases-actions .c-inline-form,

@@ -18,13 +18,15 @@ $redirectTo = str_starts_with($redirectTo, '/web/admin/')
     : '/web/admin/projects/view.php?id=' . $projectId;
 
 if ($projectId <= 0) {
-    die('Projeto inválido.');
+    flash('error', 'Projeto inválido.');
+    redirect('/web/admin/projects');
 }
 
 try {
     $mailId = ProjectProvisioner::sendAccessEmail($pdo, $projectId);
 } catch (Throwable $e) {
-    die($e->getMessage());
+    flash('error', 'Não foi possível enviar o acesso: ' . $e->getMessage());
+    redirect($redirectTo);
 }
 
 flash($mailId ? 'success' : 'error', $mailId ? 'Link de acesso reenviado.' : 'Não foi possível enviar o link de acesso.');

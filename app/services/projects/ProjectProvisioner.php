@@ -72,11 +72,17 @@ class ProjectProvisioner
 
         $coreConfig = require ROOT_PATH . '/env/env.production.php';
         $projectDbConfig = $coreConfig['project_db'];
+        $coreDbConfig = $coreConfig['db'] ?? [];
 
         $dbHost = $projectDbConfig['host'];
         $dbUser = $projectDbConfig['user'];
         $dbPass = $projectDbConfig['pass'];
         $dbCharset = $projectDbConfig['charset'] ?? 'utf8mb4';
+        $legacyRootAdminUser = ($projectDbConfig['admin_user'] ?? '') === 'root' && $dbUser !== 'root';
+        $serverDbHost = $legacyRootAdminUser ? $dbHost : ($projectDbConfig['admin_host'] ?? $dbHost);
+        $serverDbUser = $legacyRootAdminUser ? $dbUser : ($projectDbConfig['admin_user'] ?? $dbUser);
+        $serverDbPass = $legacyRootAdminUser ? $dbPass : ($projectDbConfig['admin_pass'] ?? $dbPass);
+        $serverDbCharset = $legacyRootAdminUser ? $dbCharset : ($projectDbConfig['admin_charset'] ?? $dbCharset);
         $dbName = self::projectDatabaseName($slug);
 
         $serverPdo = null;
@@ -85,9 +91,9 @@ class ProjectProvisioner
 
         try {
             $serverPdo = new PDO(
-                "mysql:host={$dbHost};charset={$dbCharset}",
-                $dbUser,
-                $dbPass,
+                "mysql:host={$serverDbHost};charset={$serverDbCharset}",
+                $serverDbUser,
+                $serverDbPass,
                 [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
 
@@ -109,6 +115,15 @@ class ProjectProvisioner
             $installStep = "criando o banco {$dbName}";
             $serverPdo->exec("CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
             $databaseCreated = true;
+
+            if ($dbUser !== $serverDbUser) {
+                $installStep = "liberando acesso ao banco {$dbName}";
+                $quotedDbUser = $serverPdo->quote((string)$dbUser);
+                $serverPdo->exec("CREATE USER IF NOT EXISTS {$quotedDbUser}@'%' IDENTIFIED BY " . $serverPdo->quote((string)$dbPass));
+                $serverPdo->exec("ALTER USER {$quotedDbUser}@'%' IDENTIFIED BY " . $serverPdo->quote((string)$dbPass));
+                $serverPdo->exec("GRANT ALL PRIVILEGES ON `{$dbName}`.* TO {$quotedDbUser}@'%'");
+                $serverPdo->exec('FLUSH PRIVILEGES');
+            }
 
             $installStep = "conectando ao banco {$dbName}";
             $projectPdo = new PDO(
@@ -240,7 +255,12 @@ class ProjectProvisioner
                 ")->execute(['id' => $leadId]);
             }
 
-            throw new RuntimeException('Erro ao criar projeto na etapa "' . $installStep . '": ' . $e->getMessage(), 0, $e);
+            $message = $e->getMessage();
+            if (str_contains($message, '1044') || str_contains($message, 'Access denied')) {
+                $message .= ' | Verifique se o usuario project_db do env.production.php tem permissao para criar bancos project_*.';
+            }
+
+            throw new RuntimeException('Erro ao criar projeto na etapa "' . $installStep . '": ' . $message, 0, $e);
         }
     }
 
@@ -288,18 +308,28 @@ class ProjectProvisioner
 
         $config = require ROOT_PATH . '/env/env.production.php';
         $baseUrl = rtrim((string)$config['app_url'], '/');
-        $link = $baseUrl . '/' . ltrim((string)$project['path'], '/') . "/web/create-password.php?token=" . $token;
+        if ($baseUrl === '') {
+            throw new RuntimeException('URL do sistema não configurada.');
+        }
+
+        $link = $baseUrl . '/' . ltrim((string)$project['path'], '/') . '/web/create-password.php?token=' . rawurlencode($token);
+        $loginLink = $baseUrl . '/' . ltrim((string)$project['path'], '/') . '/web/admin/login.php';
+        $safeLink = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+        $safeLoginLink = htmlspecialchars($loginLink, ENT_QUOTES, 'UTF-8');
+        $projectName = htmlspecialchars((string)$project['name'], ENT_QUOTES, 'UTF-8');
 
         $mailId = MailService::send(
             $email,
             'Acesso ao seu projeto',
             "
-<h2>Bem-vindo ao seu projeto</h2>
+<h2>Acesso ao seu projeto</h2>
 
-<p>Clique no botão abaixo para criar sua senha:</p>
+<p>Seu projeto <strong>{$projectName}</strong> foi criado.</p>
+
+<p>Clique no botão abaixo para criar sua senha e acessar o painel:</p>
 
 <p>
-<a href='{$link}'
+<a href='{$safeLink}'
 style='
 display:inline-block;
 padding:12px 20px;
@@ -312,11 +342,14 @@ Criar senha
 </a>
 </p>
 
-<p>Ou copie o link abaixo:</p>
-
-<p>{$link}</p>
-
 <p>Este link expira em 24 horas.</p>
+
+<p>Se o botão não abrir, copie este link:</p>
+
+<p>{$safeLink}</p>
+
+<p>Depois de criar sua senha, você também pode acessar por aqui:</p>
+<p>{$safeLoginLink}</p>
 "
         );
 
