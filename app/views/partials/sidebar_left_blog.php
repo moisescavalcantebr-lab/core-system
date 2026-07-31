@@ -1,76 +1,33 @@
 <?php
 $stmt = $pdo->query("
-    SELECT category, sub_category, title, slug
+    SELECT title, slug, category, sub_category
     FROM core_page_contents
     WHERE type='blog'
     AND status='published'
     AND area='public'
-    ORDER BY category, sub_category, created_at DESC
+    ORDER BY created_at DESC, id DESC
+    LIMIT 5
 ");
 
-$posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-/* =========================
-AGRUPAR
-========================= */
-
-$tree = [];
-
-foreach($posts as $p){
-
-    $cat = trim((string)($p['category'] ?? '')) ?: 'Sem categoria';
-    $sub = trim((string)($p['sub_category'] ?? '')) ?: 'Geral';
-
-    $tree[$cat][$sub][] = $p;
-}
-
+$recent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="sidebar-block">
-<h3 class="sidebar-title">Navegação</h3>
+    <h3 class="sidebar-title">Recentes</h3>
 
-<?php foreach($tree as $cat => $subs): ?>
-
-<div class="menu-category">
-
-    <div class="menu-cat-title">
-        <?= htmlspecialchars($cat) ?>
-    </div>
-
-    <div class="menu-sub-list">
-
-        <?php foreach($subs as $sub => $items): ?>
-
-        <div class="menu-sub">
-
-            <div class="menu-sub-title">
-                <?= htmlspecialchars($sub) ?>
-            </div>
-
-<ul class="menu-post-list">
-                <?php foreach($items as $post): ?>
-
-                <li>
-                    <a 
-href="/web/p.php?slug=<?= urlencode($post['slug']) ?>"
-class="<?= $currentSlug === $post['slug'] ? 'active' : '' ?>"
->
-                        <?= htmlspecialchars($post['title']) ?>
-                    </a>
-                </li>
-
-                <?php endforeach; ?>
-
-            </ul>
-
-        </div>
-
+    <ul class="sidebar-list">
+        <?php foreach($recent as $post): ?>
+            <li>
+                <a href="/web/p.php?slug=<?= urlencode((string)$post['slug']) ?>" class="<?= $currentSlug === $post['slug'] ? 'active' : '' ?>">
+                    <?= htmlspecialchars((string)$post['title']) ?>
+                </a>
+            </li>
         <?php endforeach; ?>
-
-    </div>
-
+    </ul>
 </div>
 
-<?php endforeach; ?>
-
+<div class="sidebar-block sidebar-ad-slot">
+    <span>Publicidade</span>
+    <strong>Espaco reservado</strong>
+    <p>Pronto para inserir o codigo do AdSense quando a monetizacao estiver ativa.</p>
 </div>

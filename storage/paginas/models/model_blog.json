@@ -1,0 +1,39 @@
+{
+  "show_title": false,
+  "blocks": [
+    {
+      "type": "blog_header",
+      "enabled": true,
+      "title": "Titulo claro do artigo",
+      "subtitle": "Uma introducao curta que mostra o problema e prepara o leitor para o conteudo.",
+      "author": "Meu Projeto Web",
+      "date": "31/07/2026"
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "O ponto principal do conteudo",
+      "content": "<p>Comece com um paragrafo direto, explicando o contexto e por que este assunto importa para quem esta organizando um projeto.</p><p>Use exemplos simples e mantenha o texto facil de adaptar para qualquer base.</p>",
+      "media_type": "image",
+      "image": "",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Como aplicar na pratica",
+      "content": "<p>Mostre os passos ou criterios que ajudam o leitor a tomar uma decisao. Esta parte pode receber uma imagem, print ou exemplo real.</p>",
+      "media_type": "image",
+      "image": "",
+      "link": ""
+    },
+    {
+      "type": "blog_cta",
+      "enabled": true,
+      "text": "Quer transformar isso em um projeto?",
+      "button_text": "Ver bases prontas",
+      "link": "/web/bases.php",
+      "align": "center"
+    }
+  ]
+}

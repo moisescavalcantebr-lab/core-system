@@ -13,6 +13,30 @@ $extraCss = '
 $extraJs = '<script src="/web/assets/js/public.js?v=' . $publicJsVersion . '"></script>';
 
 $currentSlug = (string)($page['slug'] ?? '');
+$relatedPosts = [];
+
+try {
+    $relatedStmt = $pdo->prepare("
+        SELECT title, slug, category, sub_category
+        FROM core_page_contents
+        WHERE type = 'blog'
+          AND status = 'published'
+          AND area = 'public'
+          AND slug <> :slug
+        ORDER BY
+          CASE WHEN category = :category THEN 0 ELSE 1 END,
+          created_at DESC,
+          id DESC
+        LIMIT 3
+    ");
+    $relatedStmt->execute([
+        'slug' => $currentSlug,
+        'category' => (string)($page['category'] ?? ''),
+    ]);
+    $relatedPosts = $relatedStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $relatedPosts = [];
+}
 
 ob_start();
 ?>
@@ -36,6 +60,29 @@ ob_start();
         <article class="c-blog">
 
             <?= $content ?>
+
+            <?php if ($relatedPosts): ?>
+                <section class="c-blog-related" aria-label="Outros artigos">
+                    <div class="c-blog-related-head">
+                        <span>Continue lendo</span>
+                        <h2>Outros artigos</h2>
+                    </div>
+
+                    <div class="c-blog-related-grid">
+                        <?php foreach ($relatedPosts as $post): ?>
+                            <a class="c-blog-related-card" href="/web/p.php?slug=<?= urlencode((string)$post['slug']) ?>">
+                                <small>
+                                    <?= htmlspecialchars(trim((string)($post['category'] ?? '')) ?: 'Blog') ?>
+                                    <?php if (!empty($post['sub_category'])): ?>
+                                        / <?= htmlspecialchars((string)$post['sub_category']) ?>
+                                    <?php endif; ?>
+                                </small>
+                                <strong><?= htmlspecialchars((string)$post['title']) ?></strong>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+            <?php endif; ?>
 
         </article>
 
