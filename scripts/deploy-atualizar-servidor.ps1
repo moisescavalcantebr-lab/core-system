@@ -268,8 +268,6 @@ $RequiredDeployFiles = @(
     "modules\financeiro\web\admin\financeiro\wallet_requests.php",
     "modules\financeiro\web\admin\financeiro\wallet_request_store.php",
     "modules\financeiro\web\admin\financeiro\wallet_request_review.php",
-    "modules\planos\web\admin\planos\checkout.php",
-    "modules\planos\web\admin\planos\request.php",
     "bases\base\web\admin\dashboard.php",
     "bases\base\web\admin\upgrade\index.php",
     "bases\base\web\admin\upgrade\checkout.php",
@@ -541,18 +539,6 @@ if ! docker exec app_php grep -n Saldo /var/www/html/modules/financeiro/web/admi
   docker exec app_php ls -l /var/www/html/modules/financeiro/web/admin/financeiro/meu_saldo.php
   exit 1
 fi
-echo "[check] host planos checkout"
-if ! grep -n Confirmar $RemotePath/modules/planos/web/admin/planos/checkout.php; then
-  echo "ERRO: modulo planos no host nao contem checkout por saldo"
-  ls -l $RemotePath/modules/planos/web/admin/planos/checkout.php
-  exit 1
-fi
-echo "[check] container planos checkout"
-if ! docker exec app_php grep -n Confirmar /var/www/html/modules/planos/web/admin/planos/checkout.php; then
-  echo "ERRO: modulo planos no container nao contem checkout por saldo"
-  docker exec app_php ls -l /var/www/html/modules/planos/web/admin/planos/checkout.php
-  exit 1
-fi
 echo "[check] php lint container"
 for file in \
   /var/www/html/app/views/layout_admin.php \
@@ -583,6 +569,6 @@ if (!$Applied) {
 }
 
 Write-Host "[4/4] Atualizacao concluida." -ForegroundColor Green
-Write-Host "Verificacao: core e modulos financeiro/planos atualizados no host e no container." -ForegroundColor Green
+Write-Host "Verificacao: core e modulos ativos atualizados no host e no container." -ForegroundColor Green
 Write-Host "Importante: projetos existentes nao sao enviados no pacote. No Core, use Sync Tudo na base ou Sincronizar Modulos no projeto para atualizar /projects." -ForegroundColor Yellow
 Write-Host "Site: https://meuprojetoweb.com"

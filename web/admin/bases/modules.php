@@ -75,6 +75,10 @@ if (is_dir($rootModulesPath)) {
             continue;
         }
 
+        if ($moduleSlug === 'planos' || ($manifest['status'] ?? '') === 'legacy') {
+            continue;
+        }
+
         $config = $moduleConfigs[$moduleSlug] ?? [];
         $settings = [];
 

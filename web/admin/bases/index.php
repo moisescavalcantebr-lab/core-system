@@ -194,6 +194,7 @@ ob_start();
                         $isRegistered = isset($registeredMap[$folder]);
                         $baseData = $registeredMap[$folder] ?? null;
                         $hasFolder = isset($baseFolderMap[$folder]) && is_dir(BASES_PATH . '/' . $folder);
+                        $isProtected = $isRegistered && (int)($baseData['is_protected'] ?? 0) === 1;
                         $installedModulesCount = ($isRegistered && $hasFolder) ? baseInstalledModulesCount($folder) : 0;
                         $actionsPanelId = 'base-actions-' . preg_replace('/[^a-z0-9\-_]/', '-', strtolower((string)$folder));
                         $rowClasses = [];
@@ -228,6 +229,10 @@ ob_start();
                                     <span class="c-badge c-badge--success">
                                         Pronta
                                     </span>
+                                <?php elseif ($isProtected): ?>
+                                    <span class="c-badge c-badge--warning">
+                                        Protegida no Core
+                                    </span>
                                 <?php elseif ($isRegistered): ?>
                                     <span class="c-badge c-badge--warning">
                                         Pasta ausente
@@ -260,6 +265,12 @@ ob_start();
                                                 Arquivos ausentes em /bases/<?= htmlspecialchars($folder) ?>
                                             </span>
 
+                                            <?php if ($isProtected): ?>
+                                                <span class="c-badge c-badge--warning">
+                                                    Exclusao bloqueada
+                                                </span>
+                                            <?php endif; ?>
+
                                             <a class="c-btn-secondary"
                                                href="/web/admin/bases/projects.php?id=<?= $baseData['id'] ?>">
                                                 Projetos: <?= $baseData['total_projects'] ?>
@@ -267,8 +278,11 @@ ob_start();
                                         </div>
 
                                         <p class="c-bases-missing-note">
-                                            Esta base existe no banco, mas a pasta da base não foi encontrada no servidor.
-                                            Restaure ou recrie a pasta antes de sincronizar, clonar ou instalar módulos.
+                                            <?php if ($isProtected): ?>
+                                                Esta base esta protegida e faz parte das bases oficiais do Core. Sincronize a pasta pelo Git/servidor antes de clonar, instalar modulos ou publicar novas alteracoes.
+                                            <?php else: ?>
+                                                Esta base existe no banco, mas a pasta da base nao foi encontrada no servidor. Restaure ou recrie a pasta antes de sincronizar, clonar ou instalar modulos.
+                                            <?php endif; ?>
                                         </p>
                                     </div>
 

@@ -24,22 +24,11 @@ if (!in_array($kindFilter, ['main', 'addon', 'all'], true)) {
     $kindFilter = 'main';
 }
 
-if (is_dir(BASES_PATH)) {
-    foreach (scandir(BASES_PATH) as $baseSlug) {
-        if ($baseSlug === '.' || $baseSlug === '..' || $baseSlug === 'base') {
-            continue;
-        }
-
-        if (is_dir(BASES_PATH . '/' . $baseSlug)) {
-            $totalBases++;
-        }
-    }
-}
-
 $baseStmt = $pdo->query("SELECT slug, name FROM bases WHERE slug <> 'base' ORDER BY name ASC");
 foreach ($baseStmt->fetchAll(PDO::FETCH_ASSOC) as $baseRow) {
     $baseNames[(string)$baseRow['slug']] = (string)$baseRow['name'];
 }
+$totalBases = count($baseNames);
 
 function moduleRecommendedLabel(array $recommendedBases, array $baseNames): string
 {
@@ -73,6 +62,10 @@ if (is_dir($modulesPath)) {
         $manifest = json_decode((string)file_get_contents($manifestPath), true);
 
         if (!is_array($manifest)) {
+            continue;
+        }
+
+        if ($moduleSlug === 'planos' || ($manifest['status'] ?? '') === 'legacy') {
             continue;
         }
 
