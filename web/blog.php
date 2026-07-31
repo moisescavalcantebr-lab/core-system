@@ -41,6 +41,12 @@ $logo = trim((string)($coreSettings['app_logo'] ?? ''));
 $logoUrl = $logo !== '' ? '/web/assets/uploads/' . rawurlencode($logo) : '';
 $favicon = trim((string)($coreSettings['app_favicon'] ?? ''));
 $faviconUrl = $favicon !== '' ? '/web/assets/uploads/' . rawurlencode($favicon) : '';
+$heroTitle = $categoryFilter !== ''
+    ? 'Conteudos sobre ' . $categoryFilter . '.'
+    : 'Veja nossos conteudos.';
+$heroSubtitle = $categoryFilter !== ''
+    ? 'Artigos selecionados sobre ' . $categoryFilter . ', com ideias, referencias e caminhos praticos para explorar melhor esse tema.'
+    : 'Artigos sobre diversos assuntos como economia, esporte, lazer, gestao digital, bases prontas e presenca online.';
 
 function blog_index_post_data(array $post): array
 {
@@ -182,10 +188,10 @@ function blog_index_meta(array $post): string
         .c-store-nav a:hover { color: var(--text); }
 
         .c-blog-index-hero {
-            min-height: 360px;
+            min-height: 300px;
             display: grid;
             align-content: center;
-            padding: 48px 0 30px;
+            padding: 34px 0 24px;
         }
 
         .c-blog-index-hero span {
@@ -199,18 +205,18 @@ function blog_index_meta(array $post): string
         }
 
         .c-blog-index-hero h1 {
-            max-width: 820px;
+            max-width: 720px;
             margin: 0;
-            font-size: clamp(42px, 7vw, 76px);
-            line-height: .96;
+            font-size: clamp(36px, 5.4vw, 58px);
+            line-height: 1;
             letter-spacing: 0;
         }
 
         .c-blog-index-hero p {
-            max-width: 620px;
-            margin: 20px 0 0;
+            max-width: 680px;
+            margin: 18px 0 0;
             color: var(--muted);
-            font-size: 18px;
+            font-size: 17px;
             line-height: 1.55;
         }
 
@@ -373,8 +379,8 @@ function blog_index_meta(array $post): string
     <main class="c-store-main">
         <section class="c-blog-index-hero">
             <span>Blog</span>
-            <h1>Conteudos do Meu Projeto Web.</h1>
-            <p>Artigos sobre bases, paginas, gestao digital e ideias praticas para publicar, organizar e evoluir presencas online.</p>
+            <h1><?= htmlspecialchars($heroTitle) ?></h1>
+            <p><?= htmlspecialchars($heroSubtitle) ?></p>
         </section>
 
         <?php if (!$posts): ?>
