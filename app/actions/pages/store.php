@@ -48,8 +48,10 @@ INPUT
 $title       = trim($_POST['title'] ?? '');
 $slug        = trim($_POST['slug'] ?? '');
 $modelSlug   = trim($_POST['model_slug'] ?? '');
-$category    = trim($_POST['category'] ?? '') ?: null;
-$subCategory = trim($_POST['sub_category'] ?? '') ?: null;
+$category    = null;
+$subCategory = null;
+$categoryId = (int)($_POST['category_id'] ?? 0);
+$subCategoryId = (int)($_POST['sub_category_id'] ?? 0);
 
 if (!$title || !$slug) {
     flash('error', 'Título e slug são obrigatórios.');
@@ -77,7 +79,29 @@ TIPO
 
 $type = ($modelSlug === 'model_blog') ? 'blog' : 'page';
 
-if ($type !== 'blog') {
+if ($type === 'blog') {
+    if ($categoryId <= 0) {
+        flash('error', 'Selecione uma categoria do blog.');
+        header('Location: /web/admin/pages/create.php');
+        exit;
+    }
+
+    $stmt = $pdo->prepare("SELECT name FROM blog_categories WHERE id = ? AND status = 1 LIMIT 1");
+    $stmt->execute([$categoryId]);
+    $category = trim((string)$stmt->fetchColumn());
+
+    if ($category === '') {
+        flash('error', 'Categoria do blog invalida.');
+        header('Location: /web/admin/pages/create.php');
+        exit;
+    }
+
+    if ($subCategoryId > 0) {
+        $stmt = $pdo->prepare("SELECT name FROM blog_subcategories WHERE id = ? AND category_id = ? AND status = 1 LIMIT 1");
+        $stmt->execute([$subCategoryId, $categoryId]);
+        $subCategory = trim((string)$stmt->fetchColumn()) ?: null;
+    }
+} else {
     $category = $modelSlug === 'model_page' ? ($category ?: 'Produtos') : null;
     $subCategory = null;
 }

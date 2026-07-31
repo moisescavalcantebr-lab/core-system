@@ -78,13 +78,27 @@ usort($models, fn(array $a, array $b): int => strcmp((string)$a['title'], (strin
 CATEGORIAS
 ========================= */
 
-$categories = $pdo->query("
-SELECT DISTINCT category 
-FROM core_page_contents
-WHERE category IS NOT NULL 
-AND category != ''
-ORDER BY category
-")->fetchAll(PDO::FETCH_COLUMN);
+$blogCategories = $pdo->query("
+    SELECT id, name
+    FROM blog_categories
+    WHERE status = 1
+    ORDER BY name ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$blogSubCategoriesByCategory = [];
+$stmt = $pdo->query("
+    SELECT id, category_id, name
+    FROM blog_subcategories
+    WHERE status = 1
+    ORDER BY name ASC
+");
+
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $blogSubCategoriesByCategory[(int)$row['category_id']][] = [
+        'id' => (int)$row['id'],
+        'name' => (string)$row['name'],
+    ];
+}
 
 ob_start();
 ?>
@@ -144,12 +158,25 @@ ob_start();
 
                     <div class="c-form-group c-blog-taxonomy-field" hidden>
                         <label>Categoria</label>
-                        <input name="category" class="c-input" placeholder="Ex: Financeiro">
+                        <select name="category_id" class="c-input" id="blogCategorySelect">
+                            <option value="">Selecione</option>
+                            <?php foreach ($blogCategories as $category): ?>
+                                <option value="<?= (int)$category['id'] ?>"><?= htmlspecialchars((string)$category['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
 
                     <div class="c-form-group c-blog-taxonomy-field" hidden>
                         <label>Subcategoria</label>
-                        <input name="sub_category" class="c-input" placeholder="Ex: Gestão">
+                        <select name="sub_category_id" class="c-input" id="blogSubCategorySelect">
+                            <option value="">Sem subcategoria</option>
+                        </select>
+                    </div>
+
+                    <div class="c-form-group c-blog-taxonomy-field" hidden>
+                        <a class="c-btn-secondary" href="/web/admin/pages/taxonomy.php">
+                            Gerenciar categorias
+                        </a>
                     </div>
 
                     <p class="c-text-muted c-page-category-hint" hidden>
@@ -196,6 +223,23 @@ document.getElementById('slugInput').addEventListener('input', function(){
 const pageModelSelect = document.getElementById('pageModelSelect');
 const blogTaxonomyFields = document.querySelectorAll('.c-blog-taxonomy-field');
 const pageCategoryHint = document.querySelector('.c-page-category-hint');
+const blogSubCategories = <?= json_encode($blogSubCategoriesByCategory, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+const blogCategorySelect = document.getElementById('blogCategorySelect');
+const blogSubCategorySelect = document.getElementById('blogSubCategorySelect');
+
+function refreshBlogSubCategories() {
+    if (!blogCategorySelect || !blogSubCategorySelect) return;
+
+    const subs = blogSubCategories[blogCategorySelect.value] || [];
+    blogSubCategorySelect.innerHTML = '<option value="">Sem subcategoria</option>';
+
+    subs.forEach(function(sub) {
+        const option = document.createElement('option');
+        option.value = sub.id;
+        option.textContent = sub.name;
+        blogSubCategorySelect.appendChild(option);
+    });
+}
 
 function toggleBlogTaxonomyFields() {
     const isBlog = pageModelSelect && pageModelSelect.value === 'model_blog';
@@ -205,7 +249,7 @@ function toggleBlogTaxonomyFields() {
         field.hidden = !isBlog;
 
         if (!isBlog) {
-            const input = field.querySelector('input');
+            const input = field.querySelector('input, select');
             if (input) input.value = '';
         }
     });
@@ -218,6 +262,11 @@ function toggleBlogTaxonomyFields() {
 if (pageModelSelect) {
     pageModelSelect.addEventListener('change', toggleBlogTaxonomyFields);
     toggleBlogTaxonomyFields();
+}
+
+if (blogCategorySelect) {
+    blogCategorySelect.addEventListener('change', refreshBlogSubCategories);
+    refreshBlogSubCategories();
 }
 </script>
 

@@ -13,8 +13,8 @@ requireAdmin();
 global $pdo;
 
 $id = (int)($_POST['id'] ?? 0);
-$category = trim((string)($_POST['category'] ?? ''));
-$subCategory = trim((string)($_POST['sub_category'] ?? ''));
+$categoryId = (int)($_POST['category_id'] ?? 0);
+$subCategoryId = (int)($_POST['sub_category_id'] ?? 0);
 
 if (!$id) {
     flash('error', 'Pagina invalida.');
@@ -44,50 +44,28 @@ if (!$page || ($page['type'] ?? '') !== 'blog') {
     exit;
 }
 
-$categories = $pdo->query("
-    SELECT DISTINCT category
-    FROM core_page_contents
-    WHERE area='public'
-      AND type='blog'
-      AND category IS NOT NULL
-      AND category != ''
-    ORDER BY category
-")->fetchAll(PDO::FETCH_COLUMN);
+$stmt = $pdo->prepare("SELECT name FROM blog_categories WHERE id = ? AND status = 1 LIMIT 1");
+$stmt->execute([$categoryId]);
+$category = trim((string)$stmt->fetchColumn());
 
-$currentCategory = trim((string)($page['category'] ?? ''));
-if ($currentCategory !== '' && !in_array($currentCategory, $categories, true)) {
-    $categories[] = $currentCategory;
-}
-
-if ($category === '' || !in_array($category, $categories, true)) {
+if ($category === '') {
     flash('error', 'Selecione uma categoria existente.');
     header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$id}");
     exit;
 }
 
-$stmt = $pdo->prepare("
-    SELECT DISTINCT sub_category
-    FROM core_page_contents
-    WHERE area='public'
-      AND type='blog'
-      AND category = :category
-      AND sub_category IS NOT NULL
-      AND sub_category != ''
-    ORDER BY sub_category
-");
+$subCategory = '';
 
-$stmt->execute(['category' => $category]);
-$subCategories = $stmt->fetchAll(PDO::FETCH_COLUMN);
+if ($subCategoryId > 0) {
+    $stmt = $pdo->prepare("SELECT name FROM blog_subcategories WHERE id = ? AND category_id = ? AND status = 1 LIMIT 1");
+    $stmt->execute([$subCategoryId, $categoryId]);
+    $subCategory = trim((string)$stmt->fetchColumn());
 
-$currentSubCategory = trim((string)($page['sub_category'] ?? ''));
-if ($category === $currentCategory && $currentSubCategory !== '' && !in_array($currentSubCategory, $subCategories, true)) {
-    $subCategories[] = $currentSubCategory;
-}
-
-if ($subCategory !== '' && !in_array($subCategory, $subCategories, true)) {
-    flash('error', 'Selecione uma subcategoria existente para esta categoria.');
-    header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$id}");
-    exit;
+    if ($subCategory === '') {
+        flash('error', 'Selecione uma subcategoria existente para esta categoria.');
+        header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$id}");
+        exit;
+    }
 }
 
 $stmt = $pdo->prepare("

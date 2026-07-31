@@ -84,49 +84,67 @@ $blogSubCategoriesByCategory = [];
 
 if ($type === 'blog') {
     $blogCategories = $pdo->query("
-        SELECT DISTINCT category
-        FROM core_page_contents
-        WHERE area='public'
-          AND type='blog'
-          AND category IS NOT NULL
-          AND category != ''
-        ORDER BY category
-    ")->fetchAll(PDO::FETCH_COLUMN);
+        SELECT id, name
+        FROM blog_categories
+        WHERE status = 1
+        ORDER BY name ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
 
     $currentCategory = trim((string)($pageData['category'] ?? ''));
-    if ($currentCategory !== '' && !in_array($currentCategory, $blogCategories, true)) {
-        $blogCategories[] = $currentCategory;
+    if ($currentCategory !== '') {
+        $hasCurrentCategory = false;
+        foreach ($blogCategories as $categoryRow) {
+            if ((string)$categoryRow['name'] === $currentCategory) {
+                $hasCurrentCategory = true;
+                break;
+            }
+        }
+
+        if (!$hasCurrentCategory) {
+            $blogCategories[] = ['id' => 0, 'name' => $currentCategory];
+        }
     }
 
     $stmt = $pdo->query("
-        SELECT DISTINCT category, sub_category
-        FROM core_page_contents
-        WHERE area='public'
-          AND type='blog'
-          AND category IS NOT NULL
-          AND category != ''
-          AND sub_category IS NOT NULL
-          AND sub_category != ''
-        ORDER BY category, sub_category
+        SELECT s.id, s.category_id, s.name
+        FROM blog_subcategories s
+        INNER JOIN blog_categories c ON c.id = s.category_id
+        WHERE s.status = 1
+          AND c.status = 1
+        ORDER BY c.name, s.name
     ");
 
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $cat = trim((string)($row['category'] ?? ''));
-        $sub = trim((string)($row['sub_category'] ?? ''));
-
-        if ($cat === '' || $sub === '') {
-            continue;
-        }
-
-        $blogSubCategoriesByCategory[$cat][] = $sub;
+        $blogSubCategoriesByCategory[(int)$row['category_id']][] = [
+            'id' => (int)$row['id'],
+            'name' => (string)$row['name'],
+        ];
     }
 
     $currentSubCategory = trim((string)($pageData['sub_category'] ?? ''));
     if ($currentCategory !== '' && $currentSubCategory !== '') {
-        $blogSubCategoriesByCategory[$currentCategory] ??= [];
+        $currentCategoryId = 0;
+        foreach ($blogCategories as $categoryRow) {
+            if ((string)$categoryRow['name'] === $currentCategory) {
+                $currentCategoryId = (int)$categoryRow['id'];
+                break;
+            }
+        }
 
-        if (!in_array($currentSubCategory, $blogSubCategoriesByCategory[$currentCategory], true)) {
-            $blogSubCategoriesByCategory[$currentCategory][] = $currentSubCategory;
+        if ($currentCategoryId > 0) {
+            $blogSubCategoriesByCategory[$currentCategoryId] ??= [];
+            $hasCurrentSubCategory = false;
+
+            foreach ($blogSubCategoriesByCategory[$currentCategoryId] as $subRow) {
+                if ((string)$subRow['name'] === $currentSubCategory) {
+                    $hasCurrentSubCategory = true;
+                    break;
+                }
+            }
+
+            if (!$hasCurrentSubCategory) {
+                $blogSubCategoriesByCategory[$currentCategoryId][] = ['id' => 0, 'name' => $currentSubCategory];
+            }
         }
     }
 }
@@ -194,7 +212,7 @@ ob_start();
         <?php if ($type === 'blog'): ?>
             <div class="c-card c-blog-taxonomy-config">
                 <h3>Categoria do blog</h3>
-                <p class="c-text-muted">Use apenas categorias e subcategorias ja existentes em outros posts.</p>
+                <p class="c-text-muted">Selecione uma categoria ja cadastrada. Crie ou reorganize categorias na tela propria.</p>
 
                 <?php if (!$blogCategories): ?>
                     <p>Nenhuma categoria disponivel.</p>
@@ -204,10 +222,10 @@ ob_start();
 
                         <div class="c-form-group">
                             <label>Categoria</label>
-                            <select class="c-input" name="category" id="blogCategorySelect" required>
+                            <select class="c-input" name="category_id" id="blogCategorySelect" required>
                                 <?php foreach ($blogCategories as $category): ?>
-                                    <option value="<?= htmlspecialchars((string)$category) ?>" <?= (string)$pageData['category'] === (string)$category ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars((string)$category) ?>
+                                    <option value="<?= (int)$category['id'] ?>" <?= (string)$pageData['category'] === (string)$category['name'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars((string)$category['name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -215,12 +233,13 @@ ob_start();
 
                         <div class="c-form-group">
                             <label>Subcategoria</label>
-                            <select class="c-input" name="sub_category" id="blogSubCategorySelect">
+                            <select class="c-input" name="sub_category_id" id="blogSubCategorySelect">
                                 <option value="">Sem subcategoria</option>
                             </select>
                         </div>
 
                         <button class="c-btn-secondary" type="submit">Salvar categoria</button>
+                        <a class="c-btn-secondary" href="/web/admin/pages/taxonomy.php">Gerenciar</a>
                     </form>
                 <?php endif; ?>
             </div>
@@ -380,9 +399,9 @@ function refreshBlogSubCategories(preserveCurrent = true) {
 
     subs.forEach(function(sub) {
         const option = document.createElement('option');
-        option.value = sub;
-        option.textContent = sub;
-        option.selected = sub === previous;
+        option.value = sub.id;
+        option.textContent = sub.name;
+        option.selected = sub.name === previous || String(sub.id) === String(previous);
         blogSubCategorySelect.appendChild(option);
     });
 }

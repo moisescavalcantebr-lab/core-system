@@ -469,6 +469,102 @@ try {
         )
     ");
 
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS blog_categories (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(100) NOT NULL,
+            slug VARCHAR(120) NOT NULL,
+            status TINYINT DEFAULT 1,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_blog_category_slug (slug)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS blog_subcategories (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            category_id INT UNSIGNED NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            slug VARCHAR(120) NOT NULL,
+            status TINYINT DEFAULT 1,
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uniq_blog_subcategory_slug (category_id, slug),
+            KEY idx_blog_subcategory_category (category_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $existingBlogCategories = $pdo->query("SELECT COUNT(*) FROM blog_categories")->fetchColumn();
+    if ((int)$existingBlogCategories === 0) {
+        $categorySeed = $pdo->query("
+            SELECT DISTINCT category
+            FROM core_page_contents
+            WHERE type = 'blog'
+              AND area = 'public'
+              AND category IS NOT NULL
+              AND category != ''
+            ORDER BY category
+        ")->fetchAll(PDO::FETCH_COLUMN);
+
+        $insertCategory = $pdo->prepare("
+            INSERT IGNORE INTO blog_categories (name, slug, status)
+            VALUES (:name, :slug, 1)
+        ");
+
+        foreach ($categorySeed as $categoryName) {
+            $name = trim((string)$categoryName);
+            $slug = trim((string)preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-');
+            if ($name !== '' && $slug !== '') {
+                $insertCategory->execute(['name' => $name, 'slug' => $slug]);
+            }
+        }
+    }
+
+    $existingBlogSubcategories = $pdo->query("SELECT COUNT(*) FROM blog_subcategories")->fetchColumn();
+    if ((int)$existingBlogSubcategories === 0) {
+        $subSeed = $pdo->query("
+            SELECT DISTINCT category, sub_category
+            FROM core_page_contents
+            WHERE type = 'blog'
+              AND area = 'public'
+              AND category IS NOT NULL
+              AND category != ''
+              AND sub_category IS NOT NULL
+              AND sub_category != ''
+            ORDER BY category, sub_category
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
+        $findCategory = $pdo->prepare("SELECT id FROM blog_categories WHERE name = ? LIMIT 1");
+        $insertSubcategory = $pdo->prepare("
+            INSERT IGNORE INTO blog_subcategories (category_id, name, slug, status)
+            VALUES (:category_id, :name, :slug, 1)
+        ");
+
+        foreach ($subSeed as $row) {
+            $categoryName = trim((string)($row['category'] ?? ''));
+            $subName = trim((string)($row['sub_category'] ?? ''));
+            $subSlug = trim((string)preg_replace('/[^a-z0-9]+/', '-', strtolower($subName)), '-');
+
+            if ($categoryName === '' || $subName === '' || $subSlug === '') {
+                continue;
+            }
+
+            $findCategory->execute([$categoryName]);
+            $categoryId = (int)$findCategory->fetchColumn();
+
+            if ($categoryId > 0) {
+                $insertSubcategory->execute([
+                    'category_id' => $categoryId,
+                    'name' => $subName,
+                    'slug' => $subSlug,
+                ]);
+            }
+        }
+    }
+
     base_register_manifests($pdo);
 } catch (Throwable $e) {
     // Tabelas de planos podem não existir durante a primeira instalação.
