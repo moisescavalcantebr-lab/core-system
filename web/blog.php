@@ -3,15 +3,29 @@ declare(strict_types=1);
 
 require __DIR__ . '/../app/bootstrap/bootstrap.php';
 
-$stmt = $pdo->query("
+$categoryFilter = trim((string)($_GET['category'] ?? ''));
+
+$sql = "
     SELECT id, title, slug, category, sub_category, content_path, created_at
     FROM core_page_contents
     WHERE area='public'
       AND type='blog'
       AND status='published'
-    ORDER BY created_at DESC, id DESC
-");
+";
 
+$params = [];
+
+if ($categoryFilter !== '') {
+    $sql .= " AND category = :category";
+    $params['category'] = $categoryFilter;
+}
+
+$sql .= "
+    ORDER BY created_at DESC, id DESC
+";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
 $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $featuredPosts = array_slice($posts, 0, 2);
 $morePosts = array_slice($posts, 2);

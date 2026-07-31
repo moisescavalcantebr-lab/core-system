@@ -13,6 +13,7 @@ $extraCss = '
 $extraJs = '<script src="/web/assets/js/public.js?v=' . $publicJsVersion . '"></script>';
 
 $currentSlug = (string)($page['slug'] ?? '');
+$appName = (string)($coreSettings['app_name'] ?? 'Meu Projeto Web');
 $relatedPosts = [];
 
 try {
@@ -44,6 +45,7 @@ ob_start();
 <main class="c-site">
 
     <?php require APP_PATH . '/views/partials/header_blog.php'; ?>
+    <?php require APP_PATH . '/views/partials/blog_category_nav.php'; ?>
 
     <?php if (!empty($previewMode)): ?>
         <div class="c-preview-banner">
@@ -91,6 +93,11 @@ ob_start();
         </aside>
 
     </div>
+
+    <footer class="c-blog-footer">
+        <span>© <?= date('Y') ?> <?= htmlspecialchars($appName) ?></span>
+        <a href="/web/blog.php">Blog</a>
+    </footer>
 
 </main>
 
