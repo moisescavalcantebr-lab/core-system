@@ -191,6 +191,11 @@ try {
         $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_status TINYINT DEFAULT 0 AFTER showcase_order");
     }
 
+    if (!in_array('base_stage', $baseColumns, true)) {
+        $pdo->exec("ALTER TABLE bases ADD COLUMN base_stage ENUM('laboratory','published','legacy','archived') NOT NULL DEFAULT 'laboratory' AFTER status");
+        $pdo->exec("UPDATE bases SET base_stage = 'published' WHERE is_protected = 1");
+    }
+
     $pdo->exec("ALTER TABLE bases ALTER COLUMN showcase_status SET DEFAULT 0");
 } catch (Throwable $e) {
     // Bases pode não existir durante uma instalação inicial do core.

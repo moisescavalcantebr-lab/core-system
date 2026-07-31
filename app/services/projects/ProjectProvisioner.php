@@ -43,6 +43,10 @@ class ProjectProvisioner
             throw new RuntimeException('Base inválida.');
         }
 
+        if (coreIsProduction() && !base_is_published($base)) {
+            throw new RuntimeException('Base indisponivel para criacao de projeto no servidor.');
+        }
+
         $plan = self::freePlanForBase($pdo, $baseId);
 
         if (!$plan) {
@@ -65,6 +69,10 @@ class ProjectProvisioner
         $relativePath = '/projects/' . $slug;
         $physicalPath = PROJECTS_PATH . '/' . $slug;
         $sourcePath = BASES_PATH . '/' . $base['slug'];
+
+        if (!is_dir($sourcePath)) {
+            throw new RuntimeException('Pasta da base nao encontrada.');
+        }
 
         if (is_dir($physicalPath)) {
             throw new RuntimeException('A pasta do projeto já existe.');

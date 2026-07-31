@@ -118,7 +118,7 @@ if ($RemotePath -eq "") {
 }
 
 if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
-    Write-Host "[guard] Validando bases protegidas antes do deploy..." -ForegroundColor Cyan
+    Write-Host "[guard] Validando bases publicadas antes do deploy..." -ForegroundColor Cyan
     $ProtectedBasesGuard = Join-Path $ScriptDir "servidor-validar-bases-protegidas.ps1"
     if (Test-Path $ProtectedBasesGuard) {
         $GuardArgs = @(
@@ -140,14 +140,14 @@ if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
         & powershell @GuardArgs
         if ($LASTEXITCODE -ne 0) {
             if ($LASTEXITCODE -eq 2) {
-                throw "Validacao de bases protegidas falhou por conexao/autenticacao SSH. Configure a chave SSH para ${User}@${Server} e rode o deploy novamente."
+                throw "Validacao de bases publicadas falhou por conexao/autenticacao SSH. Configure a chave SSH para ${User}@${Server} e rode o deploy novamente."
             }
 
-            throw "Validacao de bases protegidas falhou. Sincronize as bases protegidas do servidor com o VS Code/GitHub antes do deploy. Use -SkipProtectedBasesGuard apenas para primeira instalacao ou emergencia."
+            throw "Validacao de bases publicadas falhou. Sincronize as bases publicadas do servidor com o VS Code/GitHub antes do deploy. Use -SkipProtectedBasesGuard apenas para primeira instalacao ou emergencia."
         }
     }
 } elseif (!$PackageOnly -and $SkipProtectedBasesGuard) {
-    Write-Host "[guard] Validacao de bases protegidas ignorada por parametro." -ForegroundColor Yellow
+    Write-Host "[guard] Validacao de bases publicadas ignorada por parametro." -ForegroundColor Yellow
 }
 
 $DeployDir = Join-Path $Workspace "_deploy"
@@ -199,6 +199,48 @@ foreach ($File in $IncludeFiles) {
     $Source = Join-Path $Workspace $File
     if (Test-Path $Source) {
         Copy-Item -LiteralPath $Source -Destination (Join-Path $Stage $File) -Force
+    }
+}
+
+Write-Host "[package] Filtrando bases publicadas..." -ForegroundColor Cyan
+$StageBasesPath = Join-Path $Stage "bases"
+if (Test-Path $StageBasesPath) {
+    Get-ChildItem -LiteralPath $StageBasesPath -Directory | ForEach-Object {
+        $BaseDir = $_
+        $ManifestPath = Join-Path $BaseDir.FullName "base.json"
+        $KeepBase = $BaseDir.Name -eq "base"
+
+        if (!$KeepBase -and (Test-Path $ManifestPath)) {
+            try {
+                $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+                $StageValue = ""
+                if ($null -ne $Manifest.PSObject.Properties["base_stage"] -and $null -ne $Manifest.base_stage) {
+                    $StageValue = ([string]$Manifest.base_stage).Trim().ToLowerInvariant()
+                }
+
+                $ProtectedValue = 0
+                if ($null -ne $Manifest.PSObject.Properties["is_protected"] -and $null -ne $Manifest.is_protected) {
+                    $ProtectedValue = [int]$Manifest.is_protected
+                }
+
+                if ($StageValue -eq "") {
+                    if ($ProtectedValue -eq 1) {
+                        $StageValue = "published"
+                    } else {
+                        $StageValue = "laboratory"
+                    }
+                }
+
+                $KeepBase = $StageValue -eq "published"
+            } catch {
+                $KeepBase = $false
+            }
+        }
+
+        if (!$KeepBase) {
+            Write-Host "[package] Base fora do deploy: $($BaseDir.Name)" -ForegroundColor DarkYellow
+            Remove-Item -LiteralPath $BaseDir.FullName -Recurse -Force
+        }
     }
 }
 
@@ -472,6 +514,8 @@ if ! docker exec app_php test -f /var/www/html/index.php; then
   echo "ERRO: index.php ausente no container apos aplicar release"
   exit 1
 fi
+echo "[bootstrap] migrando/registrando Core"
+docker exec app_php php -r 'require "/var/www/html/app/bootstrap/bootstrap.php"; echo "[bootstrap] OK\n";'
 echo "[fix] permissao das pastas mutaveis"
 docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/$path" ]; then chown -R www-data:www-data "/var/www/html/$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/$path"; fi; done'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'

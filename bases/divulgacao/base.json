@@ -5,6 +5,7 @@
     "allows_users":  1,
     "max_admins":  1,
     "status":  1,
+    "base_stage":  "published",
     "is_protected":  1,
     "schema":  {
                    "path":  "app/database/schema.sql",

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS bases (
     allows_users TINYINT DEFAULT 1,
   max_admins INT DEFAULT 1,
   status TINYINT DEFAULT 1,
+  base_stage ENUM('laboratory','published','legacy','archived') NOT NULL DEFAULT 'laboratory',
   is_protected TINYINT DEFAULT 0,
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
@@ -326,19 +327,21 @@ VALUES
   ('theme', 'dark')
 ON DUPLICATE KEY UPDATE setting_key = VALUES(setting_key);
 
-INSERT INTO bases (name, slug, description, allows_users, max_admins, status, is_protected)
+INSERT INTO bases (name, slug, description, allows_users, max_admins, status, base_stage, is_protected)
 VALUES
-  ('Base', 'base', 'Base inicial do sistema (nao deletar)', 1, 1, 1, 1),
-  ('Base Cripto', 'cripto', 'Base para gestao cripto DCA Spot', 1, 1, 1, 0),
-  ('Base Divulgacao', 'divulgacao', 'Base para landing pages, captura de leads e campanhas simples.', 1, 1, 1, 1),
-  ('Base Futebol', 'futebol', 'Base para projetos de futebol com jogadores, elenco e modulos esportivos.', 1, 1, 1, 0),
-  ('Base Tips Survivor', 'tips-survivor', 'Base para competicoes de palpites survivor com vidas, pontos e tokens internos.', 1, 1, 1, 0)
+  ('Base', 'base', 'Base inicial do sistema (nao deletar)', 1, 1, 1, 'published', 1),
+  ('Base Cripto', 'cripto', 'Base para gestao cripto DCA Spot', 1, 1, 1, 'laboratory', 0),
+  ('Base Divulgacao', 'divulgacao', 'Base para landing pages, captura de leads e campanhas simples.', 1, 1, 1, 'published', 1),
+  ('Base Futebol', 'futebol', 'Base para projetos de futebol com jogadores, elenco e modulos esportivos.', 1, 1, 1, 'laboratory', 0),
+  ('Base Tips Survivor', 'tips-survivor', 'Base para competicoes de palpites survivor com vidas, pontos e tokens internos.', 1, 1, 1, 'laboratory', 0)
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   description = VALUES(description),
   allows_users = VALUES(allows_users),
   max_admins = VALUES(max_admins),
-  status = VALUES(status);
+  status = VALUES(status),
+  base_stage = VALUES(base_stage),
+  is_protected = VALUES(is_protected);
 
 INSERT INTO plans (id, name, billing_cycle, price, limits_json, status)
 VALUES

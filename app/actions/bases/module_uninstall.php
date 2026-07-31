@@ -156,8 +156,8 @@ try {
         throw new RuntimeException('Base invalida.');
     }
 
-    if ((int)($base['is_protected'] ?? 0) === 1) {
-        throw new RuntimeException('Desbloqueie a base antes de desinstalar modulos.');
+    if (base_is_locked($base)) {
+        throw new RuntimeException('Reabra a base no laboratorio antes de desinstalar modulos.');
     }
 
     $basePath = BASES_PATH . '/' . $base['slug'];

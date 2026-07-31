@@ -32,6 +32,7 @@ if ($base['slug'] === 'base') {
 $basePath = BASES_PATH . '/' . $base['slug'];
 $baseModulesPath = $basePath . '/modules';
 $rootModulesPath = ROOT_PATH . '/modules';
+$baseLocked = base_is_locked($base);
 $modules = [];
 $categories = [];
 $segments = [];
@@ -585,8 +586,8 @@ ob_start();
                                     <?php endif; ?>
 
                                     <?php if (!$module['installed']): ?>
-                                        <?php if ((int)($base['is_protected'] ?? 0) === 1): ?>
-                                            <span class="c-module-locked-badge">Base protegida</span>
+                                        <?php if ($baseLocked): ?>
+                                            <span class="c-module-locked-badge">Base publicada</span>
                                         <?php elseif (!empty($missingRequiredModules)): ?>
                                             <span class="c-module-locked-badge">Requer: <?= htmlspecialchars(implode(', ', $missingRequiredModules)) ?></span>
                                         <?php else: ?>
@@ -597,7 +598,7 @@ ob_start();
                                                 <button class="c-btn-secondary">Instalar</button>
                                             </form>
                                         <?php endif; ?>
-                                    <?php elseif ((int)($base['is_protected'] ?? 0) !== 1): ?>
+                                    <?php elseif (!$baseLocked): ?>
                                         <form method="post" action="/app/actions/bases/module_uninstall.php" onsubmit="return confirm('Desinstalar este módulo da base? Os dados dos projetos existentes não serão apagados, mas a base deixará de enviar este módulo em novas sincronizações.');">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
@@ -607,7 +608,7 @@ ob_start();
                                             </button>
                                         </form>
                                     <?php else: ?>
-                                        <span class="c-module-locked-badge">Base protegida</span>
+                                        <span class="c-module-locked-badge">Base publicada</span>
                                     <?php endif; ?>
                                 </div>
 

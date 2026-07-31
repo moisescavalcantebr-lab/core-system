@@ -35,6 +35,15 @@ ORDER BY b.id ASC
 
 $registered = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+if (coreIsProduction()) {
+    $registered = array_values(array_filter($registered, static function (array $base): bool {
+        return (string)($base['slug'] ?? '') === 'base'
+            || base_is_published($base)
+            || (int)($base['total_projects'] ?? 0) > 0
+            || (int)($base['total_clones'] ?? 0) > 0;
+    }));
+}
+
 $registeredMap = [];
 foreach ($registered as $base) {
     $registeredMap[$base['slug']] = $base;
@@ -194,7 +203,9 @@ ob_start();
                         $isRegistered = isset($registeredMap[$folder]);
                         $baseData = $registeredMap[$folder] ?? null;
                         $hasFolder = isset($baseFolderMap[$folder]) && is_dir(BASES_PATH . '/' . $folder);
-                        $isProtected = $isRegistered && (int)($baseData['is_protected'] ?? 0) === 1;
+                        $baseStage = $isRegistered ? base_normalize_stage($baseData['base_stage'] ?? null, (int)($baseData['is_protected'] ?? 0)) : 'laboratory';
+                        $isPublished = $isRegistered && $baseStage === 'published';
+                        $isLocked = $isRegistered && base_is_locked($baseData);
                         $installedModulesCount = ($isRegistered && $hasFolder) ? baseInstalledModulesCount($folder) : 0;
                         $actionsPanelId = 'base-actions-' . preg_replace('/[^a-z0-9\-_]/', '-', strtolower((string)$folder));
                         $rowClasses = [];
@@ -229,10 +240,6 @@ ob_start();
                                     <span class="c-badge c-badge--success">
                                         Pronta
                                     </span>
-                                <?php elseif ($isProtected): ?>
-                                    <span class="c-badge c-badge--warning">
-                                        Protegida no Core
-                                    </span>
                                 <?php elseif ($isRegistered): ?>
                                     <span class="c-badge c-badge--warning">
                                         Pasta ausente
@@ -240,6 +247,12 @@ ob_start();
                                 <?php else: ?>
                                     <span class="c-badge c-badge--warning">
                                         Não registrada
+                                    </span>
+                                <?php endif; ?>
+
+                                <?php if ($isRegistered): ?>
+                                    <span class="c-badge <?= $isPublished ? 'c-badge--success' : 'c-badge--neutral' ?>">
+                                        <?= htmlspecialchars(base_stage_label($baseData)) ?>
                                     </span>
                                 <?php endif; ?>
                             </td>
@@ -265,7 +278,7 @@ ob_start();
                                                 Arquivos ausentes em /bases/<?= htmlspecialchars($folder) ?>
                                             </span>
 
-                                            <?php if ($isProtected): ?>
+                                            <?php if ($isPublished): ?>
                                                 <span class="c-badge c-badge--warning">
                                                     Exclusao bloqueada
                                                 </span>
@@ -278,8 +291,8 @@ ob_start();
                                         </div>
 
                                         <p class="c-bases-missing-note">
-                                            <?php if ($isProtected): ?>
-                                                Esta base esta protegida e faz parte das bases oficiais do Core. Sincronize a pasta pelo Git/servidor antes de clonar, instalar modulos ou publicar novas alteracoes.
+                                            <?php if ($isPublished): ?>
+                                                Esta base esta publicada e faz parte do pacote oficial do Core. Sincronize a pasta pelo Git/servidor antes de clonar, instalar modulos ou publicar novas alteracoes.
                                             <?php else: ?>
                                                 Esta base existe no banco, mas a pasta da base nao foi encontrada no servidor. Restaure ou recrie a pasta antes de sincronizar, clonar ou instalar modulos.
                                             <?php endif; ?>
@@ -361,12 +374,12 @@ ob_start();
                                                 </form>
                                             <?php endif; ?>
 
-                                            <a class="c-btn-secondary c-btn-protection <?= $baseData['is_protected'] ? 'is-unlock' : 'is-lock' ?>"
+                                            <a class="c-btn-secondary c-btn-protection <?= $isPublished ? 'is-unlock' : 'is-lock' ?>"
                                                href="/app/actions/bases/toggle_protection.php?id=<?= $baseData['id'] ?>">
-                                                <?= $baseData['is_protected'] ? 'Desbloquear' : 'Bloquear' ?>
+                                                <?= $isPublished ? 'Reabrir laboratorio' : 'Publicar' ?>
                                             </a>
 
-                                            <?php if (!$baseData['is_protected']): ?>
+                                            <?php if (!$isLocked): ?>
 
                                                 <form method="post" action="/app/actions/bases/update_schema.php" class="c-inline-form" onsubmit="return confirm('Atualizar o registro do schema desta base? Use isso quando a base estiver testada.');">
                                                     <?= csrf_field() ?>
@@ -398,16 +411,23 @@ ob_start();
                                             <?php else: ?>
 
                                                 <span class="c-badge c-badge--warning">
-                                                    Protegida
+                                                    Publicada
                                                 </span>
 
                                             <?php endif; ?>
 
                                         <?php else: ?>
 
-                                            <span class="c-badge c-badge--warning">
-                                                Protegida
-                                            </span>
+                                            <?php if ($folder !== 'base' && (int)$baseData['total_projects'] === 0 && (int)$baseData['total_clones'] === 0): ?>
+                                                <a class="c-btn-danger c-btn-base-delete"
+                                                   href="/app/actions/bases/delete.php?id=<?= $baseData['id'] ?>">
+                                                    Excluir
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="c-badge c-badge--warning">
+                                                    Protegida por uso
+                                                </span>
+                                            <?php endif; ?>
 
                                         <?php endif; ?>
                                         </div>

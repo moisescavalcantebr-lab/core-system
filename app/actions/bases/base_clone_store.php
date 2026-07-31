@@ -225,9 +225,9 @@ try {
 
     $stmt = $pdo->prepare('
         INSERT INTO bases
-        (cloned_from_id, name, slug, description, allows_users, max_admins, status, is_protected, created_at)
+        (cloned_from_id, name, slug, description, allows_users, max_admins, status, base_stage, is_protected, created_at)
         VALUES
-        (:cloned_from_id, :name, :slug, :description, :allows_users, :max_admins, 1, 0, NOW())
+        (:cloned_from_id, :name, :slug, :description, :allows_users, :max_admins, 1, :base_stage, 0, NOW())
     ');
 
     $stmt->execute([
@@ -237,6 +237,7 @@ try {
         'description' => $base['description'] ?? '',
         'allows_users' => $base['allows_users'] ?? 1,
         'max_admins' => $base['max_admins'] ?? 1,
+        'base_stage' => 'laboratory',
     ]);
 
     $newBase = [
@@ -246,6 +247,7 @@ try {
         'allows_users' => $base['allows_users'] ?? 1,
         'max_admins' => $base['max_admins'] ?? 1,
         'status' => 1,
+        'base_stage' => 'laboratory',
         'is_protected' => 0,
     ];
     base_write_manifest($newBase, $destination);

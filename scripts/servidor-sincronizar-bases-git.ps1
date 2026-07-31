@@ -80,9 +80,15 @@ if ($AllBases) {
     $ListCommand = "if [ -d '$RemotePath/bases' ]; then find '$RemotePath/bases' -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort; fi"
     Write-Host "[sync] Listando todas as bases do servidor..." -ForegroundColor Cyan
 } else {
-    $Sql = "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
-    $ListCommand = "docker exec app_db mysql -N -B -uroot -proot core -e '$Sql'"
-    Write-Host "[sync] Listando bases protegidas do servidor..." -ForegroundColor Cyan
+    $ListCommand = @'
+if docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" | grep -q base_stage; then
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' ORDER BY slug;"
+else
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
+fi
+'@
+    $ListCommand = "sh -lc " + "'" + ($ListCommand -replace "'", "'\''" -replace "`r`n", "`n" -replace "`r", "`n") + "'"
+    Write-Host "[sync] Listando bases publicadas do servidor..." -ForegroundColor Cyan
 }
 
 $PreviousErrorActionPreference = $ErrorActionPreference

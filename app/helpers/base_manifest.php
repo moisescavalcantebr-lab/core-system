@@ -1,10 +1,45 @@
 <?php
 
 if (!function_exists('base_manifest_payload')) {
+    function base_normalize_stage(?string $stage, int $isProtected = 0): string
+    {
+        $stage = strtolower(trim((string)$stage));
+
+        return match ($stage) {
+            'published', 'servidor', 'server', 'production', 'producao' => 'published',
+            'legacy', 'legado' => 'legacy',
+            'archived', 'arquivada', 'arquivo' => 'archived',
+            'laboratory', 'laboratorio', 'lab', 'local' => 'laboratory',
+            default => $isProtected === 1 ? 'published' : 'laboratory',
+        };
+    }
+
+    function base_stage_label(array $base): string
+    {
+        return match (base_normalize_stage($base['base_stage'] ?? null, (int)($base['is_protected'] ?? 0))) {
+            'published' => 'Publicada',
+            'legacy' => 'Legacy',
+            'archived' => 'Arquivada',
+            default => 'Laboratorio',
+        };
+    }
+
+    function base_is_published(array $base): bool
+    {
+        return base_normalize_stage($base['base_stage'] ?? null, (int)($base['is_protected'] ?? 0)) === 'published';
+    }
+
+    function base_is_locked(array $base): bool
+    {
+        return base_is_published($base) || (int)($base['is_protected'] ?? 0) === 1;
+    }
+
     function base_manifest_payload(array $base, string $basePath): array
     {
         $schemaPath = $basePath . '/app/database/schema.sql';
         $schemaHash = is_file($schemaPath) ? md5_file($schemaPath) : null;
+        $isProtected = (int)($base['is_protected'] ?? 0);
+        $stage = base_normalize_stage($base['base_stage'] ?? null, $isProtected);
 
         return [
             'name' => (string)($base['name'] ?? ''),
@@ -13,7 +48,8 @@ if (!function_exists('base_manifest_payload')) {
             'allows_users' => (int)($base['allows_users'] ?? 1),
             'max_admins' => (int)($base['max_admins'] ?? 1),
             'status' => (int)($base['status'] ?? 1),
-            'is_protected' => (int)($base['is_protected'] ?? 0),
+            'base_stage' => $stage,
+            'is_protected' => $stage === 'published' ? 1 : $isProtected,
             'schema' => [
                 'path' => 'app/database/schema.sql',
                 'hash' => $schemaHash,
@@ -121,16 +157,21 @@ if (!function_exists('base_register_manifests')) {
             $maxAdmins = (int)($manifest['max_admins'] ?? 1);
             $status = (int)($manifest['status'] ?? 1);
             $isProtected = (int)($manifest['is_protected'] ?? 0);
+            $stage = base_normalize_stage($manifest['base_stage'] ?? null, $isProtected);
+            if ($stage === 'published') {
+                $isProtected = 1;
+            }
 
             $stmt = $pdo->prepare("
-                INSERT INTO bases (name, slug, description, allows_users, max_admins, status, is_protected)
-                VALUES (:name, :slug, :description, :allows_users, :max_admins, :status, :is_protected)
+                INSERT INTO bases (name, slug, description, allows_users, max_admins, status, base_stage, is_protected)
+                VALUES (:name, :slug, :description, :allows_users, :max_admins, :status, :base_stage, :is_protected)
                 ON DUPLICATE KEY UPDATE
                     name = VALUES(name),
                     description = VALUES(description),
                     allows_users = VALUES(allows_users),
                     max_admins = VALUES(max_admins),
                     status = VALUES(status),
+                    base_stage = VALUES(base_stage),
                     is_protected = VALUES(is_protected)
             ");
             $stmt->execute([
@@ -140,6 +181,7 @@ if (!function_exists('base_register_manifests')) {
                 'allows_users' => $allowsUsers,
                 'max_admins' => $maxAdmins,
                 'status' => $status,
+                'base_stage' => $stage,
                 'is_protected' => $isProtected,
             ]);
 

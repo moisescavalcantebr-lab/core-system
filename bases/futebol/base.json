@@ -5,6 +5,7 @@
     "allows_users":  1,
     "max_admins":  1,
     "status":  1,
+    "base_stage":  "laboratory",
     "is_protected":  0,
     "schema":  {
                    "path":  "app/database/schema.sql",

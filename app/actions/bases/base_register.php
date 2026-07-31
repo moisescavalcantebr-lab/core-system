@@ -64,13 +64,14 @@ $base = [
     'allows_users' => (int)($manifest['allows_users'] ?? 1),
     'max_admins' => max(1, (int)($manifest['max_admins'] ?? 1)),
     'status' => 1,
+    'base_stage' => base_normalize_stage($manifest['base_stage'] ?? 'laboratory', (int)($manifest['is_protected'] ?? 0)),
     'is_protected' => 0,
 ];
 
 try {
     $insert = $pdo->prepare('
-        INSERT INTO bases (name, slug, description, allows_users, max_admins, status, is_protected, created_at)
-        VALUES (:name, :slug, :description, :allows_users, :max_admins, :status, :is_protected, NOW())
+        INSERT INTO bases (name, slug, description, allows_users, max_admins, status, base_stage, is_protected, created_at)
+        VALUES (:name, :slug, :description, :allows_users, :max_admins, :status, :base_stage, :is_protected, NOW())
     ');
 
     $insert->execute([
@@ -80,6 +81,7 @@ try {
         'allows_users' => $base['allows_users'],
         'max_admins' => $base['max_admins'],
         'status' => $base['status'],
+        'base_stage' => $base['base_stage'],
         'is_protected' => $base['is_protected'],
     ]);
 
@@ -90,7 +92,7 @@ try {
 
     base_write_manifest($base, $baseRealPath);
 
-    flash('success', 'Base registrada como pronta e desbloqueada.');
+    flash('success', 'Base registrada no laboratorio.');
 } catch (Throwable $e) {
     flash('error', 'Nao foi possivel registrar a base: ' . $e->getMessage());
 }

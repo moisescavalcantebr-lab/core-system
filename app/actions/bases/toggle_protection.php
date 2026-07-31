@@ -28,30 +28,32 @@ if ($base['slug'] === 'base') {
     die('A base não pode ser modificada.');
 }
 
-/*
-|--------------------------------------------------------------------------
-| Alternar proteção
-|--------------------------------------------------------------------------
-*/
-
-$newStatus = $base['is_protected'] ? 0 : 1;
+$currentStage = base_normalize_stage($base['base_stage'] ?? null, (int)($base['is_protected'] ?? 0));
+$publishBase = $currentStage !== 'published';
+$newStage = $publishBase ? 'published' : 'laboratory';
+$newStatus = $publishBase ? 1 : 0;
 
 $pdo->prepare("
     UPDATE bases 
-    SET is_protected = :status
+    SET base_stage = :base_stage,
+        is_protected = :status
     WHERE id = :id
 ")->execute([
+    'base_stage' => $newStage,
     'status' => $newStatus,
     'id'     => $id
 ]);
 
+$base['base_stage'] = $newStage;
 $base['is_protected'] = $newStatus;
 
 try {
     base_write_manifest($base, BASES_PATH . '/' . $base['slug']);
 } catch (Throwable $e) {
-    flash('warning', 'Protecao alterada, mas o manifesto da base nao foi atualizado: ' . $e->getMessage());
+    flash('warning', 'Status da base alterado, mas o manifesto nao foi atualizado: ' . $e->getMessage());
 }
+
+flash('success', $publishBase ? 'Base publicada e travada para deploy.' : 'Base reaberta no laboratorio.');
 
 header("Location: /web/admin/bases/index.php");
 exit;

@@ -43,6 +43,7 @@ if ($baseId > 0) {
         WHERE id = :id
         AND status = 1
         AND slug != 'base'
+        AND base_stage = 'published'
         LIMIT 1
     ");
 
@@ -56,6 +57,8 @@ if (!$validBaseId && $baseSlug !== '') {
         FROM bases
         WHERE slug = :slug
         AND status = 1
+        AND slug != 'base'
+        AND base_stage = 'published'
         LIMIT 1
     ");
 

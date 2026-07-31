@@ -90,7 +90,7 @@ Ambiente de producao.
 Aqui entram:
 
 - Core instalado.
-- Bases oficiais protegidas.
+- Bases oficiais publicadas e travadas quando estiverem em uso.
 - Projetos reais.
 - Dados reais.
 - Backups.
@@ -113,7 +113,7 @@ Base testada localmente e quase pronta.
 
 Ainda pode receber ajustes, mas ja deve seguir o padrao do Core.
 
-### Oficial protegida
+### Publicada
 
 Base pronta para virar produto.
 
@@ -121,7 +121,8 @@ Regras:
 
 - Deve estar no GitHub.
 - Deve ter sido testada no Docker local.
-- Deve estar bloqueada/protegida.
+- Deve estar com `base_stage = published`.
+- Deve ficar travada para edicao estrutural fora do laboratorio.
 - Deve ter schemas e modulos coerentes.
 - Pode ir para o servidor.
 
@@ -144,7 +145,7 @@ Regra recomendada: nao enviar legacy para producao, a menos que exista motivo cl
 7. Testar cada modulo instalado.
 8. Testar criacao de projeto a partir dessa base.
 9. Validar banco/schema.
-10. Bloquear/proteger a base.
+10. Publicar a base no laboratorio (`base_stage = published`).
 11. Commitar e enviar ao GitHub.
 12. Rodar deploy para o servidor.
 13. No servidor, criar apenas projetos reais a partir da base oficial.
@@ -239,7 +240,8 @@ No servidor:
 Implementacao atual:
 
 - `web/admin/bases/index.php` identifica o ambiente e mostra acoes de laboratorio somente quando `coreLaboratoryEnabled()` permite.
-- Em producao, bases registradas aparecem como produto publicado/protegido, sem botoes de clonagem, registro, exclusao, bloqueio, sync em lote ou atualizacao estrutural.
+- Em producao, bases registradas aparecem como produto publicado/operacional, sem botoes de clonagem, registro, sync em lote ou atualizacao estrutural.
+- Em producao, exclusao de base so aparece quando nao houver projetos nem clones vinculados.
 - Em producao, pastas de bases ainda nao registradas aparecem apenas como alerta de leitura. O registro deve ser feito no laboratorio e publicado por deploy.
 - `web/admin/bases/modules.php` tambem respeita o ambiente.
 - No laboratorio, a tela de modulos permite ver disponiveis, abrir cada modulo, configurar, instalar, desinstalar e aplicar nos projetos.
@@ -269,7 +271,7 @@ No servidor:
 
 Status: concluida.
 
-Antes de uma base virar oficial protegida, validar:
+Antes de uma base virar publicada, validar:
 
 - `project.json`.
 - `app/database/schema.sql`.
@@ -284,10 +286,10 @@ Antes de uma base virar oficial protegida, validar:
 Implementacao atual:
 
 - O deploy normal executa `scripts/servidor-validar-bases-protegidas.ps1` antes de preparar e enviar o pacote.
-- A validacao consulta o servidor e lista as bases marcadas como protegidas no banco.
-- Se existir uma base protegida no servidor que nao existe na pasta local `bases/`, o deploy e bloqueado.
+- A validacao consulta o servidor e lista as bases marcadas como publicadas no banco.
+- Se existir uma base publicada no servidor que nao existe como publicada na pasta local `bases/`, o deploy e bloqueado.
 - Esse bloqueio evita que uma base consolidada no servidor desapareca porque o VS Code/Git ficou atrasado.
-- Em servidor novo, sem banco Core instalado ou sem bases protegidas, a validacao nao bloqueia a primeira instalacao.
+- Em servidor novo, sem banco Core instalado ou sem bases publicadas, a validacao nao bloqueia a primeira instalacao.
 - Para primeira instalacao ou emergencia existe o parametro `-SkipProtectedBasesGuard`.
 - O uso normal deve ser sempre sem `-SkipProtectedBasesGuard`.
 
@@ -311,8 +313,8 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy-atualizar-servidor.ps1 -
 
 No VS Code, as mesmas rotinas estao disponiveis em:
 
-- `Servidor: validar bases protegidas`
-- `Servidor: sincronizar bases protegidas com Git`
+- `Servidor: validar bases publicadas`
+- `Servidor: sincronizar bases publicadas com Git`
 - `Deploy: atualizar servidor`
 - `Deploy: atualizar servidor sem validar bases`
 
@@ -323,7 +325,7 @@ Status: implantado no deploy do servidor.
 O pacote de produto deve enviar somente a estrutura consolidada:
 
 - `app`.
-- `bases` oficiais, exceto bases legacy como `bases/futebol-amador`.
+- `bases` publicadas (`base_stage = published`). Bases de laboratorio, legacy e arquivadas ficam fora do pacote.
 - `cron`.
 - `docs`.
 - `docker`.
@@ -367,7 +369,7 @@ Depois das etapas tecnicas, criar um manual final:
 
 - Como criar uma base no laboratorio.
 - Como testar no Docker.
-- Como proteger uma base.
+- Como publicar uma base.
 - Como publicar no GitHub.
 - Como subir para o servidor.
 - Como criar projeto no servidor.
@@ -407,13 +409,13 @@ Uso recomendado:
 
 - Emergencia.
 - Recuperar uma base oficial que foi criada no servidor por necessidade real.
-- Antes de qualquer deploy que poderia apagar uma base protegida que nao existe localmente.
+- Antes de qualquer deploy que poderia apagar uma base publicada que nao existe localmente.
 
 No fluxo novo, a base oficial deve nascer localmente e subir pelo GitHub/deploy.
 
 ### `scripts/servidor-validar-bases-protegidas.ps1`
 
-Pode continuar como protecao temporaria.
+Valida as bases publicadas do servidor antes do deploy.
 
 No fluxo novo, ele ajuda a impedir que uma base oficial existente no servidor seja apagada por um deploy desalinhado.
 
@@ -424,7 +426,7 @@ No fluxo novo, ele ajuda a impedir que uma base oficial existente no servidor se
 - Modulo e addon sempre voltam para GitHub.
 - Servidor nao e laboratorio.
 - Local pode quebrar; servidor nao.
-- Base protegida deve ser tratada como produto.
+- Base publicada deve ser tratada como produto.
 - Base legacy deve ficar fora do deploy normal.
 - Backup resolve runtime; Git resolve produto.
 
@@ -432,7 +434,7 @@ No fluxo novo, ele ajuda a impedir que uma base oficial existente no servidor se
 
 - Docker local atualizado.
 - Projeto de teste criado e validado localmente.
-- Base bloqueada/protegida.
+- Base publicada no laboratorio.
 - Modulos e addons instalados na base correta.
 - `git status` revisado.
 - Commit feito.

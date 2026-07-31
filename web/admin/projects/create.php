@@ -35,6 +35,7 @@ $bases = $pdo->query("
     SELECT *
     FROM bases
     WHERE status = 1
+      " . (coreIsProduction() ? "AND base_stage = 'published'" : "") . "
     ORDER BY name ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 

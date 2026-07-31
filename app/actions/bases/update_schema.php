@@ -21,8 +21,8 @@ if (!$base) {
     redirect('/web/admin/bases/index.php');
 }
 
-if ((int)$base['is_protected'] === 1) {
-    flash('error', 'Desbloqueie a base antes de atualizar o schema.');
+if (base_is_locked($base)) {
+    flash('error', 'Reabra a base no laboratorio antes de atualizar o schema.');
     redirect('/web/admin/bases/index.php');
 }
 
@@ -37,7 +37,7 @@ if (!is_file($schemaPath)) {
 try {
     base_write_manifest($base, $basePath);
     base_ensure_plan_prices($pdo, (int)$base['id']);
-    flash('success', 'Schema da base registrado. Agora voce pode bloquear a base para proteger esta versao.');
+    flash('success', 'Schema da base registrado. Agora voce pode publicar a base para deploy.');
 } catch (Throwable $e) {
     flash('error', $e->getMessage());
 }

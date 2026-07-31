@@ -10,6 +10,7 @@ $stmt = $pdo->query("
     FROM bases
     WHERE status = 1
       AND slug != 'base'
+      AND base_stage = 'published'
       AND showcase_status = 1
     ORDER BY showcase_order ASC, name ASC
 ");

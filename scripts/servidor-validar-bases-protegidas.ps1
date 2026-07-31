@@ -57,14 +57,50 @@ if ($RemotePath -eq "") {
 $LocalBasesPath = Join-Path $Workspace "bases"
 $LocalBases = @()
 if (Test-Path $LocalBasesPath) {
-    $LocalBases = Get-ChildItem -Path $LocalBasesPath -Directory | Select-Object -ExpandProperty Name
+    $LocalBases = Get-ChildItem -Path $LocalBasesPath -Directory | Where-Object {
+        if ($_.Name -eq "base") {
+            return $true
+        }
+
+        $ManifestPath = Join-Path $_.FullName "base.json"
+        if (!(Test-Path $ManifestPath)) {
+            return $false
+        }
+
+        try {
+            $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+            $StageValue = ""
+            if ($null -ne $Manifest.PSObject.Properties["base_stage"] -and $null -ne $Manifest.base_stage) {
+                $StageValue = ([string]$Manifest.base_stage).Trim().ToLowerInvariant()
+            }
+
+            $ProtectedValue = 0
+            if ($null -ne $Manifest.PSObject.Properties["is_protected"] -and $null -ne $Manifest.is_protected) {
+                $ProtectedValue = [int]$Manifest.is_protected
+            }
+
+            if ($StageValue -eq "") {
+                $StageValue = if ($ProtectedValue -eq 1) { "published" } else { "laboratory" }
+            }
+
+            return $StageValue -eq "published"
+        } catch {
+            return $false
+        }
+    } | Select-Object -ExpandProperty Name
 }
 
-$Sql = "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
-$RemoteCommand = "docker exec app_db mysql -N -B -uroot -proot core -e '$Sql'"
+$RemoteCommand = @'
+if docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" | grep -q base_stage; then
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' ORDER BY slug;"
+else
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
+fi
+'@
+$RemoteCommand = "sh -lc " + "'" + ($RemoteCommand -replace "'", "'\''" -replace "`r`n", "`n" -replace "`r", "`n") + "'"
 $SshArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 
-Write-Host "[guard] Validando bases protegidas do servidor..." -ForegroundColor Cyan
+Write-Host "[guard] Validando bases publicadas do servidor..." -ForegroundColor Cyan
 $PreviousErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 $RemoteOutput = & ssh.exe @SshArgs 2>&1
@@ -79,7 +115,7 @@ if ($ExitCode -ne 0) {
         exit 2
     }
 
-    Write-Host "[guard] Nao foi possivel consultar bases protegidas no servidor." -ForegroundColor Yellow
+    Write-Host "[guard] Nao foi possivel consultar bases publicadas no servidor." -ForegroundColor Yellow
     Write-Host "[guard] Em servidor novo ou sem banco core, o deploy pode continuar." -ForegroundColor Yellow
     Write-Host $RemoteText -ForegroundColor DarkYellow
     exit 0
@@ -94,7 +130,7 @@ $RemoteProtectedBases = @(
 )
 
 if ($RemoteProtectedBases.Count -eq 0) {
-    Write-Host "[guard] Nenhuma base protegida registrada no servidor." -ForegroundColor Green
+    Write-Host "[guard] Nenhuma base publicada registrada no servidor." -ForegroundColor Green
     exit 0
 }
 
@@ -107,15 +143,15 @@ foreach ($Base in $RemoteProtectedBases) {
 
 if ($Missing.Count -gt 0) {
     Write-Host "[guard] Deploy bloqueado para proteger bases oficiais do servidor." -ForegroundColor Red
-    Write-Host "[guard] Bases protegidas ausentes no VS Code:" -ForegroundColor Red
+    Write-Host "[guard] Bases publicadas ausentes no VS Code:" -ForegroundColor Red
     foreach ($Base in $Missing) {
         Write-Host " - $Base" -ForegroundColor Red
     }
     Write-Host ""
-    Write-Host "Sincronize as bases protegidas do servidor com o VS Code/GitHub antes do deploy:" -ForegroundColor Yellow
+    Write-Host "Sincronize as bases publicadas do servidor com o VS Code/GitHub antes do deploy:" -ForegroundColor Yellow
     Write-Host "powershell -ExecutionPolicy Bypass -File scripts\servidor-sincronizar-bases-git.ps1 -Overwrite" -ForegroundColor Yellow
     Write-Host "Depois teste localmente, faca commit/push e rode o deploy normal." -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "[guard] Bases protegidas do servidor estao presentes no VS Code." -ForegroundColor Green
+Write-Host "[guard] Bases publicadas do servidor estao presentes no VS Code." -ForegroundColor Green

@@ -4,6 +4,7 @@ error_reporting(E_ALL);
 
 require dirname(__DIR__, 3) . '/app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
+require APP_PATH . '/helpers/base_manifest.php';
 
 requireAdmin();
 
@@ -67,6 +68,10 @@ if (!$base) {
     die('Base não encontrada.');
 }
 
+if ((string)$base['slug'] === 'base') {
+    die('A base principal não pode ser excluída.');
+}
+
 /* =====================================
    Verificar projetos vinculados
 ===================================== */
@@ -98,8 +103,8 @@ $totalClones = $stmt->fetchColumn();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verify();
 
-    if ($base['is_protected']) {
-        baseDeleteBlocked('Esta base está protegida. Desbloqueie antes de excluir.', $id);
+    if (!coreIsProduction() && base_is_locked($base)) {
+        baseDeleteBlocked('Esta base esta publicada/travada. Reabra no laboratorio antes de excluir.', $id);
     }
 
     if ($totalProjects > 0) {
@@ -140,10 +145,10 @@ ob_start();
     <p><strong>Base:</strong> <?= htmlspecialchars($base['name']) ?></p>
     <p><strong>Slug:</strong> <?= htmlspecialchars($base['slug']) ?></p>
 
-    <?php if ($base['is_protected']): ?>
+    <?php if (!coreIsProduction() && base_is_locked($base)): ?>
 
         <div style="color:#b91c1c; margin-top:15px;">
-            ⚠ Esta base está protegida e não pode ser excluída.
+            Esta base esta publicada/travada. Reabra no laboratorio antes de excluir.
         </div>
 
         <br>
