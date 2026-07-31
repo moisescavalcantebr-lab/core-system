@@ -28,7 +28,10 @@ function Invoke-DeployNative([string]$Description, [scriptblock]$Command, [int]$
             Write-Host "[$Description] tentativa $Attempt/$Attempts" -ForegroundColor DarkCyan
         }
 
+        $PreviousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
         & $Command
+        $ErrorActionPreference = $PreviousErrorActionPreference
         if ($LASTEXITCODE -eq 0) {
             return $true
         }
@@ -136,6 +139,10 @@ if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
 
         & powershell @GuardArgs
         if ($LASTEXITCODE -ne 0) {
+            if ($LASTEXITCODE -eq 2) {
+                throw "Validacao de bases protegidas falhou por conexao/autenticacao SSH. Configure a chave SSH para ${User}@${Server} e rode o deploy novamente."
+            }
+
             throw "Validacao de bases protegidas falhou. Sincronize as bases protegidas do servidor com o VS Code/GitHub antes do deploy. Use -SkipProtectedBasesGuard apenas para primeira instalacao ou emergencia."
         }
     }
@@ -349,7 +356,7 @@ if ($PackageOnly) {
 }
 
 Write-Host "[2/4] Enviando pacote para o servidor..." -ForegroundColor Cyan
-$ScpArgs = @("-o", "ConnectTimeout=20", $Zip, "${User}@${Server}:$RemoteZip")
+$ScpArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", $Zip, "${User}@${Server}:$RemoteZip")
 $Sent = Invoke-DeployNative "scp" { & scp.exe @ScpArgs } 3 10
 if (!$Sent) {
     throw "Falha ao enviar pacote para o servidor."
@@ -562,7 +569,7 @@ echo "[done] release aplicada e verificada"
 "@
 
 $RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
-$SshArgs = @("-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
+$SshArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 $Applied = Invoke-DeployNative "ssh" { & ssh.exe @SshArgs } 3 10
 if (!$Applied) {
     throw "Falha ao aplicar/verificar arquivos no servidor."

@@ -62,16 +62,26 @@ if (Test-Path $LocalBasesPath) {
 
 $Sql = "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
 $RemoteCommand = "docker exec app_db mysql -N -B -uroot -proot core -e '$Sql'"
-$SshArgs = @("-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
+$SshArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 
 Write-Host "[guard] Validando bases protegidas do servidor..." -ForegroundColor Cyan
+$PreviousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 $RemoteOutput = & ssh.exe @SshArgs 2>&1
 $ExitCode = $LASTEXITCODE
+$ErrorActionPreference = $PreviousErrorActionPreference
 
 if ($ExitCode -ne 0) {
+    $RemoteText = $RemoteOutput -join [Environment]::NewLine
+    if ($RemoteText -match "Permission denied|Host key verification failed|Could not resolve hostname|Connection timed out|No route to host") {
+        Write-Host "[guard] Falha de conexao/autenticacao SSH com o servidor." -ForegroundColor Red
+        Write-Host $RemoteText -ForegroundColor DarkYellow
+        exit 2
+    }
+
     Write-Host "[guard] Nao foi possivel consultar bases protegidas no servidor." -ForegroundColor Yellow
     Write-Host "[guard] Em servidor novo ou sem banco core, o deploy pode continuar." -ForegroundColor Yellow
-    Write-Host ($RemoteOutput -join [Environment]::NewLine) -ForegroundColor DarkYellow
+    Write-Host $RemoteText -ForegroundColor DarkYellow
     exit 0
 }
 

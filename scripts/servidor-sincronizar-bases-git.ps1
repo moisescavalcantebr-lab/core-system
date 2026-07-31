@@ -23,7 +23,7 @@ function Get-DeployConfigValue([hashtable]$DeployConfig, [string]$Key, [string]$
 
 function Invoke-Remote([string]$Description, [string]$Command) {
     Write-Host "[$Description]" -ForegroundColor Cyan
-    & ssh.exe -o ConnectTimeout=20 "${User}@${Server}" $Command
+    & ssh.exe -o BatchMode=yes -o ConnectTimeout=20 "${User}@${Server}" $Command
     if ($LASTEXITCODE -ne 0) {
         throw "Falha ao executar comando remoto: $Description"
     }
@@ -85,7 +85,10 @@ if ($AllBases) {
     Write-Host "[sync] Listando bases protegidas do servidor..." -ForegroundColor Cyan
 }
 
-$RemoteOutput = & ssh.exe -o ConnectTimeout=20 "${User}@${Server}" $ListCommand 2>&1
+$PreviousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+$RemoteOutput = & ssh.exe -o BatchMode=yes -o ConnectTimeout=20 "${User}@${Server}" $ListCommand 2>&1
+$ErrorActionPreference = $PreviousErrorActionPreference
 if ($LASTEXITCODE -ne 0) {
     Write-Host ($RemoteOutput -join [Environment]::NewLine) -ForegroundColor DarkYellow
     throw "Nao foi possivel listar as bases no servidor."
@@ -111,7 +114,7 @@ foreach ($Base in $Bases) {
 
     Write-Host "[sync] Baixando base: $Base" -ForegroundColor Cyan
     $RemoteSource = "${User}@${Server}:$RemoteBasePath"
-    & scp.exe -r $RemoteSource $TempPullRoot
+    & scp.exe -o BatchMode=yes -o ConnectTimeout=20 -r $RemoteSource $TempPullRoot
     if ($LASTEXITCODE -ne 0 -or !(Test-Path $TempBasePath)) {
         throw "Falha ao baixar a base do servidor: $Base"
     }
