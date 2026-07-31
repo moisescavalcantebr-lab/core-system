@@ -21,6 +21,14 @@ if (!$base) {
     exit;
 }
 
+$showcaseStatus = isset($_POST['showcase_status']) ? 1 : 0;
+
+if ($showcaseStatus === 1 && !base_showcase_find_page($pdo, $base, true)) {
+    flash('warning', 'Crie e publique a pagina da base antes de exibir na vitrine publica.');
+    redirect('/web/admin/bases/vitrine.php?id=' . $baseId);
+    exit;
+}
+
 function base_showcase_upload(string $field, string $slug): ?string
 {
     if (empty($_FILES[$field]['name'])) {
@@ -116,7 +124,7 @@ try {
         'showcase_cover_image' => $coverImage,
         'showcase_banner_image' => $bannerImage,
         'showcase_featured' => isset($_POST['showcase_featured']) ? 1 : 0,
-        'showcase_status' => isset($_POST['showcase_status']) ? 1 : 0,
+        'showcase_status' => $showcaseStatus,
         'id' => $baseId,
     ]);
 

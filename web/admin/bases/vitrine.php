@@ -27,6 +27,8 @@ function base_showcase_asset_url(?string $path): string
 
 $coverUrl = base_showcase_asset_url($base['showcase_cover_image'] ?? null);
 $bannerUrl = base_showcase_asset_url($base['showcase_banner_image'] ?? null);
+$showcasePage = base_showcase_find_page($pdo, $base, false);
+$publishedShowcasePage = base_showcase_find_page($pdo, $base, true);
 
 $title = 'Vitrine da Base';
 ob_start();
@@ -47,6 +49,51 @@ ob_start();
 
     <div class="c-page-content">
         <?php flash_show(); ?>
+
+        <div class="c-card c-showcase-page-card">
+            <div>
+                <h3>Pagina da base</h3>
+                <?php if ($showcasePage): ?>
+                    <p class="c-text-muted">
+                        <?= htmlspecialchars((string)$showcasePage['title']) ?>
+                        <span class="c-badge <?= $showcasePage['status'] === 'published' ? 'c-badge--success' : 'c-badge--warning' ?>">
+                            <?= $showcasePage['status'] === 'published' ? 'Publicada' : 'Rascunho' ?>
+                        </span>
+                    </p>
+                <?php else: ?>
+                    <p class="c-text-muted">
+                        Crie a pagina da base antes de ativar a vitrine publica.
+                    </p>
+                <?php endif; ?>
+            </div>
+
+            <div class="c-showcase-page-actions">
+                <?php if ($showcasePage): ?>
+                    <a class="c-btn-secondary" href="/web/admin/pages/edit.php?id=<?= (int)$showcasePage['id'] ?>">
+                        Editar pagina
+                    </a>
+                    <?php if ($showcasePage['status'] === 'published'): ?>
+                        <a class="c-btn-secondary" target="_blank" href="/web/p.php?slug=<?= urlencode((string)$showcasePage['slug']) ?>&base=<?= urlencode((string)$base['slug']) ?>">
+                            Ver pagina
+                        </a>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <form method="post" action="/app/actions/bases/vitrine_page_create.php" class="c-inline-form">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
+                        <button class="c-btn-primary" type="submit">
+                            Criar pagina
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <?php if (!$publishedShowcasePage): ?>
+            <div class="c-card" style="border-left:5px solid #f59e0b;">
+                Para exibir esta base na vitrine publica, crie e publique a pagina da base primeiro.
+            </div>
+        <?php endif; ?>
 
         <form method="post" action="/app/actions/bases/vitrine_save.php" enctype="multipart/form-data" class="c-card">
             <?= csrf_field() ?>
@@ -81,7 +128,7 @@ ob_start();
                 </label>
 
                 <label class="c-checkbox-line">
-                    <input type="checkbox" name="showcase_status" value="1" <?= (int)($base['showcase_status'] ?? 1) === 1 ? 'checked' : '' ?>>
+                    <input type="checkbox" name="showcase_status" value="1" <?= (int)($base['showcase_status'] ?? 1) === 1 ? 'checked' : '' ?> <?= !$publishedShowcasePage ? 'disabled' : '' ?>>
                     Exibir na vitrine pública
                 </label>
             </div>
@@ -158,9 +205,33 @@ ob_start();
     object-fit: cover;
 }
 
+.c-showcase-page-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.c-showcase-page-card h3 {
+    margin: 0 0 6px;
+}
+
+.c-showcase-page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 @media (max-width: 760px) {
     .c-showcase-preview-grid {
         grid-template-columns: 1fr;
+    }
+
+    .c-showcase-page-card {
+        align-items: stretch;
+        flex-direction: column;
     }
 }
 </style>
