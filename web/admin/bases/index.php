@@ -381,6 +381,17 @@ ob_start();
 
                                             <?php if (!$isLocked): ?>
 
+                                                <form method="post" action="/app/actions/bases/rename.php" class="c-inline-form c-base-rename-form">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="base_id" value="<?= (int)$baseData['id'] ?>">
+                                                    <input class="c-input c-base-rename-input"
+                                                           name="name"
+                                                           value="<?= htmlspecialchars((string)$baseData['name']) ?>"
+                                                           maxlength="150"
+                                                           required>
+                                                    <button class="c-btn-secondary" title="Altera apenas o nome visivel da base; slug e pasta continuam iguais.">Renomear</button>
+                                                </form>
+
                                                 <form method="post" action="/app/actions/bases/update_schema.php" class="c-inline-form" onsubmit="return confirm('Atualizar o registro do schema desta base? Use isso quando a base estiver testada.');">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="base_id" value="<?= (int)$baseData['id'] ?>">
@@ -483,6 +494,18 @@ $content .= '
 .c-inline-form {
     display: inline-flex;
     margin: 0;
+}
+
+.c-base-rename-form {
+    gap: 6px;
+    align-items: center;
+}
+
+.c-base-rename-input {
+    width: 170px;
+    min-height: 28px;
+    padding: 6px 9px;
+    font-size: 12px;
 }
 
 .c-base-actions-toggle {
@@ -747,6 +770,17 @@ $content .= '
     .c-bases-actions .c-btn-register,
     .c-bases-actions .c-badge {
         width: 100%;
+    }
+
+    .c-base-rename-form {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .c-base-rename-input {
+        width: 100%;
+        min-height: 42px;
     }
 
     .c-bases-actions .c-inline-form button,
