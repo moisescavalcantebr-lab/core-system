@@ -7,6 +7,8 @@ $stmt = $pdo->query("
     SELECT b.id, b.slug, b.name, b.description, b.showcase_title, b.showcase_summary,
            showcase_cover_image, showcase_banner_image, showcase_order,
            showcase_status,
+           (SELECT COUNT(*) FROM projects p2 WHERE p2.base_id = b.id AND p2.status != 'deleted') AS total_projects,
+           (SELECT COUNT(*) FROM leads l WHERE l.base_id = b.id) AS total_leads,
            (
                SELECT p.slug
                FROM core_page_contents p
@@ -36,6 +38,23 @@ $stmt = $pdo->query("
 ");
 
 $bases = $stmt->fetchAll(PDO::FETCH_ASSOC);
+usort($bases, static function (array $a, array $b): int {
+    $demandA = (int)($a['total_projects'] ?? 0) + (int)($a['total_leads'] ?? 0);
+    $demandB = (int)($b['total_projects'] ?? 0) + (int)($b['total_leads'] ?? 0);
+
+    if ($demandA !== $demandB) {
+        return $demandB <=> $demandA;
+    }
+
+    $orderA = (int)($a['showcase_order'] ?? 0);
+    $orderB = (int)($b['showcase_order'] ?? 0);
+
+    if ($orderA !== $orderB) {
+        return $orderA <=> $orderB;
+    }
+
+    return strcasecmp((string)$a['name'], (string)$b['name']);
+});
 $appName = $coreSettings['app_name'] ?? 'Meu Projeto Web';
 $logo = trim((string)($coreSettings['app_logo'] ?? ''));
 $logoUrl = $logo !== '' ? '/web/assets/uploads/' . rawurlencode($logo) : '';
@@ -62,7 +81,9 @@ function store_catalog_landing_url(array $base): string
 
 function store_catalog_public_title(array $base): string
 {
-    return (string)$base['name'];
+    $title = trim((string)($base['showcase_title'] ?? ''));
+
+    return $title !== '' ? $title : (string)$base['name'];
 }
 
 function store_catalog_public_summary(array $base): string
@@ -225,14 +246,14 @@ function store_catalog_asset_url(?string $path): string
 
         .c-bases-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
             padding: 22px 0 56px;
         }
 
         .c-base-card {
             display: grid;
-            min-height: 430px;
+            min-height: 360px;
             overflow: hidden;
             border: 1px solid var(--line);
             border-radius: 10px;
@@ -240,7 +261,7 @@ function store_catalog_asset_url(?string $path): string
         }
 
         .c-base-cover {
-            min-height: 160px;
+            min-height: 118px;
             background:
                 linear-gradient(135deg, rgba(33, 195, 123, .85), rgba(59, 130, 246, .82)),
                 repeating-linear-gradient(90deg, transparent 0 22px, rgba(255, 255, 255, .08) 22px 23px);
@@ -252,11 +273,11 @@ function store_catalog_asset_url(?string $path): string
         .c-base-cover::after {
             content: attr(data-title);
             position: absolute;
-            left: 18px;
-            right: 18px;
-            bottom: 16px;
+            left: 14px;
+            right: 14px;
+            bottom: 13px;
             color: #fff;
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 800;
             line-height: 1;
             text-shadow: 0 8px 26px rgba(0, 0, 0, .35);
@@ -265,8 +286,8 @@ function store_catalog_asset_url(?string $path): string
         .c-base-body {
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            padding: 18px;
+            gap: 12px;
+            padding: 14px;
         }
 
         .c-base-meta {
@@ -278,12 +299,14 @@ function store_catalog_asset_url(?string $path): string
 
         .c-base-card h2 {
             margin: 0;
-            font-size: 22px;
+            font-size: 17px;
+            line-height: 1.2;
         }
 
         .c-base-card p {
             margin: 7px 0 0;
             color: var(--muted);
+            font-size: 13px;
             line-height: 1.45;
         }
 
@@ -302,7 +325,7 @@ function store_catalog_asset_url(?string $path): string
 
         .c-base-features {
             display: grid;
-            gap: 9px;
+            gap: 7px;
             padding: 0;
             margin: 0;
             list-style: none;
@@ -312,6 +335,7 @@ function store_catalog_asset_url(?string $path): string
             display: flex;
             gap: 9px;
             color: #dce5f4;
+            font-size: 13px;
             line-height: 1.35;
         }
 
@@ -336,12 +360,13 @@ function store_catalog_asset_url(?string $path): string
             align-items: center;
             justify-content: center;
             min-height: 44px;
-            padding: 0 16px;
+            padding: 0 12px;
             border: 1px solid var(--line);
             border-radius: 8px;
             background: var(--panel-2);
             color: var(--text);
             font-weight: 700;
+            font-size: 13px;
             text-decoration: none;
         }
 
@@ -449,7 +474,7 @@ function store_catalog_asset_url(?string $path): string
                                         <p><?= htmlspecialchars($baseSummary) ?></p>
                                     <?php endif; ?>
                                 </div>
-                                <span class="c-base-badge">Pronta</span>
+                                <span class="c-base-badge"><?= (int)($base['total_projects'] ?? 0) + (int)($base['total_leads'] ?? 0) ?> demanda(s)</span>
                             </div>
 
                             <ul class="c-base-features">

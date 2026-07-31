@@ -7,6 +7,8 @@ $stmt = $pdo->query("
     SELECT b.id, b.slug, b.name, b.description, b.showcase_title, b.showcase_summary,
            showcase_cover_image, showcase_banner_image, showcase_featured,
            showcase_order, showcase_status,
+           (SELECT COUNT(*) FROM projects p2 WHERE p2.base_id = b.id AND p2.status != 'deleted') AS total_projects,
+           (SELECT COUNT(*) FROM leads l WHERE l.base_id = b.id) AS total_leads,
            (
                SELECT p.slug
                FROM core_page_contents p
@@ -37,15 +39,37 @@ $stmt = $pdo->query("
 
 $bases = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$featuredBase = null;
+$featuredBases = [];
 foreach ($bases as $base) {
     if ((int)($base['showcase_featured'] ?? 0) === 1) {
-        $featuredBase = $base;
-        break;
+        $featuredBases[] = $base;
     }
 }
 
-$featuredBase = $featuredBase ?: ($bases[0] ?? null);
+if (count($featuredBases) < 2) {
+    $featuredBases = array_slice($bases, 0, 5);
+}
+
+$demandBases = $bases;
+usort($demandBases, static function (array $a, array $b): int {
+    $demandA = (int)($a['total_projects'] ?? 0) + (int)($a['total_leads'] ?? 0);
+    $demandB = (int)($b['total_projects'] ?? 0) + (int)($b['total_leads'] ?? 0);
+
+    if ($demandA !== $demandB) {
+        return $demandB <=> $demandA;
+    }
+
+    $orderA = (int)($a['showcase_order'] ?? 0);
+    $orderB = (int)($b['showcase_order'] ?? 0);
+
+    if ($orderA !== $orderB) {
+        return $orderA <=> $orderB;
+    }
+
+    return strcasecmp((string)$a['name'], (string)$b['name']);
+});
+
+$choiceBases = array_slice($demandBases, 0, 5);
 $appName = $coreSettings['app_name'] ?? 'Meu Projeto Web';
 $logo = trim((string)($coreSettings['app_logo'] ?? ''));
 $logoUrl = $logo !== '' ? '/web/assets/uploads/' . rawurlencode($logo) : '';
@@ -77,7 +101,9 @@ function store_base_landing_url(array $base): string
 
 function store_base_public_title(array $base): string
 {
-    return (string)$base['name'];
+    $title = trim((string)($base['showcase_title'] ?? ''));
+
+    return $title !== '' ? $title : (string)$base['name'];
 }
 
 function store_base_public_summary(array $base): string
@@ -206,11 +232,129 @@ function store_base_asset_url(?string $path): string
         }
 
         .c-store-hero {
+            padding: 22px 0 28px;
+        }
+
+        .c-store-rotator {
+            position: relative;
+            min-height: 410px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(16, 25, 43, .92);
+        }
+
+        .c-store-slide {
+            position: absolute;
+            inset: 0;
             display: grid;
-            grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
-            gap: 24px;
-            align-items: stretch;
-            padding: 30px 0 22px;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 28px;
+            align-items: end;
+            padding: 38px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity .28s ease, visibility .28s ease;
+        }
+
+        .c-store-slide.is-active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .c-store-slide::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(90deg, rgba(5, 8, 23, .94), rgba(5, 8, 23, .72) 48%, rgba(5, 8, 23, .22)),
+                linear-gradient(135deg, rgba(33, 195, 123, .8), rgba(59, 130, 246, .76));
+            background-size: cover;
+            background-position: center;
+            z-index: 0;
+        }
+
+        .c-store-slide[data-bg]::before {
+            background-image:
+                linear-gradient(90deg, rgba(5, 8, 23, .94), rgba(5, 8, 23, .72) 48%, rgba(5, 8, 23, .22)),
+                var(--slide-bg);
+        }
+
+        .c-store-slide-content,
+        .c-store-slide-panel {
+            position: relative;
+            z-index: 1;
+        }
+
+        .c-store-slide-content {
+            max-width: 720px;
+        }
+
+        .c-store-slide h1 {
+            margin: 12px 0 14px;
+            max-width: 820px;
+            font-size: clamp(34px, 5vw, 64px);
+            line-height: .98;
+            letter-spacing: 0;
+        }
+
+        .c-store-slide p {
+            max-width: 650px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 18px;
+            line-height: 1.55;
+        }
+
+        .c-store-slide-panel {
+            display: grid;
+            gap: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: 10px;
+            background: rgba(10, 16, 31, .76);
+        }
+
+        .c-store-slide-panel h2 {
+            margin: 0;
+            font-size: 26px;
+            line-height: 1.08;
+        }
+
+        .c-store-slide-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .c-store-rotator-nav {
+            position: absolute;
+            left: 38px;
+            right: 38px;
+            bottom: 20px;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .c-store-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .c-store-dot {
+            width: 34px;
+            height: 4px;
+            border: 0;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .28);
+            cursor: pointer;
+        }
+
+        .c-store-dot.is-active {
+            background: var(--brand-2);
         }
 
         .c-store-body-title {
@@ -366,8 +510,8 @@ function store_base_asset_url(?string $path): string
 
         .c-store-bases-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 14px;
         }
 
         .c-store-card {
@@ -379,7 +523,7 @@ function store_base_asset_url(?string $path): string
         }
 
         .c-store-card-media {
-            min-height: 138px;
+            min-height: 106px;
             background:
                 linear-gradient(135deg, rgba(59, 130, 246, .78), rgba(33, 195, 123, .66)),
                 repeating-linear-gradient(90deg, transparent 0 20px, rgba(255, 255, 255, .08) 20px 21px);
@@ -389,21 +533,28 @@ function store_base_asset_url(?string $path): string
 
         .c-store-card-body {
             display: grid;
-            gap: 14px;
-            padding: 18px;
+            gap: 10px;
+            padding: 14px;
         }
 
         .c-store-card h3 {
             margin: 0;
-            font-size: 21px;
+            font-size: 17px;
             line-height: 1.2;
         }
 
         .c-store-card p {
-            min-height: 44px;
+            min-height: 58px;
             margin: 0;
             color: var(--muted);
+            font-size: 13px;
             line-height: 1.45;
+        }
+
+        .c-store-card .c-store-btn {
+            min-height: 40px;
+            padding: 0 12px;
+            font-size: 13px;
         }
 
         .c-store-section-title {
@@ -497,9 +648,18 @@ function store_base_asset_url(?string $path): string
         }
 
         @media (max-width: 860px) {
-            .c-store-hero {
+            .c-store-slide {
                 grid-template-columns: 1fr;
-                padding-top: 8px;
+                align-items: end;
+                padding: 26px;
+            }
+
+            .c-store-slide-panel {
+                display: none;
+            }
+
+            .c-store-bases-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .c-store-copy {
@@ -531,8 +691,29 @@ function store_base_asset_url(?string $path): string
                 font-size: 36px;
             }
 
+            .c-store-rotator {
+                min-height: 440px;
+            }
+
+            .c-store-slide h1 {
+                font-size: 36px;
+            }
+
             .c-store-copy p {
                 font-size: 16px;
+            }
+
+            .c-store-slide p {
+                font-size: 16px;
+            }
+
+            .c-store-bases-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .c-store-rotator-nav {
+                left: 26px;
+                right: 26px;
             }
 
             .c-store-actions,
@@ -572,37 +753,56 @@ function store_base_asset_url(?string $path): string
         <div class="c-store-body-title">Bases prontas para projetos digitais</div>
 
         <section class="c-store-hero">
-            <div class="c-store-copy">
-                <div class="c-store-kicker">Comece pela base certa</div>
-                <h1>Crie seu projeto com uma estrutura pronta para operar.</h1>
-                <p>Escolha uma base, envie seus dados e continue a criacao pelo e-mail cadastrado. O painel nasce organizado para testar, ajustar e evoluir sem comecar do zero.</p>
-            </div>
+            <?php if ($featuredBases): ?>
+                <div class="c-store-rotator" data-store-rotator>
+                    <?php foreach ($featuredBases as $index => $base): ?>
+                        <?php
+                            $baseSlug = (string)$base['slug'];
+                            $slideImage = store_base_asset_url($base['showcase_banner_image'] ?: $base['showcase_cover_image'] ?: null);
+                            $summary = store_base_public_summary($base);
+                        ?>
+                        <article
+                            class="c-store-slide <?= $index === 0 ? 'is-active' : '' ?>"
+                            data-store-slide
+                            <?= $slideImage !== '' ? 'data-bg="1" style="--slide-bg: url(\'' . htmlspecialchars($slideImage, ENT_QUOTES) . '\')"' : '' ?>>
+                            <div class="c-store-slide-content">
+                                <div class="c-store-kicker">Base em destaque</div>
+                                <h1><?= htmlspecialchars(store_base_public_title($base)) ?></h1>
+                                <p><?= htmlspecialchars($summary !== '' ? $summary : 'Escolha uma base pronta e continue a criacao pelo e-mail cadastrado.') ?></p>
+                                <div class="c-store-actions">
+                                    <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_base_landing_url($base)) ?>">Escolher base</a>
+                                    <a class="c-store-btn" href="/web/bases.php">Ver todas</a>
+                                </div>
+                            </div>
 
-            <?php if ($featuredBase): ?>
-                <article class="c-store-featured">
-                    <?php
-                        $featuredImage = store_base_asset_url($featuredBase['showcase_banner_image'] ?: $featuredBase['showcase_cover_image'] ?: null);
-                    ?>
-                    <div class="c-store-featured-media" <?= $featuredImage !== '' ? 'style="background-image: linear-gradient(180deg, rgba(5,8,23,.08), rgba(5,8,23,.48)), url(\'' . htmlspecialchars($featuredImage, ENT_QUOTES) . '\')"' : '' ?>></div>
-                    <div class="c-store-featured-head">
-                        <div>
-                            <h2><?= htmlspecialchars(store_base_public_title($featuredBase)) ?></h2>
-                            <?php $featuredSummary = store_base_public_summary($featuredBase); ?>
-                            <?php if ($featuredSummary !== ''): ?>
-                                <p><?= htmlspecialchars($featuredSummary) ?></p>
-                            <?php endif; ?>
+                            <aside class="c-store-slide-panel">
+                                <div class="c-store-slide-meta">
+                                    <span class="c-store-badge"><?= htmlspecialchars(store_base_badge($baseSlug)) ?></span>
+                                    <span class="c-store-badge"><?= (int)($base['total_projects'] ?? 0) + (int)($base['total_leads'] ?? 0) ?> demanda(s)</span>
+                                </div>
+                                <h2><?= htmlspecialchars((string)$base['name']) ?></h2>
+                                <ul class="c-store-feature-list">
+                                    <?php foreach (store_base_features($baseSlug) as $feature): ?>
+                                        <li><?= htmlspecialchars($feature) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </aside>
+                        </article>
+                    <?php endforeach; ?>
+
+                    <?php if (count($featuredBases) > 1): ?>
+                        <div class="c-store-rotator-nav">
+                            <div class="c-store-dots" aria-label="Bases em destaque">
+                                <?php foreach ($featuredBases as $index => $base): ?>
+                                    <button class="c-store-dot <?= $index === 0 ? 'is-active' : '' ?>"
+                                            type="button"
+                                            data-store-dot="<?= $index ?>"
+                                            aria-label="Mostrar <?= htmlspecialchars(store_base_public_title($base)) ?>"></button>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
-                        <span class="c-store-badge"><?= htmlspecialchars(store_base_badge((string)$featuredBase['slug'])) ?></span>
-                    </div>
-
-                    <ul class="c-store-feature-list">
-                        <?php foreach (store_base_features((string)$featuredBase['slug']) as $feature): ?>
-                            <li><?= htmlspecialchars($feature) ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-
-                    <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_base_landing_url($featuredBase)) ?>">Ver mais</a>
-                </article>
+                    <?php endif; ?>
+                </div>
             <?php else: ?>
                 <div class="c-store-note">Nenhuma base publica esta disponivel no momento.</div>
             <?php endif; ?>
@@ -618,7 +818,7 @@ function store_base_asset_url(?string $path): string
 
             <?php if ($bases): ?>
                 <div class="c-store-bases-grid">
-                    <?php foreach ($bases as $base): ?>
+                    <?php foreach ($choiceBases as $base): ?>
                         <?php
                             $baseSlug = (string)$base['slug'];
                             $cardImage = store_base_asset_url($base['showcase_cover_image'] ?: $base['showcase_banner_image'] ?: null);
@@ -628,6 +828,7 @@ function store_base_asset_url(?string $path): string
                             <div class="c-store-card-media" <?= $cardImage !== '' ? 'style="background-image: linear-gradient(180deg, rgba(5,8,23,.05), rgba(5,8,23,.48)), url(\'' . htmlspecialchars($cardImage, ENT_QUOTES) . '\')"' : '' ?>></div>
                             <div class="c-store-card-body">
                                 <span class="c-store-badge"><?= htmlspecialchars(store_base_badge($baseSlug)) ?></span>
+                                <span class="c-store-badge"><?= (int)($base['total_projects'] ?? 0) + (int)($base['total_leads'] ?? 0) ?> demanda(s)</span>
                                 <h3><?= htmlspecialchars(store_base_public_title($base)) ?></h3>
                                 <?php if ($summary !== ''): ?>
                                     <p><?= htmlspecialchars($summary) ?></p>
@@ -652,5 +853,52 @@ function store_base_asset_url(?string $path): string
         <span>&copy; <?= date('Y') ?> <?= htmlspecialchars($appName) ?></span>
         <span>Projetos com bases e modulos organizados.</span>
     </footer>
+    <script>
+        (function () {
+            var root = document.querySelector('[data-store-rotator]');
+            if (!root) {
+                return;
+            }
+
+            var slides = Array.prototype.slice.call(root.querySelectorAll('[data-store-slide]'));
+            var dots = Array.prototype.slice.call(root.querySelectorAll('[data-store-dot]'));
+            var active = 0;
+            var timer = null;
+
+            function show(index) {
+                if (!slides.length) {
+                    return;
+                }
+
+                active = (index + slides.length) % slides.length;
+                slides.forEach(function (slide, slideIndex) {
+                    slide.classList.toggle('is-active', slideIndex === active);
+                });
+                dots.forEach(function (dot, dotIndex) {
+                    dot.classList.toggle('is-active', dotIndex === active);
+                });
+            }
+
+            function start() {
+                if (slides.length < 2) {
+                    return;
+                }
+
+                window.clearInterval(timer);
+                timer = window.setInterval(function () {
+                    show(active + 1);
+                }, 6500);
+            }
+
+            dots.forEach(function (dot) {
+                dot.addEventListener('click', function () {
+                    show(parseInt(dot.getAttribute('data-store-dot'), 10) || 0);
+                    start();
+                });
+            });
+
+            start();
+        }());
+    </script>
 </body>
 </html>
