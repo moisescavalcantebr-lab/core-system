@@ -474,7 +474,7 @@ function store_catalog_asset_url(?string $path): string
                                         <p><?= htmlspecialchars($baseSummary) ?></p>
                                     <?php endif; ?>
                                 </div>
-                                <span class="c-base-badge"><?= (int)($base['total_projects'] ?? 0) + (int)($base['total_leads'] ?? 0) ?> demanda(s)</span>
+                                <span class="c-base-badge">Pronta</span>
                             </div>
 
                             <ul class="c-base-features">

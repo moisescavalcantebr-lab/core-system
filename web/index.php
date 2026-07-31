@@ -778,7 +778,6 @@ function store_base_asset_url(?string $path): string
                             <aside class="c-store-slide-panel">
                                 <div class="c-store-slide-meta">
                                     <span class="c-store-badge"><?= htmlspecialchars(store_base_badge($baseSlug)) ?></span>
-                                    <span class="c-store-badge"><?= (int)($base['total_projects'] ?? 0) + (int)($base['total_leads'] ?? 0) ?> demanda(s)</span>
                                 </div>
                                 <h2><?= htmlspecialchars((string)$base['name']) ?></h2>
                                 <ul class="c-store-feature-list">
@@ -828,7 +827,6 @@ function store_base_asset_url(?string $path): string
                             <div class="c-store-card-media" <?= $cardImage !== '' ? 'style="background-image: linear-gradient(180deg, rgba(5,8,23,.05), rgba(5,8,23,.48)), url(\'' . htmlspecialchars($cardImage, ENT_QUOTES) . '\')"' : '' ?>></div>
                             <div class="c-store-card-body">
                                 <span class="c-store-badge"><?= htmlspecialchars(store_base_badge($baseSlug)) ?></span>
-                                <span class="c-store-badge"><?= (int)($base['total_projects'] ?? 0) + (int)($base['total_leads'] ?? 0) ?> demanda(s)</span>
                                 <h3><?= htmlspecialchars(store_base_public_title($base)) ?></h3>
                                 <?php if ($summary !== ''): ?>
                                     <p><?= htmlspecialchars($summary) ?></p>
