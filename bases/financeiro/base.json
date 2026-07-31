@@ -1,5 +1,5 @@
 {
-    "name": "Base Financeira",
+    "name": "Meu Financeiro",
     "slug": "financeiro",
     "description": "Base inicial do sistema (nao deletar)",
     "allows_users": 1,
@@ -10,6 +10,6 @@
     "schema": {
         "path": "app/database/schema.sql",
         "hash": "975bd3ac9c354cff4179c733432d7ab9",
-        "updated_at": "2026-07-31 17:39:48"
+        "updated_at": "2026-07-31 20:51:59"
     }
 }
