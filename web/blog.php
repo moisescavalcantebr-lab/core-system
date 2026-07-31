@@ -373,8 +373,8 @@ function blog_index_meta(array $post): string
     <main class="c-store-main">
         <section class="c-blog-index-hero">
             <span>Blog</span>
-            <h1>Ideias para organizar e evoluir seus projetos.</h1>
-            <p>Conteudos praticos sobre bases, gestao e caminhos para transformar uma ideia em projeto organizado.</p>
+            <h1>Conteudos do Meu Projeto Web.</h1>
+            <p>Artigos sobre bases, paginas, gestao digital e ideias praticas para publicar, organizar e evoluir presencas online.</p>
         </section>
 
         <?php if (!$posts): ?>
