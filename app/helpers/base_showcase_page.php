@@ -135,14 +135,18 @@ if (!function_exists('base_showcase_create_page')) {
             if (($block['type'] ?? '') === 'hero') {
                 $block['title'] = $title;
                 $block['subtitle'] = trim((string)($base['showcase_summary'] ?? '')) ?: trim((string)($base['description'] ?? ''));
-                $block['cta_text'] = $block['cta_text'] ?? 'Quero saber mais';
+                $block['cta_enabled'] = '0';
+                $block['cta_text'] = 'Quero saber mais';
+                $block['cta_url'] = '';
+                $block['cta_target'] = '_self';
             }
 
             if (in_array(($block['type'] ?? ''), ['lead_form', 'form_lead_simple'], true)) {
                 $block['base_id'] = (int)$base['id'];
                 $block['base_slug'] = $slug;
+                $block['title'] = 'Vamos criar o projeto';
                 $block['description'] = 'Informe seu e-mail para receber o link de continuacao.';
-                $block['button_text'] = $block['button_text'] ?? 'Receber link';
+                $block['button_text'] = 'Receber link';
             }
         }
         unset($block);

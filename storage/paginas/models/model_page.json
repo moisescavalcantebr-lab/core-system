@@ -1,0 +1,26 @@
+{
+  "show_title": false,
+  "media": {
+    "image_1": "",
+    "image_2": ""
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "enabled": true,
+      "title": "Apresente sua oferta com clareza",
+      "subtitle": "Uma pagina direta para explicar a oferta, captar interessados e encaminhar o visitante para o proximo passo.",
+      "cta_enabled": "0",
+      "cta_text": "Quero saber mais",
+      "cta_url": "",
+      "cta_target": "_self"
+    },
+    {
+      "type": "form_lead_simple",
+      "enabled": true,
+      "title": "Vamos criar o projeto",
+      "description": "Informe seu e-mail para receber o link de continuacao.",
+      "button_text": "Receber link"
+    }
+  ]
+}

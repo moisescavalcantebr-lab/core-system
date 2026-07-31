@@ -66,6 +66,25 @@ return [
                 'label' => 'Texto do botão',
                 'default' => 'Começar agora'
             ],
+            'cta_enabled' => [
+                'type' => 'text',
+                'label' => 'Exibir botão',
+                'default' => '0'
+            ],
+            'cta_url' => [
+                'type' => 'text',
+                'label' => 'URL do botão',
+                'default' => ''
+            ],
+            'cta_target' => [
+                'type' => 'select',
+                'label' => 'Abrir botão',
+                'options' => [
+                    '_self' => 'Mesma aba',
+                    '_blank' => 'Nova aba'
+                ],
+                'default' => '_self'
+            ],
         ]
     ],
 
