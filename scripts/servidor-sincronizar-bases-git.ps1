@@ -77,14 +77,14 @@ New-Item -ItemType Directory -Force -Path $TempPullRoot | Out-Null
 $ResolvedBasesRoot = (Resolve-Path $LocalBasesPath).Path
 
 if ($AllBases) {
-    $ListCommand = "if [ -d '$RemotePath/bases' ]; then find '$RemotePath/bases' -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort; fi"
+    $ListCommand = "if [ -d '$RemotePath/bases' ]; then find '$RemotePath/bases' -mindepth 1 -maxdepth 1 -type d ! -name 'base' -printf '%f\n' | sort; fi"
     Write-Host "[sync] Listando todas as bases do servidor..." -ForegroundColor Cyan
 } else {
     $ListCommand = @'
 if docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" | grep -q base_stage; then
-  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' ORDER BY slug;"
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' AND slug <> 'base' ORDER BY slug;"
 else
-  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 AND slug <> 'base' ORDER BY slug;"
 fi
 '@
     $ListCommand = "sh -lc " + "'" + ($ListCommand -replace "'", "'\''" -replace "`r`n", "`n" -replace "`r", "`n") + "'"

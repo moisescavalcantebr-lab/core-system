@@ -59,7 +59,7 @@ $LocalBases = @()
 if (Test-Path $LocalBasesPath) {
     $LocalBases = Get-ChildItem -Path $LocalBasesPath -Directory | Where-Object {
         if ($_.Name -eq "base") {
-            return $true
+            return $false
         }
 
         $ManifestPath = Join-Path $_.FullName "base.json"
@@ -69,9 +69,9 @@ if (Test-Path $LocalBasesPath) {
 
 $RemoteCommand = @'
 if docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" | grep -q base_stage; then
-  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' ORDER BY slug;"
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' AND slug <> 'base' ORDER BY slug;"
 else
-  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 ORDER BY slug;"
+  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 AND slug <> 'base' ORDER BY slug;"
 fi
 '@
 $RemoteCommand = "sh -lc " + "'" + ($RemoteCommand -replace "'", "'\''" -replace "`r`n", "`n" -replace "`r", "`n") + "'"

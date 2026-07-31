@@ -208,9 +208,11 @@ if (Test-Path $StageBasesPath) {
     Get-ChildItem -LiteralPath $StageBasesPath -Directory | ForEach-Object {
         $BaseDir = $_
         $ManifestPath = Join-Path $BaseDir.FullName "base.json"
-        $KeepBase = $BaseDir.Name -eq "base"
+        $KeepBase = $false
 
-        if (!$KeepBase -and (Test-Path $ManifestPath)) {
+        if ($BaseDir.Name -eq "base") {
+            $KeepBase = $false
+        } elseif (Test-Path $ManifestPath) {
             try {
                 $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
                 $StageValue = ""
@@ -241,6 +243,27 @@ if (Test-Path $StageBasesPath) {
             Write-Host "[package] Base fora do deploy: $($BaseDir.Name)" -ForegroundColor DarkYellow
             Remove-Item -LiteralPath $BaseDir.FullName -Recurse -Force
         }
+    }
+}
+
+if (Test-Path $StageBasesPath) {
+    $UntrackedPublishedBases = @()
+
+    Get-ChildItem -LiteralPath $StageBasesPath -Directory | ForEach-Object {
+        $ManifestRelativePath = "bases/$($_.Name)/base.json"
+        $PreviousErrorActionPreference = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        & git -C $Workspace ls-files --error-unmatch -- $ManifestRelativePath *> $null
+        $GitExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $PreviousErrorActionPreference
+
+        if ($GitExitCode -ne 0) {
+            $UntrackedPublishedBases += $_.Name
+        }
+    }
+
+    if ($UntrackedPublishedBases.Count -gt 0) {
+        throw "Base(s) publicada(s) ainda nao rastreada(s) no Git: $($UntrackedPublishedBases -join ', '). Faca git add/commit/push antes do deploy."
     }
 }
 
@@ -317,13 +340,6 @@ $RequiredDeployFiles = @(
     "modules\financeiro\web\admin\financeiro\wallet_requests.php",
     "modules\financeiro\web\admin\financeiro\wallet_request_store.php",
     "modules\financeiro\web\admin\financeiro\wallet_request_review.php",
-    "bases\base\web\admin\dashboard.php",
-    "bases\base\web\admin\upgrade\index.php",
-    "bases\base\web\admin\upgrade\checkout.php",
-    "bases\base\web\admin\upgrade\request.php",
-    "bases\base\web\admin\saldo.php",
-    "bases\base\web\admin\saldo_historico.php",
-    "bases\base\app\helpers\core_bridge.php",
     "storage\paginas\pages",
     "storage\paginas\pages_manifest.json",
     "storage\paginas\blocks",
@@ -354,6 +370,7 @@ $ForbiddenPackagePrefixes = @(
     ".codex/",
     ".agents/",
     ".vscode/",
+    "bases/base/",
     "bases/futebol-amador/",
     "storage/uploads/",
     "storage/logs/",
@@ -463,6 +480,7 @@ if [ -d "$RemoteRelease/app" ]; then
 fi
 if [ -d "$RemoteRelease/bases" ]; then
   mkdir -p "$RemotePath/bases"
+  rm -rf "$RemotePath/bases/base"
   find "$RemoteRelease/bases" -mindepth 1 -maxdepth 1 -type d | while read base_dir; do
     base_name=`$(basename "$base_dir")
     rm -rf "$RemotePath/bases/`$base_name"
@@ -504,7 +522,7 @@ fi
 echo "[container] aplicando release validada"
 docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
-docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=$(basename "$base_dir"); rm -rf "/var/www/html/bases/$base_name"; cp -a "$base_dir" "/var/www/html/bases/$base_name"; done; fi'
+docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; rm -rf /var/www/html/bases/base; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=$(basename "$base_dir"); rm -rf "/var/www/html/bases/$base_name"; cp -a "$base_dir" "/var/www/html/bases/$base_name"; done; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/cron ]; then cp -a /tmp/workspace-release/cron /var/www/html/cron; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/docs ]; then cp -a /tmp/workspace-release/docs /var/www/html/docs; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/modules ]; then cp -a /tmp/workspace-release/modules /var/www/html/modules; fi'
@@ -552,18 +570,6 @@ if ! docker exec app_php grep -n "Principais" /var/www/html/web/admin/modules/in
   docker exec app_php sed -n '160,190p' /var/www/html/web/admin/modules/index.php
   exit 1
 fi
-echo "[check] host carteira base"
-if ! grep -n "wallet-layout" $RemotePath/bases/base/web/admin/saldo.php || ! test -f $RemotePath/bases/base/web/admin/saldo_historico.php; then
-  echo "ERRO: carteira da base no host nao contem layout novo ou historico"
-  ls -l $RemotePath/bases/base/web/admin/saldo.php $RemotePath/bases/base/web/admin/saldo_historico.php
-  exit 1
-fi
-echo "[check] container carteira base"
-if ! docker exec app_php grep -n "wallet-layout" /var/www/html/bases/base/web/admin/saldo.php || ! docker exec app_php test -f /var/www/html/bases/base/web/admin/saldo_historico.php; then
-  echo "ERRO: carteira da base no container nao contem layout novo ou historico"
-  docker exec app_php ls -l /var/www/html/bases/base/web/admin/saldo.php /var/www/html/bases/base/web/admin/saldo_historico.php
-  exit 1
-fi
 echo "[check] paginas publicas"
 if ! test -d $RemotePath/storage/paginas/pages || ! test -d $RemotePath/storage/paginas/blocks || ! test -d $RemotePath/storage/paginas/models; then
   echo "ERRO: estrutura de paginas ausente no host"
@@ -607,10 +613,7 @@ for file in \
   /var/www/html/modules/financeiro/web/admin/financeiro/categories.php \
   /var/www/html/modules/financeiro/web/admin/financeiro/index.php \
   /var/www/html/modules/financeiro/web/admin/financeiro/meu_saldo.php \
-  /var/www/html/modules/financeiro/web/admin/financeiro/wallet_requests.php \
-  /var/www/html/bases/base/web/admin/saldo.php \
-  /var/www/html/bases/base/web/admin/saldo_historico.php \
-  /var/www/html/bases/base/app/helpers/core_bridge.php; do
+  /var/www/html/modules/financeiro/web/admin/financeiro/wallet_requests.php; do
   docker exec app_php php -l "`$file" || exit 1
 done
 echo "[done] release aplicada e verificada"
