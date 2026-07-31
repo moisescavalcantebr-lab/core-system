@@ -32,6 +32,14 @@ $currentStage = base_normalize_stage($base['base_stage'] ?? null, (int)($base['i
 $publishBase = $currentStage !== 'published';
 $newStage = $publishBase ? 'published' : 'laboratory';
 $newStatus = $publishBase ? 1 : 0;
+$basePath = BASES_PATH . '/' . $base['slug'];
+$schemaPath = $basePath . '/app/database/schema.sql';
+
+if ($publishBase && !is_file($schemaPath)) {
+    flash('error', 'Schema da base nao encontrado. Corrija a pasta da base antes de publicar.');
+    header("Location: /web/admin/bases/index.php");
+    exit;
+}
 
 $pdo->prepare("
     UPDATE bases 
@@ -48,12 +56,16 @@ $base['base_stage'] = $newStage;
 $base['is_protected'] = $newStatus;
 
 try {
-    base_write_manifest($base, BASES_PATH . '/' . $base['slug']);
+    if ($publishBase) {
+        base_ensure_plan_prices($pdo, (int)$base['id']);
+    }
+
+    base_write_manifest($base, $basePath);
 } catch (Throwable $e) {
     flash('warning', 'Status da base alterado, mas o manifesto nao foi atualizado: ' . $e->getMessage());
 }
 
-flash('success', $publishBase ? 'Base publicada e travada para deploy.' : 'Base reaberta no laboratorio.');
+flash('success', $publishBase ? 'Base publicada, schema atualizado e travada para deploy.' : 'Base reaberta no laboratorio.');
 
 header("Location: /web/admin/bases/index.php");
 exit;
