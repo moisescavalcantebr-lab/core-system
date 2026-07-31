@@ -43,7 +43,6 @@ $menu = [
 
     'Conteúdo' => [
         ['label' => 'Páginas', 'url' => '/web/admin/pages/index.php', 'key' => 'pages'],
-        ['label' => 'Categorias Blog', 'url' => '/web/admin/pages/taxonomy.php', 'key' => 'pages'],
         ['label' => 'Biblioteca', 'url' => '/web/admin/media/index.php', 'key' => 'media'],
         ['label' => 'Leads', 'url' => '/web/admin/leads/index.php', 'key' => 'leads'],
         ['label' => 'Content Studio', 'url' => '/web/admin/content_studio/index.php', 'key' => 'content_studio'],

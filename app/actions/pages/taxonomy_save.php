@@ -45,7 +45,12 @@ try {
             }
 
             $pdo->prepare('UPDATE blog_categories SET name = ?, slug = ? WHERE id = ?')->execute([$name, $slug, $id]);
-            $pdo->prepare("UPDATE core_page_contents SET category = ?, updated_at = NOW() WHERE type = 'blog' AND category = ?")->execute([$name, $oldName]);
+            $pdo->prepare("
+                UPDATE core_page_contents
+                SET category = ?, updated_at = NOW()
+                WHERE type = 'blog'
+                  AND CONVERT(category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci
+            ")->execute([$name, $oldName]);
             flash('success', 'Categoria atualizada.');
         } else {
             $pdo->prepare('INSERT INTO blog_categories (name, slug, status) VALUES (?, ?, 1)')->execute([$name, $slug]);
@@ -87,8 +92,8 @@ try {
                 UPDATE core_page_contents
                 SET category = ?, sub_category = ?, updated_at = NOW()
                 WHERE type = 'blog'
-                  AND category = ?
-                  AND sub_category = ?
+                  AND CONVERT(category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                  AND CONVERT(sub_category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci
             ")->execute([$categoryName, $name, (string)$old['category_name'], (string)$old['name']]);
             flash('success', 'Subcategoria atualizada.');
         } else {

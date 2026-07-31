@@ -107,6 +107,9 @@ ob_start();
             <a class="c-btn-secondary" href="/web/admin/pages/create.php">
                 + Nova Página
             </a>
+            <a class="c-btn-secondary" href="/web/admin/pages/taxonomy.php">
+                Categorias Blog
+            </a>
         </div>
 
     </div>

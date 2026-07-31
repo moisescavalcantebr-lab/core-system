@@ -10,14 +10,25 @@ requireAdmin();
 
 $categories = $pdo->query("
     SELECT c.*,
-           (SELECT COUNT(*) FROM core_page_contents p WHERE p.type = 'blog' AND p.category = c.name) AS total_posts
+           (
+               SELECT COUNT(*)
+               FROM core_page_contents p
+               WHERE p.type = 'blog'
+                 AND CONVERT(p.category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(c.name USING utf8mb4) COLLATE utf8mb4_unicode_ci
+           ) AS total_posts
     FROM blog_categories c
     ORDER BY c.name ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 $subcategories = $pdo->query("
     SELECT s.*, c.name AS category_name,
-           (SELECT COUNT(*) FROM core_page_contents p WHERE p.type = 'blog' AND p.category = c.name AND p.sub_category = s.name) AS total_posts
+           (
+               SELECT COUNT(*)
+               FROM core_page_contents p
+               WHERE p.type = 'blog'
+                 AND CONVERT(p.category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(c.name USING utf8mb4) COLLATE utf8mb4_unicode_ci
+                 AND CONVERT(p.sub_category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(s.name USING utf8mb4) COLLATE utf8mb4_unicode_ci
+           ) AS total_posts
     FROM blog_subcategories s
     INNER JOIN blog_categories c ON c.id = s.category_id
     ORDER BY c.name ASC, s.name ASC

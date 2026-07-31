@@ -28,7 +28,12 @@ try {
             redirect('/web/admin/pages/taxonomy.php');
         }
 
-        $count = $pdo->prepare("SELECT COUNT(*) FROM core_page_contents WHERE type = 'blog' AND category = ?");
+        $count = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM core_page_contents
+            WHERE type = 'blog'
+              AND CONVERT(category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        ");
         $count->execute([$name]);
 
         if ((int)$count->fetchColumn() > 0) {
@@ -55,7 +60,13 @@ try {
             redirect('/web/admin/pages/taxonomy.php');
         }
 
-        $count = $pdo->prepare("SELECT COUNT(*) FROM core_page_contents WHERE type = 'blog' AND category = ? AND sub_category = ?");
+        $count = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM core_page_contents
+            WHERE type = 'blog'
+              AND CONVERT(category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci
+              AND CONVERT(sub_category USING utf8mb4) COLLATE utf8mb4_unicode_ci = CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci
+        ");
         $count->execute([(string)$item['category_name'], (string)$item['name']]);
 
         if ((int)$count->fetchColumn() > 0) {
