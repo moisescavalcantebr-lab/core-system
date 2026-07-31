@@ -457,13 +457,17 @@ if ! docker exec app_php test -f /tmp/workspace-release/app/actions/projects/syn
   exit 1
 fi
 echo "[host] aplicando release validada"
-rm -rf "$RemotePath/app" "$RemotePath/bases" "$RemotePath/cron" "$RemotePath/docs" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web" "$RemotePath/storage/paginas"
+rm -rf "$RemotePath/app" "$RemotePath/cron" "$RemotePath/docs" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web" "$RemotePath/storage/paginas"
 if [ -d "$RemoteRelease/app" ]; then
   cp -a "$RemoteRelease/app" "$RemotePath/app"
 fi
 if [ -d "$RemoteRelease/bases" ]; then
   mkdir -p "$RemotePath/bases"
-  cp -a "$RemoteRelease/bases/." "$RemotePath/bases"
+  find "$RemoteRelease/bases" -mindepth 1 -maxdepth 1 -type d | while read base_dir; do
+    base_name=`$(basename "$base_dir")
+    rm -rf "$RemotePath/bases/`$base_name"
+    cp -a "$base_dir" "$RemotePath/bases/`$base_name"
+  done
 fi
 if [ -d "$RemoteRelease/cron" ]; then
   cp -a "$RemoteRelease/cron" "$RemotePath/cron"
@@ -498,9 +502,9 @@ if [ -f "$RemoteRelease/README.md" ]; then
   cp -a "$RemoteRelease/README.md" "$RemotePath/README.md"
 fi
 echo "[container] aplicando release validada"
-docker exec app_php rm -rf /var/www/html/app /var/www/html/bases /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
+docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
-docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases && cp -a /tmp/workspace-release/bases/. /var/www/html/bases; fi'
+docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=$(basename "$base_dir"); rm -rf "/var/www/html/bases/$base_name"; cp -a "$base_dir" "/var/www/html/bases/$base_name"; done; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/cron ]; then cp -a /tmp/workspace-release/cron /var/www/html/cron; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/docs ]; then cp -a /tmp/workspace-release/docs /var/www/html/docs; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/modules ]; then cp -a /tmp/workspace-release/modules /var/www/html/modules; fi'

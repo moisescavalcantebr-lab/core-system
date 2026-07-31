@@ -63,30 +63,7 @@ if (Test-Path $LocalBasesPath) {
         }
 
         $ManifestPath = Join-Path $_.FullName "base.json"
-        if (!(Test-Path $ManifestPath)) {
-            return $false
-        }
-
-        try {
-            $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
-            $StageValue = ""
-            if ($null -ne $Manifest.PSObject.Properties["base_stage"] -and $null -ne $Manifest.base_stage) {
-                $StageValue = ([string]$Manifest.base_stage).Trim().ToLowerInvariant()
-            }
-
-            $ProtectedValue = 0
-            if ($null -ne $Manifest.PSObject.Properties["is_protected"] -and $null -ne $Manifest.is_protected) {
-                $ProtectedValue = [int]$Manifest.is_protected
-            }
-
-            if ($StageValue -eq "") {
-                $StageValue = if ($ProtectedValue -eq 1) { "published" } else { "laboratory" }
-            }
-
-            return $StageValue -eq "published"
-        } catch {
-            return $false
-        }
+        return Test-Path $ManifestPath
     } | Select-Object -ExpandProperty Name
 }
 
@@ -148,10 +125,10 @@ if ($Missing.Count -gt 0) {
         Write-Host " - $Base" -ForegroundColor Red
     }
     Write-Host ""
-    Write-Host "Sincronize as bases publicadas do servidor com o VS Code/GitHub antes do deploy:" -ForegroundColor Yellow
+    Write-Host "Sincronize ou remova com seguranca as bases publicadas do servidor antes do deploy:" -ForegroundColor Yellow
     Write-Host "powershell -ExecutionPolicy Bypass -File scripts\servidor-sincronizar-bases-git.ps1 -Overwrite" -ForegroundColor Yellow
-    Write-Host "Depois teste localmente, faca commit/push e rode o deploy normal." -ForegroundColor Yellow
+    Write-Host "Se a base deve sair de producao, despublique/remova primeiro no servidor quando nao houver projetos vinculados; depois exclua no laboratorio." -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host "[guard] Bases publicadas do servidor estao presentes no VS Code." -ForegroundColor Green
+Write-Host "[guard] Bases publicadas do servidor existem no laboratorio local." -ForegroundColor Green
