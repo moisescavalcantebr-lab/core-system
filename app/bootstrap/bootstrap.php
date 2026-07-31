@@ -52,7 +52,6 @@ require_once APP_PATH . '/helpers/ui_helper.php';
 require_once APP_PATH . '/helpers/url_helper.php';
 require_once APP_PATH . '/helpers/form_renderer.php';
 require_once APP_PATH . '/helpers/base_manifest.php';
-require_once APP_PATH . '/helpers/base_showcase_page.php';
 require_once APP_PATH . '/helpers/core_wallet.php';
 
 /*

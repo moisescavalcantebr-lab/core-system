@@ -22,6 +22,8 @@ if (!$base) {
 }
 
 $showcaseStatus = isset($_POST['showcase_status']) ? 1 : 0;
+$showcaseTitle = trim((string)($_POST['showcase_title'] ?? ''));
+$showcaseSummary = trim((string)($_POST['showcase_summary'] ?? ''));
 $detailUrl = trim((string)($_POST['showcase_detail_url'] ?? ''));
 $ctaText = trim((string)($_POST['showcase_cta_text'] ?? ''));
 
@@ -32,6 +34,8 @@ if ($detailUrl !== '' && !preg_match('#^(/|https?://)#i', $detailUrl)) {
 }
 
 $ctaText = $ctaText !== '' ? substr($ctaText, 0, 80) : null;
+$showcaseTitle = $showcaseTitle !== '' ? substr($showcaseTitle, 0, 150) : null;
+$showcaseSummary = $showcaseSummary !== '' ? $showcaseSummary : null;
 $detailUrl = $detailUrl !== '' ? substr($detailUrl, 0, 500) : null;
 
 function base_showcase_upload(string $field, string $slug): ?string
@@ -118,7 +122,9 @@ try {
 
     $stmt = $pdo->prepare("
         UPDATE bases
-        SET showcase_cover_image = :showcase_cover_image,
+        SET showcase_title = :showcase_title,
+            showcase_summary = :showcase_summary,
+            showcase_cover_image = :showcase_cover_image,
             showcase_banner_image = :showcase_banner_image,
             showcase_detail_url = :showcase_detail_url,
             showcase_cta_text = :showcase_cta_text,
@@ -128,6 +134,8 @@ try {
     ");
 
     $stmt->execute([
+        'showcase_title' => $showcaseTitle,
+        'showcase_summary' => $showcaseSummary,
         'showcase_cover_image' => $coverImage,
         'showcase_banner_image' => $bannerImage,
         'showcase_detail_url' => $detailUrl,

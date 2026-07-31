@@ -27,20 +27,23 @@ function base_showcase_asset_url(?string $path): string
 
 $coverUrl = base_showcase_asset_url($base['showcase_cover_image'] ?? null);
 $bannerUrl = base_showcase_asset_url($base['showcase_banner_image'] ?? null);
-$showcasePage = base_showcase_find_page($pdo, $base, false);
+$isLandingVisible = base_is_published($base) && (int)($base['showcase_status'] ?? 0) === 1;
 
-$title = 'Vitrine da Base';
+$title = 'Landing da Base';
 ob_start();
 ?>
 
 <div class="c-page">
     <div class="c-page-header">
         <div>
-            <h1 class="c-page-title">Vitrine da Base</h1>
-            <p class="c-page-subtitle"><?= htmlspecialchars((string)$base['name']) ?></p>
+            <h1 class="c-page-title">Landing da Base</h1>
+            <p class="c-page-subtitle"><?= htmlspecialchars((string)$base['name']) ?> em /web/base.php?slug=<?= htmlspecialchars((string)$base['slug']) ?></p>
         </div>
 
         <div class="c-page-actions">
+            <?php if ($isLandingVisible): ?>
+                <a href="/web/base.php?slug=<?= urlencode((string)$base['slug']) ?>" target="_blank" class="c-btn-secondary">Ver landing</a>
+            <?php endif; ?>
             <a href="/web/admin/bases/vitrines.php" class="c-btn-secondary">Vitrines</a>
             <a href="/web/admin/bases/index.php" class="c-btn-secondary">Bases</a>
         </div>
@@ -49,50 +52,28 @@ ob_start();
     <div class="c-page-content">
         <?php flash_show(); ?>
 
-        <div class="c-card c-showcase-page-card">
-            <div>
-                <h3>Pagina da base</h3>
-                <?php if ($showcasePage): ?>
-                    <p class="c-text-muted">
-                        <?= htmlspecialchars((string)$showcasePage['title']) ?>
-                        <span class="c-badge <?= $showcasePage['status'] === 'published' ? 'c-badge--success' : 'c-badge--warning' ?>">
-                            <?= $showcasePage['status'] === 'published' ? 'Publicada' : 'Rascunho' ?>
-                        </span>
-                    </p>
-                <?php else: ?>
-                    <p class="c-text-muted">
-                        Crie a pagina da base antes de ativar a vitrine publica.
-                    </p>
-                <?php endif; ?>
-            </div>
-
-            <div class="c-showcase-page-actions">
-                <?php if ($showcasePage): ?>
-                    <a class="c-btn-secondary" href="/web/admin/pages/edit.php?id=<?= (int)$showcasePage['id'] ?>">
-                        Editar pagina
-                    </a>
-                    <?php if ($showcasePage['status'] === 'published'): ?>
-                        <a class="c-btn-secondary" target="_blank" href="/web/p.php?slug=<?= urlencode((string)$showcasePage['slug']) ?>&base=<?= urlencode((string)$base['slug']) ?>">
-                            Ver pagina
-                        </a>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <form method="post" action="/app/actions/bases/vitrine_page_create.php" class="c-inline-form">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
-                        <button class="c-btn-primary" type="submit">
-                            Criar pagina
-                        </button>
-                    </form>
-                <?php endif; ?>
-            </div>
-        </div>
-
         <form method="post" action="/app/actions/bases/vitrine_save.php" enctype="multipart/form-data" class="c-card">
             <?= csrf_field() ?>
             <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
 
             <div class="c-form-grid">
+                <div class="c-form-group">
+                    <label>Titulo da landing</label>
+                    <input class="c-input"
+                           name="showcase_title"
+                           maxlength="150"
+                           placeholder="<?= htmlspecialchars((string)$base['name']) ?>"
+                           value="<?= htmlspecialchars((string)($base['showcase_title'] ?? '')) ?>">
+                </div>
+
+                <div class="c-form-group c-form-group-full">
+                    <label>Subtitulo da landing</label>
+                    <textarea class="c-input"
+                              name="showcase_summary"
+                              rows="3"
+                              placeholder="Texto curto para explicar a base na pagina publica."><?= htmlspecialchars((string)($base['showcase_summary'] ?? '')) ?></textarea>
+                </div>
+
                 <div class="c-form-group">
                     <label>Imagem de capa</label>
                     <input class="c-input" type="file" name="showcase_cover_image" accept="image/png,image/jpeg,image/webp">
@@ -116,7 +97,7 @@ ob_start();
                 </div>
 
                 <div class="c-form-group">
-                    <label>Link do conteúdo detalhado/blog</label>
+                    <label>Link opcional do blog/conteudo</label>
                     <input class="c-input"
                            name="showcase_detail_url"
                            placeholder="/web/p.php?slug=meu-post ou https://..."
@@ -124,7 +105,7 @@ ob_start();
                 </div>
 
                 <div class="c-form-group">
-                    <label>Texto do botão de conteúdo</label>
+                    <label>Texto do botao opcional</label>
                     <input class="c-input"
                            name="showcase_cta_text"
                            maxlength="80"
@@ -215,33 +196,9 @@ ob_start();
     object-fit: cover;
 }
 
-.c-showcase-page-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.c-showcase-page-card h3 {
-    margin: 0 0 6px;
-}
-
-.c-showcase-page-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
 @media (max-width: 760px) {
     .c-showcase-preview-grid {
         grid-template-columns: 1fr;
-    }
-
-    .c-showcase-page-card {
-        align-items: stretch;
-        flex-direction: column;
     }
 }
 </style>
