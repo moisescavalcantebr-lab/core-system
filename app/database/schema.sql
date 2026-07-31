@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS bases (
     showcase_summary TEXT NULL,
     showcase_cover_image VARCHAR(255) NULL,
     showcase_banner_image VARCHAR(255) NULL,
+    showcase_detail_url VARCHAR(500) NULL,
+    showcase_cta_text VARCHAR(80) NULL,
     showcase_featured TINYINT DEFAULT 0,
     showcase_order INT DEFAULT 0,
     showcase_status TINYINT DEFAULT 0,

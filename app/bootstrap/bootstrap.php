@@ -189,8 +189,16 @@ try {
         $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_banner_image VARCHAR(255) NULL AFTER showcase_cover_image");
     }
 
+    if (!in_array('showcase_detail_url', $baseColumns, true)) {
+        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_detail_url VARCHAR(500) NULL AFTER showcase_banner_image");
+    }
+
+    if (!in_array('showcase_cta_text', $baseColumns, true)) {
+        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_cta_text VARCHAR(80) NULL AFTER showcase_detail_url");
+    }
+
     if (!in_array('showcase_featured', $baseColumns, true)) {
-        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_featured TINYINT DEFAULT 0 AFTER showcase_banner_image");
+        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_featured TINYINT DEFAULT 0 AFTER showcase_cta_text");
     }
 
     if (!in_array('showcase_order', $baseColumns, true)) {

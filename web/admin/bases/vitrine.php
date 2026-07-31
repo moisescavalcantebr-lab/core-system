@@ -28,7 +28,6 @@ function base_showcase_asset_url(?string $path): string
 $coverUrl = base_showcase_asset_url($base['showcase_cover_image'] ?? null);
 $bannerUrl = base_showcase_asset_url($base['showcase_banner_image'] ?? null);
 $showcasePage = base_showcase_find_page($pdo, $base, false);
-$publishedShowcasePage = base_showcase_find_page($pdo, $base, true);
 
 $title = 'Vitrine da Base';
 ob_start();
@@ -89,12 +88,6 @@ ob_start();
             </div>
         </div>
 
-        <?php if (!$publishedShowcasePage): ?>
-            <div class="c-card" style="border-left:5px solid #f59e0b;">
-                Para exibir esta base na vitrine publica, crie e publique a pagina da base primeiro.
-            </div>
-        <?php endif; ?>
-
         <form method="post" action="/app/actions/bases/vitrine_save.php" enctype="multipart/form-data" class="c-card">
             <?= csrf_field() ?>
             <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
@@ -122,13 +115,30 @@ ob_start();
                     <?php endif; ?>
                 </div>
 
+                <div class="c-form-group">
+                    <label>Link do conteúdo detalhado/blog</label>
+                    <input class="c-input"
+                           name="showcase_detail_url"
+                           placeholder="/web/p.php?slug=meu-post ou https://..."
+                           value="<?= htmlspecialchars((string)($base['showcase_detail_url'] ?? '')) ?>">
+                </div>
+
+                <div class="c-form-group">
+                    <label>Texto do botão de conteúdo</label>
+                    <input class="c-input"
+                           name="showcase_cta_text"
+                           maxlength="80"
+                           placeholder="Quero saber mais"
+                           value="<?= htmlspecialchars((string)($base['showcase_cta_text'] ?? '')) ?>">
+                </div>
+
                 <label class="c-checkbox-line">
                     <input type="checkbox" name="showcase_featured" value="1" <?= (int)($base['showcase_featured'] ?? 0) === 1 ? 'checked' : '' ?>>
                     Destacar na home
                 </label>
 
                 <label class="c-checkbox-line">
-                    <input type="checkbox" name="showcase_status" value="1" <?= (int)($base['showcase_status'] ?? 1) === 1 ? 'checked' : '' ?> <?= !$publishedShowcasePage ? 'disabled' : '' ?>>
+                    <input type="checkbox" name="showcase_status" value="1" <?= (int)($base['showcase_status'] ?? 1) === 1 ? 'checked' : '' ?>>
                     Exibir na vitrine pública
                 </label>
             </div>

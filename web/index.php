@@ -8,27 +8,7 @@ $stmt = $pdo->query("
            showcase_cover_image, showcase_banner_image, showcase_featured,
            showcase_order, showcase_status,
            (SELECT COUNT(*) FROM projects p2 WHERE p2.base_id = b.id AND p2.status != 'deleted') AS total_projects,
-           (SELECT COUNT(*) FROM leads l WHERE l.base_id = b.id) AS total_leads,
-           (
-               SELECT p.slug
-               FROM core_page_contents p
-               WHERE p.area = 'public'
-                 AND p.status = 'published'
-                 AND p.type = 'page'
-                 AND (
-                     p.slug = b.slug
-                     OR p.slug LIKE CONCAT('%', b.slug, '%')
-                     OR LOWER(p.title) LIKE CONCAT('%', REPLACE(b.slug, '-', ' '), '%')
-                 )
-               ORDER BY
-                   CASE
-                       WHEN p.slug = b.slug THEN 0
-                       WHEN p.slug LIKE CONCAT('%', b.slug, '%') THEN 1
-                       ELSE 2
-                   END,
-                   p.id ASC
-               LIMIT 1
-           ) AS landing_slug
+           (SELECT COUNT(*) FROM leads l WHERE l.base_id = b.id) AS total_leads
     FROM bases b
     WHERE b.status = 1
       AND b.slug != 'base'
@@ -93,10 +73,7 @@ function store_base_badge(string $slug): string
 
 function store_base_landing_url(array $base): string
 {
-    $baseSlug = (string)$base['slug'];
-    $pageSlug = trim((string)($base['landing_slug'] ?? '')) ?: $baseSlug;
-
-    return '/web/p.php?slug=' . rawurlencode($pageSlug) . '&base=' . rawurlencode($baseSlug);
+    return '/web/base.php?slug=' . rawurlencode((string)$base['slug']);
 }
 
 function store_base_public_title(array $base): string

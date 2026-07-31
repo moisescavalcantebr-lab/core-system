@@ -22,12 +22,17 @@ if (!$base) {
 }
 
 $showcaseStatus = isset($_POST['showcase_status']) ? 1 : 0;
+$detailUrl = trim((string)($_POST['showcase_detail_url'] ?? ''));
+$ctaText = trim((string)($_POST['showcase_cta_text'] ?? ''));
 
-if ($showcaseStatus === 1 && !base_showcase_find_page($pdo, $base, true)) {
-    flash('warning', 'Crie e publique a pagina da base antes de exibir na vitrine publica.');
+if ($detailUrl !== '' && !preg_match('#^(/|https?://)#i', $detailUrl)) {
+    flash('error', 'Use uma URL de conteudo valida, iniciando com /, http:// ou https://.');
     redirect('/web/admin/bases/vitrine.php?id=' . $baseId);
     exit;
 }
+
+$ctaText = $ctaText !== '' ? substr($ctaText, 0, 80) : null;
+$detailUrl = $detailUrl !== '' ? substr($detailUrl, 0, 500) : null;
 
 function base_showcase_upload(string $field, string $slug): ?string
 {
@@ -115,6 +120,8 @@ try {
         UPDATE bases
         SET showcase_cover_image = :showcase_cover_image,
             showcase_banner_image = :showcase_banner_image,
+            showcase_detail_url = :showcase_detail_url,
+            showcase_cta_text = :showcase_cta_text,
             showcase_featured = :showcase_featured,
             showcase_status = :showcase_status
         WHERE id = :id
@@ -123,6 +130,8 @@ try {
     $stmt->execute([
         'showcase_cover_image' => $coverImage,
         'showcase_banner_image' => $bannerImage,
+        'showcase_detail_url' => $detailUrl,
+        'showcase_cta_text' => $ctaText,
         'showcase_featured' => isset($_POST['showcase_featured']) ? 1 : 0,
         'showcase_status' => $showcaseStatus,
         'id' => $baseId,
