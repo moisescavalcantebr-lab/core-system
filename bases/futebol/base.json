@@ -1,15 +1,15 @@
 {
-    "name":  "Base Futebol",
-    "slug":  "futebol",
-    "description":  "Base para projetos de futebol com jogadores, elenco e modulos esportivos.",
-    "allows_users":  1,
-    "max_admins":  1,
-    "status":  1,
-    "base_stage":  "laboratory",
-    "is_protected":  0,
-    "schema":  {
-                   "path":  "app/database/schema.sql",
-                   "hash":  "1a1f0601475482817567e04e2e7ed9ae",
-                   "updated_at":  "2026-06-12 18:35:00"
-               }
+    "name": "Base Futebol",
+    "slug": "futebol",
+    "description": "Base para projetos de futebol com jogadores, elenco e modulos esportivos.",
+    "allows_users": 1,
+    "max_admins": 1,
+    "status": 1,
+    "base_stage": "published",
+    "is_protected": 1,
+    "schema": {
+        "path": "app/database/schema.sql",
+        "hash": "86d188f0021c60c69288e694cdf99c62",
+        "updated_at": "2026-07-31 17:55:36"
+    }
 }

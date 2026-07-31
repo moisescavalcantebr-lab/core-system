@@ -79,6 +79,38 @@ if (!function_exists('base_write_manifest')) {
     }
 }
 
+if (!function_exists('base_git_status')) {
+    function base_git_status(string $slug): array
+    {
+        $slug = preg_replace('/[^a-z0-9\-]/', '', strtolower($slug));
+
+        if ($slug === '' || !defined('ROOT_PATH')) {
+            return ['available' => false, 'tracked' => false, 'clean' => false];
+        }
+
+        $baseRelativePath = 'bases/' . $slug;
+        $manifestRelativePath = $baseRelativePath . '/base.json';
+        $gitDir = ROOT_PATH . '/.git';
+
+        if (!is_dir($gitDir)) {
+            return ['available' => false, 'tracked' => false, 'clean' => false];
+        }
+
+        $trackedCommand = 'git -C ' . escapeshellarg(ROOT_PATH) . ' ls-files --error-unmatch -- ' . escapeshellarg($manifestRelativePath) . ' 2>&1';
+        exec($trackedCommand, $trackedOutput, $trackedExitCode);
+
+        $statusCommand = 'git -C ' . escapeshellarg(ROOT_PATH) . ' status --porcelain -- ' . escapeshellarg($baseRelativePath) . ' 2>&1';
+        exec($statusCommand, $statusOutput, $statusExitCode);
+
+        return [
+            'available' => $trackedExitCode !== 127 && $statusExitCode === 0,
+            'tracked' => $trackedExitCode === 0,
+            'clean' => $statusExitCode === 0 && count($statusOutput) === 0,
+            'status' => $statusOutput,
+        ];
+    }
+}
+
 if (!function_exists('base_ensure_plan_prices')) {
     function base_ensure_plan_prices(PDO $pdo, int $baseId): void
     {

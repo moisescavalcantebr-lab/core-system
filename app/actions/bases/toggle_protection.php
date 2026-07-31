@@ -65,7 +65,21 @@ try {
     flash('warning', 'Status da base alterado, mas o manifesto nao foi atualizado: ' . $e->getMessage());
 }
 
-flash('success', $publishBase ? 'Base publicada, schema atualizado e travada para deploy.' : 'Base reaberta no laboratorio.');
+if ($publishBase) {
+    $gitStatus = base_git_status((string)$base['slug']);
+
+    if (!$gitStatus['available']) {
+        flash('warning', 'Base publicada e schema atualizado. Nao foi possivel validar o Git automaticamente; confira git status antes do deploy.');
+    } elseif (!$gitStatus['tracked']) {
+        flash('warning', 'Base publicada e schema atualizado. A pasta ainda nao esta rastreada no Git: rode git add bases/' . $base['slug'] . ' && git commit && git push antes do deploy.');
+    } elseif (!$gitStatus['clean']) {
+        flash('warning', 'Base publicada e schema atualizado. O manifesto mudou no Git: rode git add bases/' . $base['slug'] . '/base.json && git commit && git push antes do deploy.');
+    } else {
+        flash('success', 'Base publicada, schema atualizado, Git limpo e pronta para deploy.');
+    }
+} else {
+    flash('success', 'Base reaberta no laboratorio.');
+}
 
 header("Location: /web/admin/bases/index.php");
 exit;

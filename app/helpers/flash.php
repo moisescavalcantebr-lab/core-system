@@ -19,8 +19,14 @@ if (!function_exists('flash_show')) {
             $flash = $_SESSION['_flash'];
             unset($_SESSION['_flash']);
 
+            $color = match ($flash['type'] ?? 'info') {
+                'error' => 'red',
+                'warning' => '#f59e0b',
+                default => 'green',
+            };
+
             echo '<div class="c-card" style="border-left:5px solid ' .
-                 ($flash['type'] === 'error' ? 'red' : 'green') .
+                 $color .
                  ';">' .
                  htmlspecialchars($flash['message']) .
                  '</div>';

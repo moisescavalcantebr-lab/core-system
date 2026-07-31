@@ -1,15 +1,15 @@
 {
-    "name":  "Base Cripto",
-    "slug":  "cripto",
-    "description":  "Base para gestao cripto DCA Spot",
-    "allows_users":  1,
-    "max_admins":  1,
-    "status":  1,
-    "base_stage":  "laboratory",
-    "is_protected":  0,
-    "schema":  {
-                   "path":  "app/database/schema.sql",
-                   "hash":  "96c290ad4e8a8f7c16891b4dcab57376",
-                   "updated_at":  "2026-06-12 16:10:00"
-               }
+    "name": "Base Cripto",
+    "slug": "cripto",
+    "description": "Base para gestao cripto DCA Spot",
+    "allows_users": 1,
+    "max_admins": 1,
+    "status": 1,
+    "base_stage": "published",
+    "is_protected": 1,
+    "schema": {
+        "path": "app/database/schema.sql",
+        "hash": "15f60e3f9f9c454d4df61626bcd73f2b",
+        "updated_at": "2026-07-31 17:55:41"
+    }
 }
