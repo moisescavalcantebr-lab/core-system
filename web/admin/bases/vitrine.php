@@ -74,6 +74,14 @@ ob_start();
                               placeholder="Texto curto para explicar a base na pagina publica."><?= htmlspecialchars((string)($base['showcase_summary'] ?? '')) ?></textarea>
                 </div>
 
+                <div class="c-form-group c-form-group-full">
+                    <label>Destaques dos cards</label>
+                    <textarea class="c-input"
+                              name="showcase_features"
+                              rows="4"
+                              placeholder="Um destaque por linha. Ex: Gestao de campanhas simples&#10;Cadastro rapido por e-mail&#10;Painel pronto para acompanhar leads"><?= htmlspecialchars((string)($base['showcase_features'] ?? '')) ?></textarea>
+                </div>
+
                 <div class="c-form-group">
                     <label>Imagem de capa</label>
                     <input class="c-input" type="file" name="showcase_cover_image" accept="image/png,image/jpeg,image/webp">

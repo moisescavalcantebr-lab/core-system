@@ -180,8 +180,12 @@ try {
         $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_summary TEXT NULL AFTER showcase_title");
     }
 
+    if (!in_array('showcase_features', $baseColumns, true)) {
+        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_features TEXT NULL AFTER showcase_summary");
+    }
+
     if (!in_array('showcase_cover_image', $baseColumns, true)) {
-        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_cover_image VARCHAR(255) NULL AFTER showcase_summary");
+        $pdo->exec("ALTER TABLE bases ADD COLUMN showcase_cover_image VARCHAR(255) NULL AFTER showcase_features");
     }
 
     if (!in_array('showcase_banner_image', $baseColumns, true)) {

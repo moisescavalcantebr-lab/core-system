@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS bases (
     description TEXT NULL,
     showcase_title VARCHAR(150) NULL,
     showcase_summary TEXT NULL,
+    showcase_features TEXT NULL,
     showcase_cover_image VARCHAR(255) NULL,
     showcase_banner_image VARCHAR(255) NULL,
     showcase_detail_url VARCHAR(500) NULL,

@@ -5,7 +5,7 @@ require __DIR__ . '/../app/bootstrap/bootstrap.php';
 
 $stmt = $pdo->query("
     SELECT b.id, b.slug, b.name, b.description, b.showcase_title, b.showcase_summary,
-           showcase_cover_image, showcase_banner_image, showcase_order,
+           b.showcase_features, showcase_cover_image, showcase_banner_image, showcase_order,
            showcase_status,
            (SELECT COUNT(*) FROM projects p2 WHERE p2.base_id = b.id AND p2.status != 'deleted') AS total_projects,
            (SELECT COUNT(*) FROM leads l WHERE l.base_id = b.id) AS total_leads
@@ -41,8 +41,21 @@ $logoUrl = $logo !== '' ? '/web/assets/uploads/' . rawurlencode($logo) : '';
 $favicon = trim((string)($coreSettings['app_favicon'] ?? ''));
 $faviconUrl = $favicon !== '' ? '/web/assets/uploads/' . rawurlencode($favicon) : '';
 
-function store_catalog_features(string $slug): array
+function store_catalog_features(array $base): array
 {
+    $custom = trim((string)($base['showcase_features'] ?? ''));
+
+    if ($custom !== '') {
+        $features = array_values(array_filter(array_map(
+            static fn(string $line): string => trim($line),
+            preg_split('/\r\n|\r|\n/', $custom) ?: []
+        )));
+
+        if ($features) {
+            return array_slice($features, 0, 4);
+        }
+    }
+
     return [
         'Painel administrativo',
         'Fluxo de criacao guiado',
@@ -455,7 +468,7 @@ function store_catalog_asset_url(?string $path): string
                             </div>
 
                             <ul class="c-base-features">
-                                <?php foreach (store_catalog_features($baseSlug) as $feature): ?>
+                                <?php foreach (store_catalog_features($base) as $feature): ?>
                                     <li><?= htmlspecialchars($feature) ?></li>
                                 <?php endforeach; ?>
                             </ul>
