@@ -24,6 +24,16 @@ if ($status === 'lead_exists') {
     $message = 'Já existe um cadastro iniciado com este e-mail para esta base. Confira o e-mail cadastrado para continuar a criação do projeto. Veja também a caixa de spam.';
 }
 
+if ($status === 'check_email') {
+    $heading = 'Confira seu e-mail';
+    $message = 'Enviamos um link para continuar a criação do projeto. Abra a mensagem recebida e complete os dados no próximo passo.';
+}
+
+if ($status === 'check_email_pending') {
+    $heading = 'E-mail registrado';
+    $message = 'Recebemos seu e-mail. Não conseguimos confirmar o envio automático agora, então o registro ficou salvo para acompanhamento.';
+}
+
 if ($status === 'created' && $projectSlug !== '') {
     $heading = 'Projeto criado';
     $message = 'Cadastro concluído. Para continuar, confira o e-mail cadastrado e abra o link enviado para criar sua senha. Veja também a caixa de spam.';

@@ -10,6 +10,8 @@ SLUG
 ========================= */
 
 $slug = $_GET['slug'] ?? '';
+$baseSlugParam = strtolower(trim((string)($_GET['base'] ?? '')));
+$baseSlugParam = preg_replace('/[^a-z0-9\-]/', '', $baseSlugParam) ?? '';
 
 if(!$slug){
     die('Slug não informado.');
@@ -78,6 +80,25 @@ if(file_exists($jsonPath)){
 }
 
 $blocks = $data['blocks'] ?? [];
+
+$lookupBaseSlug = $baseSlugParam !== '' ? $baseSlugParam : $slug;
+
+$stmt = $pdo->prepare("
+    SELECT id, slug
+    FROM bases
+    WHERE slug = :slug
+    AND status = 1
+    AND slug != 'base'
+    AND base_stage = 'published'
+    LIMIT 1
+");
+$stmt->execute(['slug' => $lookupBaseSlug]);
+$pageBase = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($pageBase) {
+    $data['base_id'] = (int)$pageBase['id'];
+    $data['base_slug'] = (string)$pageBase['slug'];
+}
 /*
 |--------------------------------------------------------------------------
 | RENDER

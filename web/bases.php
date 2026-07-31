@@ -4,15 +4,35 @@ declare(strict_types=1);
 require __DIR__ . '/../app/bootstrap/bootstrap.php';
 
 $stmt = $pdo->query("
-    SELECT id, slug, name, description, showcase_title, showcase_summary,
+    SELECT b.id, b.slug, b.name, b.description, b.showcase_title, b.showcase_summary,
            showcase_cover_image, showcase_banner_image, showcase_order,
-           showcase_status
-    FROM bases
-    WHERE status = 1
-      AND slug != 'base'
-      AND base_stage = 'published'
-      AND showcase_status = 1
-    ORDER BY showcase_order ASC, name ASC
+           showcase_status,
+           (
+               SELECT p.slug
+               FROM core_page_contents p
+               WHERE p.area = 'public'
+                 AND p.status = 'published'
+                 AND p.type = 'page'
+                 AND (
+                     p.slug = b.slug
+                     OR p.slug LIKE CONCAT('%', b.slug, '%')
+                     OR LOWER(p.title) LIKE CONCAT('%', REPLACE(b.slug, '-', ' '), '%')
+                 )
+               ORDER BY
+                   CASE
+                       WHEN p.slug = b.slug THEN 0
+                       WHEN p.slug LIKE CONCAT('%', b.slug, '%') THEN 1
+                       ELSE 2
+                   END,
+                   p.id ASC
+               LIMIT 1
+           ) AS landing_slug
+    FROM bases b
+    WHERE b.status = 1
+      AND b.slug != 'base'
+      AND b.base_stage = 'published'
+      AND b.showcase_status = 1
+    ORDER BY b.showcase_order ASC, b.name ASC
 ");
 
 $bases = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -32,9 +52,12 @@ function store_catalog_features(string $slug): array
     ];
 }
 
-function store_catalog_landing_url(string $slug): string
+function store_catalog_landing_url(array $base): string
 {
-    return '/web/p.php?slug=' . rawurlencode($slug);
+    $baseSlug = (string)$base['slug'];
+    $pageSlug = trim((string)($base['landing_slug'] ?? '')) ?: $baseSlug;
+
+    return '/web/p.php?slug=' . rawurlencode($pageSlug) . '&base=' . rawurlencode($baseSlug);
 }
 
 function store_catalog_public_title(array $base): string
@@ -436,7 +459,7 @@ function store_catalog_asset_url(?string $path): string
                             </ul>
 
                             <div class="c-base-actions">
-                                <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_catalog_landing_url($baseSlug)) ?>">Ver mais</a>
+                                <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_catalog_landing_url($base)) ?>">Ver mais</a>
                             </div>
                         </div>
                     </article>

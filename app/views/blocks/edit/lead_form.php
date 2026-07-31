@@ -25,6 +25,7 @@
                 FROM bases
                 WHERE status = 1
                 AND slug != 'base'
+                AND base_stage = 'published'
                 ORDER BY name ASC
             ");
 

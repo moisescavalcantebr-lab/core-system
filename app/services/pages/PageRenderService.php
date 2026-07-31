@@ -51,6 +51,11 @@ class PageRenderService
             $config = $block;
             unset($config['type'], $config['enabled']);
 
+            if (in_array($type, ['lead_form', 'form_lead_simple'], true)) {
+                $config['base_id'] = $config['base_id'] ?? ($globalData['base_id'] ?? '');
+                $config['base_slug'] = $config['base_slug'] ?? ($globalData['base_slug'] ?? '');
+            }
+
             //  RESOLVE MEDIA
             $config = $this->parsePlaceholders($config, $media);
 

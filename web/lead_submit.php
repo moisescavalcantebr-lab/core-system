@@ -24,14 +24,39 @@ $contentSource = strtolower(trim((string)($_POST['content_source'] ?? $_GET['cs_
 $contentCampaignKey = $contentCampaignKey !== '' ? substr(preg_replace('/[^a-z0-9_\-]+/', '-', $contentCampaignKey) ?? '', 0, 120) : null;
 $contentSource = $contentSource !== '' ? substr(preg_replace('/[^a-z0-9_\-]+/', '-', $contentSource) ?? '', 0, 120) : null;
 
-if ($name === '' || $phone === '' || $email === '' || $state === '' || $city === '') {
-    http_response_code(422);
-    die('Preencha todos os campos.');
-}
-
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     http_response_code(422);
     die('E-mail inválido.');
+}
+
+function lead_continue_base_url(array $config): string
+{
+    $configuredUrl = rtrim((string)($config['app_url'] ?? ''), '/');
+
+    if ($configuredUrl !== '') {
+        return $configuredUrl;
+    }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = (string)($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+    return $scheme . '://' . $host;
+}
+
+function lead_send_continue_email(string $email, string $continueLink, string $appName): bool
+{
+    $safeAppName = htmlspecialchars($appName, ENT_QUOTES, 'UTF-8');
+    $safeLink = htmlspecialchars($continueLink, ENT_QUOTES, 'UTF-8');
+    $subject = 'Continue a criação do seu projeto';
+    $html = '
+        <p>Olá,</p>
+        <p>Recebemos seu e-mail em ' . $safeAppName . '.</p>
+        <p>Para continuar a criação do projeto, abra o link abaixo:</p>
+        <p><a href="' . $safeLink . '">' . $safeLink . '</a></p>
+        <p>Se você não solicitou esse acesso, ignore esta mensagem.</p>
+    ';
+
+    return MailService::send($email, $subject, $html) !== null;
 }
 
 $validBaseId = null;
@@ -66,6 +91,15 @@ if (!$validBaseId && $baseSlug !== '') {
     $validBaseId = $stmt->fetchColumn() ?: null;
 }
 
+if (!$validBaseId) {
+    http_response_code(422);
+    die('Escolha uma base disponível para continuar.');
+}
+
+$continueToken = bin2hex(random_bytes(32));
+$continueExpiresAt = date('Y-m-d H:i:s', time() + 86400);
+$continueLink = lead_continue_base_url($config) . '/web/projects/create.php?token=' . rawurlencode($continueToken);
+
 $stmt = $pdo->prepare("
     SELECT id
     FROM leads
@@ -86,7 +120,32 @@ $stmt->execute([
 $existingLeadId = (int)($stmt->fetchColumn() ?: 0);
 
 if ($existingLeadId > 0) {
-    header('Location: /web/projects/thanks.php?status=lead_exists');
+    $stmt = $pdo->prepare("
+        UPDATE leads
+        SET continue_token = :continue_token,
+            continue_expires_at = :continue_expires_at,
+            ip_address = :ip_address,
+            user_agent = :user_agent,
+            referer = :referer,
+            content_campaign_key = COALESCE(:content_campaign_key, content_campaign_key),
+            content_source = COALESCE(:content_source, content_source),
+            status = 'new'
+        WHERE id = :id
+    ");
+
+    $stmt->execute([
+        'continue_token' => $continueToken,
+        'continue_expires_at' => $continueExpiresAt,
+        'ip_address' => $ipAddress,
+        'user_agent' => $userAgent,
+        'referer' => $referer,
+        'content_campaign_key' => $contentCampaignKey,
+        'content_source' => $contentSource,
+        'id' => $existingLeadId,
+    ]);
+
+    $sent = lead_send_continue_email($email, $continueLink, (string)($coreSettings['app_name'] ?? 'Meu Projeto Web'));
+    header('Location: /web/projects/thanks.php?status=' . ($sent ? 'check_email' : 'check_email_pending'));
     exit;
 }
 
@@ -116,26 +175,28 @@ if ($existingProjectSlug !== '') {
 
 $stmt = $pdo->prepare("
     INSERT INTO leads
-    (name, phone, email, state, city, base_id, ip_address, user_agent, referer, content_campaign_key, content_source, created_at)
+    (name, phone, email, state, city, base_id, ip_address, user_agent, referer, content_campaign_key, content_source, continue_token, continue_expires_at, created_at)
     VALUES
-    (:name, :phone, :email, :state, :city, :base_id, :ip_address, :user_agent, :referer, :content_campaign_key, :content_source, NOW())
+    (:name, :phone, :email, :state, :city, :base_id, :ip_address, :user_agent, :referer, :content_campaign_key, :content_source, :continue_token, :continue_expires_at, NOW())
 ");
 
 $stmt->execute([
-    'name' => $name,
-    'phone' => $phone,
+    'name' => $name !== '' ? $name : null,
+    'phone' => $phone !== '' ? $phone : null,
     'email' => $email,
-    'state' => $state,
-    'city' => $city,
+    'state' => $state !== '' ? $state : null,
+    'city' => $city !== '' ? $city : null,
     'base_id' => $validBaseId,
     'ip_address' => $ipAddress,
     'user_agent' => $userAgent,
     'referer' => $referer,
     'content_campaign_key' => $contentCampaignKey,
     'content_source' => $contentSource,
+    'continue_token' => $continueToken,
+    'continue_expires_at' => $continueExpiresAt,
 ]);
 
-$leadId = (int)$pdo->lastInsertId();
+$sent = lead_send_continue_email($email, $continueLink, (string)($coreSettings['app_name'] ?? 'Meu Projeto Web'));
 
-header('Location: /web/projects/create.php?lead_id=' . $leadId);
+header('Location: /web/projects/thanks.php?status=' . ($sent ? 'check_email' : 'check_email_pending'));
 exit;

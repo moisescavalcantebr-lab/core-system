@@ -247,13 +247,13 @@ return [
             'title' => [
                 'label' => 'Título',
                 'type' => 'text',
-                'default' => 'Entre em contato'
+                'default' => 'Comece pelo e-mail'
             ],
 
             'description' => [
                 'label' => 'Descrição',
                 'type' => 'textarea',
-                'default' => 'Preencha o formulário e retornaremos rapidamente.'
+                'default' => 'Informe seu e-mail para receber o link de continuação.'
             ],
 
             'base_id' => [

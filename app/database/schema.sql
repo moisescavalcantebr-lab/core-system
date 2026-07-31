@@ -284,10 +284,17 @@ CREATE TABLE IF NOT EXISTS leads (
   ip_address VARCHAR(45) NULL,
   user_agent VARCHAR(500) NULL,
   referer VARCHAR(500) NULL,
+  content_campaign_key VARCHAR(120) NULL,
+  content_source VARCHAR(120) NULL,
+  continue_token VARCHAR(120) NULL,
+  continue_expires_at DATETIME NULL,
   implementation_status VARCHAR(30) DEFAULT 'pending',
   status VARCHAR(20) DEFAULT 'new',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id)
+  PRIMARY KEY (id),
+  KEY idx_content_campaign_key (content_campaign_key),
+  KEY idx_content_source (content_source),
+  KEY idx_leads_continue_token (continue_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS core_media (

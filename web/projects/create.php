@@ -5,23 +5,41 @@ require __DIR__ . '/../../app/bootstrap/bootstrap.php';
 require APP_PATH . '/services/projects/ProjectProvisioner.php';
 
 $leadId = (int)($_GET['lead_id'] ?? $_POST['lead_id'] ?? 0);
+$continueToken = trim((string)($_GET['token'] ?? $_POST['token'] ?? ''));
 
-if (!$leadId) {
+if (!$leadId && $continueToken === '') {
     http_response_code(404);
     die('Lead não encontrado.');
 }
 
-$stmt = $pdo->prepare("SELECT * FROM leads WHERE id = :id LIMIT 1");
-$stmt->execute(['id' => $leadId]);
+if ($continueToken !== '') {
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM leads
+        WHERE continue_token = :token
+        AND continue_expires_at >= NOW()
+        LIMIT 1
+    ");
+    $stmt->execute(['token' => $continueToken]);
+} else {
+    $stmt = $pdo->prepare("SELECT * FROM leads WHERE id = :id LIMIT 1");
+    $stmt->execute(['id' => $leadId]);
+}
+
 $lead = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$lead) {
     http_response_code(404);
-    die('Lead não encontrado.');
+    die('Link inválido ou expirado.');
 }
 
+$leadId = (int)$lead['id'];
 $error = null;
 $resume = ($_GET['resume'] ?? '') === '1';
+$ownerName = trim($_POST['name'] ?? ($lead['name'] ?? ''));
+$phone = trim($_POST['phone'] ?? ($lead['phone'] ?? ''));
+$state = trim($_POST['state'] ?? ($lead['state'] ?? ''));
+$city = trim($_POST['city'] ?? ($lead['city'] ?? ''));
 $siteName = trim($_POST['site_name'] ?? ($lead['site_name'] ?? ''));
 $slug = trim($_POST['slug'] ?? ($lead['slug'] ?? ''));
 $baseId = (int)($lead['base_id'] ?? 0);
@@ -106,7 +124,7 @@ function uniqueProjectSlug(PDO $pdo, string $baseSlug, int $leadId): string
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $slug = ProjectProvisioner::normalizeSlug($slug);
 
-    if ($siteName === '' || $slug === '') {
+    if ($ownerName === '' || $phone === '' || $state === '' || $city === '' || $siteName === '' || $slug === '') {
         $error = 'Preencha todos os campos.';
     } elseif (!$baseId || !$baseName) {
         $error = 'A base deste projeto não está configurada. Entre em contato com o suporte.';
@@ -118,15 +136,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare("
                 UPDATE leads
-                SET site_name = :site_name,
+                SET name = :name,
+                    phone = :phone,
+                    state = :state,
+                    city = :city,
+                    site_name = :site_name,
                     slug = :slug,
                     base_id = :base_id,
+                    continue_token = NULL,
+                    continue_expires_at = NULL,
                     implementation_status = 'creating',
                     status = 'qualified'
                 WHERE id = :id
             ");
 
             $stmt->execute([
+                'name' => $ownerName,
+                'phone' => $phone,
+                'state' => $state,
+                'city' => $city,
                 'site_name' => $siteName,
                 'slug' => $slug,
                 'base_id' => $baseId,
@@ -136,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $project = ProjectProvisioner::createFreeProject($pdo, [
                 'name' => $siteName,
                 'slug' => $slug,
-                'owner_name' => (string)($lead['name'] ?? ''),
+                'owner_name' => $ownerName,
                 'owner_email' => (string)($lead['email'] ?? ''),
                 'base_id' => $baseId,
                 'lead_id' => $leadId,
@@ -188,6 +216,45 @@ ob_start();
 
             <form method="post" class="lead-form-inner">
                 <input type="hidden" name="lead_id" value="<?= $leadId ?>">
+                <?php if ($continueToken !== ''): ?>
+                    <input type="hidden" name="token" value="<?= htmlspecialchars($continueToken) ?>">
+                <?php endif; ?>
+
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="Seu nome"
+                    value="<?= htmlspecialchars($ownerName) ?>"
+                    maxlength="120"
+                    autocomplete="name"
+                    required>
+
+                <input
+                    type="tel"
+                    name="phone"
+                    placeholder="WhatsApp"
+                    value="<?= htmlspecialchars($phone) ?>"
+                    maxlength="40"
+                    autocomplete="tel"
+                    required>
+
+                <input
+                    type="text"
+                    name="state"
+                    placeholder="Estado"
+                    value="<?= htmlspecialchars($state) ?>"
+                    maxlength="60"
+                    autocomplete="address-level1"
+                    required>
+
+                <input
+                    type="text"
+                    name="city"
+                    placeholder="Cidade"
+                    value="<?= htmlspecialchars($city) ?>"
+                    maxlength="60"
+                    autocomplete="address-level2"
+                    required>
 
                 <input
                     type="text"

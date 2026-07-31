@@ -156,6 +156,15 @@ try {
         $pdo->exec("ALTER TABLE leads ADD COLUMN content_source VARCHAR(120) NULL AFTER content_campaign_key");
         $pdo->exec("ALTER TABLE leads ADD KEY idx_content_source (content_source)");
     }
+
+    if (!in_array('continue_token', $leadColumns, true)) {
+        $pdo->exec("ALTER TABLE leads ADD COLUMN continue_token VARCHAR(120) NULL AFTER content_source");
+        $pdo->exec("ALTER TABLE leads ADD KEY idx_leads_continue_token (continue_token)");
+    }
+
+    if (!in_array('continue_expires_at', $leadColumns, true)) {
+        $pdo->exec("ALTER TABLE leads ADD COLUMN continue_expires_at DATETIME NULL AFTER continue_token");
+    }
 } catch (Throwable $e) {
     // Leads pode não existir durante uma instalação inicial do core.
 }

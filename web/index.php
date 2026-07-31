@@ -4,15 +4,35 @@ declare(strict_types=1);
 require __DIR__ . '/../app/bootstrap/bootstrap.php';
 
 $stmt = $pdo->query("
-    SELECT id, slug, name, description, showcase_title, showcase_summary,
+    SELECT b.id, b.slug, b.name, b.description, b.showcase_title, b.showcase_summary,
            showcase_cover_image, showcase_banner_image, showcase_featured,
-           showcase_order, showcase_status
-    FROM bases
-    WHERE status = 1
-      AND slug != 'base'
-      AND base_stage = 'published'
-      AND showcase_status = 1
-    ORDER BY showcase_order ASC, name ASC
+           showcase_order, showcase_status,
+           (
+               SELECT p.slug
+               FROM core_page_contents p
+               WHERE p.area = 'public'
+                 AND p.status = 'published'
+                 AND p.type = 'page'
+                 AND (
+                     p.slug = b.slug
+                     OR p.slug LIKE CONCAT('%', b.slug, '%')
+                     OR LOWER(p.title) LIKE CONCAT('%', REPLACE(b.slug, '-', ' '), '%')
+                 )
+               ORDER BY
+                   CASE
+                       WHEN p.slug = b.slug THEN 0
+                       WHEN p.slug LIKE CONCAT('%', b.slug, '%') THEN 1
+                       ELSE 2
+                   END,
+                   p.id ASC
+               LIMIT 1
+           ) AS landing_slug
+    FROM bases b
+    WHERE b.status = 1
+      AND b.slug != 'base'
+      AND b.base_stage = 'published'
+      AND b.showcase_status = 1
+    ORDER BY b.showcase_order ASC, b.name ASC
 ");
 
 $bases = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -47,9 +67,12 @@ function store_base_badge(string $slug): string
     return 'Disponivel';
 }
 
-function store_base_landing_url(string $slug): string
+function store_base_landing_url(array $base): string
 {
-    return '/web/p.php?slug=' . rawurlencode($slug);
+    $baseSlug = (string)$base['slug'];
+    $pageSlug = trim((string)($base['landing_slug'] ?? '')) ?: $baseSlug;
+
+    return '/web/p.php?slug=' . rawurlencode($pageSlug) . '&base=' . rawurlencode($baseSlug);
 }
 
 function store_base_public_title(array $base): string
@@ -341,6 +364,48 @@ function store_base_asset_url(?string $path): string
             padding: 24px 0 52px;
         }
 
+        .c-store-bases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .c-store-card {
+            display: flex;
+            flex-direction: column;
+            min-height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .c-store-card-media {
+            min-height: 138px;
+            background:
+                linear-gradient(135deg, rgba(59, 130, 246, .78), rgba(33, 195, 123, .66)),
+                repeating-linear-gradient(90deg, transparent 0 20px, rgba(255, 255, 255, .08) 20px 21px);
+            background-size: cover;
+            background-position: center;
+        }
+
+        .c-store-card-body {
+            display: grid;
+            gap: 14px;
+            padding: 18px;
+        }
+
+        .c-store-card h3 {
+            margin: 0;
+            font-size: 21px;
+            line-height: 1.2;
+        }
+
+        .c-store-card p {
+            min-height: 44px;
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+        }
+
         .c-store-section-title {
             display: flex;
             align-items: flex-end;
@@ -536,67 +601,46 @@ function store_base_asset_url(?string $path): string
                         <?php endforeach; ?>
                     </ul>
 
-                    <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_base_landing_url((string)$featuredBase['slug'])) ?>">Ver mais</a>
+                    <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_base_landing_url($featuredBase)) ?>">Ver mais</a>
                 </article>
             <?php else: ?>
                 <div class="c-store-note">Nenhuma base publica esta disponivel no momento.</div>
             <?php endif; ?>
         </section>
 
-        <section id="solicitar" class="c-store-form-section">
+        <section id="bases" class="c-store-form-section">
             <div class="c-store-section-title">
                 <div>
-                    <h2>Criar meu projeto</h2>
-                    <p>Use um e-mail real, porque o proximo passo chega nele.</p>
+                    <h2>Escolha uma base</h2>
+                    <p>Abra o modelo ideal e continue pela página da base escolhida.</p>
                 </div>
             </div>
 
             <?php if ($bases): ?>
-                <form class="c-store-form" action="/web/lead_submit.php" method="post">
-                    <div class="c-store-form-grid">
-                        <div class="c-store-field c-store-field-full">
-                            <label for="base_id">Base do projeto</label>
-                            <select id="base_id" name="base_id" required>
-                                <?php foreach ($bases as $base): ?>
-                                    <option value="<?= (int)$base['id'] ?>" <?= $featuredBase && (int)$featuredBase['id'] === (int)$base['id'] ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars((string)$base['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="c-store-field">
-                            <label for="name">Nome</label>
-                            <input id="name" name="name" autocomplete="name" required>
-                        </div>
-
-                        <div class="c-store-field">
-                            <label for="phone">WhatsApp</label>
-                            <input id="phone" name="phone" autocomplete="tel" required>
-                        </div>
-
-                        <div class="c-store-field c-store-field-full">
-                            <label for="email">E-mail</label>
-                            <input id="email" name="email" type="email" autocomplete="email" required>
-                        </div>
-
-                        <div class="c-store-field">
-                            <label for="state">Estado</label>
-                            <input id="state" name="state" autocomplete="address-level1" required>
-                        </div>
-
-                        <div class="c-store-field">
-                            <label for="city">Cidade</label>
-                            <input id="city" name="city" autocomplete="address-level2" required>
-                        </div>
-
-                        <div class="c-store-field c-store-field-full">
-                            <button class="c-store-submit" type="submit">Enviar e continuar pelo e-mail</button>
-                        </div>
-                    </div>
-                </form>
+                <div class="c-store-bases-grid">
+                    <?php foreach ($bases as $base): ?>
+                        <?php
+                            $baseSlug = (string)$base['slug'];
+                            $cardImage = store_base_asset_url($base['showcase_cover_image'] ?: $base['showcase_banner_image'] ?: null);
+                            $summary = store_base_public_summary($base);
+                        ?>
+                        <article class="c-store-card">
+                            <div class="c-store-card-media" <?= $cardImage !== '' ? 'style="background-image: linear-gradient(180deg, rgba(5,8,23,.05), rgba(5,8,23,.48)), url(\'' . htmlspecialchars($cardImage, ENT_QUOTES) . '\')"' : '' ?>></div>
+                            <div class="c-store-card-body">
+                                <span class="c-store-badge"><?= htmlspecialchars(store_base_badge($baseSlug)) ?></span>
+                                <h3><?= htmlspecialchars(store_base_public_title($base)) ?></h3>
+                                <?php if ($summary !== ''): ?>
+                                    <p><?= htmlspecialchars($summary) ?></p>
+                                <?php else: ?>
+                                    <p>Base pronta para iniciar um projeto com estrutura organizada.</p>
+                                <?php endif; ?>
+                                <a class="c-store-btn c-store-btn-primary" href="<?= htmlspecialchars(store_base_landing_url($base)) ?>">Escolher base</a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
                 <div class="c-store-direct-actions">
-                    <a class="c-store-btn" href="/web/bases.php">Ver bases disponiveis</a>
+                    <a class="c-store-btn" href="/web/bases.php">Ver catálogo completo</a>
                 </div>
             <?php else: ?>
                 <div class="c-store-note">As bases publicas ainda nao foram liberadas para criacao.</div>
@@ -606,7 +650,7 @@ function store_base_asset_url(?string $path): string
 
     <footer class="c-store-footer">
         <span>&copy; <?= date('Y') ?> <?= htmlspecialchars($appName) ?></span>
-        <span>Projetos com bases, planos e modulos organizados.</span>
+        <span>Projetos com bases e modulos organizados.</span>
     </footer>
 </body>
 </html>
