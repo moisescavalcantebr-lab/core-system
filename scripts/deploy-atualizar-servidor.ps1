@@ -288,7 +288,6 @@ $BlockedPatterns = @(
     "\storage\uploads",
     "\storage\logs",
     "\storage\cache",
-    "\env",
     "\.git",
     "\.codex",
     "\.agents",
@@ -338,6 +337,7 @@ foreach ($RelativePath in $BlockedRelativePaths) {
 }
 
 $RequiredDeployFiles = @(
+    "app\helpers\environment.php",
     "app\views\layout_admin.php",
     "app\views\partials\sidebar.php",
     "app\console\sync_pages.php",
