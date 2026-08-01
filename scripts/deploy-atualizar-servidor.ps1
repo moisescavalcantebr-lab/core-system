@@ -498,9 +498,9 @@ if [ -d "$RemoteRelease/bases" ]; then
   mkdir -p "$RemotePath/bases"
   rm -rf "$RemotePath/bases/base"
   find "$RemoteRelease/bases" -mindepth 1 -maxdepth 1 -type d | while read base_dir; do
-    base_name=`$(basename "$base_dir")
+    base_name=`$(basename "`$base_dir")
     rm -rf "$RemotePath/bases/`$base_name"
-    cp -a "$base_dir" "$RemotePath/bases/`$base_name"
+    cp -a "`$base_dir" "$RemotePath/bases/`$base_name"
   done
 fi
 if [ -d "$RemoteRelease/cron" ]; then
@@ -538,7 +538,7 @@ fi
 echo "[container] aplicando release validada"
 docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
-docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; rm -rf /var/www/html/bases/base; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=$(basename "$base_dir"); rm -rf "/var/www/html/bases/$base_name"; cp -a "$base_dir" "/var/www/html/bases/$base_name"; done; fi'
+docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; rm -rf /var/www/html/bases/base; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=`$(basename "`$base_dir"); rm -rf "/var/www/html/bases/`$base_name"; cp -a "`$base_dir" "/var/www/html/bases/`$base_name"; done; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/cron ]; then cp -a /tmp/workspace-release/cron /var/www/html/cron; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/docs ]; then cp -a /tmp/workspace-release/docs /var/www/html/docs; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/modules ]; then cp -a /tmp/workspace-release/modules /var/www/html/modules; fi'
@@ -555,7 +555,7 @@ fi
 echo "[bootstrap] migrando/registrando Core"
 docker exec app_php php -r 'require "/var/www/html/app/bootstrap/bootstrap.php"; echo "[bootstrap] OK\n";'
 echo "[fix] permissao das pastas mutaveis"
-docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/$path" ]; then chown -R www-data:www-data "/var/www/html/$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/$path"; fi; done'
+docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/`$path" ]; then chown -R www-data:www-data "/var/www/html/`$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/`$path"; fi; done'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'
 echo "[db] deploy de arquivos concluido - schema do Core fica no instalador/reparo dedicado"
 echo "[check] host sync_preview.php"

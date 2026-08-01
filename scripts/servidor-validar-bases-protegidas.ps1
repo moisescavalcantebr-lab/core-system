@@ -81,13 +81,19 @@ if (Test-Path $LocalBasesPath) {
 }
 
 $RemoteCommand = @'
-if docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" | grep -q base_stage; then
+set -e
+ColumnsFile="/tmp/core-bases-columns.txt"
+if ! docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" > "$ColumnsFile"; then
+  exit 1
+fi
+if grep -q base_stage "$ColumnsFile"; then
   docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' AND slug <> 'base' ORDER BY slug;"
 else
   docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 AND slug <> 'base' ORDER BY slug;"
 fi
+rm -f "$ColumnsFile"
 '@
-$RemoteCommand = "sh -lc " + "'" + ($RemoteCommand -replace "'", "'\''" -replace "`r`n", "`n" -replace "`r", "`n") + "'"
+$RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
 $SshArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 
 Write-Host "[guard] Validando bases publicadas do servidor..." -ForegroundColor Cyan
