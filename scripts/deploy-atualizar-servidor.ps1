@@ -4,6 +4,7 @@ param(
     [string]$User = "",
     [string]$RemoteZip = "",
     [string]$RemotePath = "",
+    [string]$BatchMode = "",
     [switch]$PackageOnly,
     [switch]$SkipProtectedBasesGuard
 )
@@ -99,6 +100,9 @@ if ($Config -ne "") {
     if ($RemotePath -eq "") {
         $RemotePath = Get-DeployConfigValue $DeployConfig "RemotePath"
     }
+    if ($BatchMode -eq "") {
+        $BatchMode = Get-DeployConfigValue $DeployConfig "BatchMode" "no"
+    }
 }
 
 if ($Server -eq "" -and !$PackageOnly) {
@@ -117,6 +121,15 @@ if ($RemotePath -eq "") {
     $RemotePath = "/opt/workspace"
 }
 
+if ($BatchMode -eq "") {
+    $BatchMode = "no"
+}
+
+$BatchMode = $BatchMode.ToLowerInvariant()
+if ($BatchMode -notin @("yes", "no")) {
+    throw "BatchMode invalido. Use 'yes' para exigir chave SSH ou 'no' para permitir senha."
+}
+
 if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
     Write-Host "[guard] Validando bases publicadas antes do deploy..." -ForegroundColor Cyan
     $ProtectedBasesGuard = Join-Path $ScriptDir "servidor-validar-bases-protegidas.ps1"
@@ -133,6 +146,9 @@ if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
             "-RemotePath",
             $RemotePath
         )
+        if ($BatchMode -ne "") {
+            $GuardArgs += @("-BatchMode", $BatchMode)
+        }
         if ($Config -ne "") {
             $GuardArgs += @("-Config", $Config)
         }
@@ -140,7 +156,7 @@ if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
         & powershell @GuardArgs
         if ($LASTEXITCODE -ne 0) {
             if ($LASTEXITCODE -eq 2) {
-                throw "Validacao de bases publicadas falhou por conexao/autenticacao SSH. Configure a chave SSH para ${User}@${Server} e rode o deploy novamente."
+                throw "Validacao de bases publicadas falhou por conexao/autenticacao SSH. Confira o acesso SSH para ${User}@${Server} e rode o deploy novamente."
             }
 
             throw "Validacao de bases publicadas falhou. Sincronize as bases publicadas do servidor com o VS Code/GitHub antes do deploy. Use -SkipProtectedBasesGuard apenas para primeira instalacao ou emergencia."
@@ -415,7 +431,7 @@ if ($PackageOnly) {
 }
 
 Write-Host "[2/4] Enviando pacote para o servidor..." -ForegroundColor Cyan
-$ScpArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", $Zip, "${User}@${Server}:$RemoteZip")
+$ScpArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", $Zip, "${User}@${Server}:$RemoteZip")
 $Sent = Invoke-DeployNative "scp" { & scp.exe @ScpArgs } 3 10
 if (!$Sent) {
     throw "Falha ao enviar pacote para o servidor."
@@ -620,7 +636,7 @@ echo "[done] release aplicada e verificada"
 "@
 
 $RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
-$SshArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
+$SshArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 $Applied = Invoke-DeployNative "ssh" { & ssh.exe @SshArgs } 3 10
 if (!$Applied) {
     throw "Falha ao aplicar/verificar arquivos no servidor."

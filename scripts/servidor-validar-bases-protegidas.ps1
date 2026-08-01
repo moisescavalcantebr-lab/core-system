@@ -2,7 +2,8 @@ param(
     [string]$Config = "",
     [string]$Server = "",
     [string]$User = "",
-    [string]$RemotePath = ""
+    [string]$RemotePath = "",
+    [string]$BatchMode = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,6 +43,9 @@ if ($Config -ne "") {
     if ($RemotePath -eq "") {
         $RemotePath = Get-DeployConfigValue $DeployConfig "RemotePath"
     }
+    if ($BatchMode -eq "") {
+        $BatchMode = Get-DeployConfigValue $DeployConfig "BatchMode" "no"
+    }
 }
 
 if ($Server -eq "") {
@@ -52,6 +56,15 @@ if ($User -eq "") {
 }
 if ($RemotePath -eq "") {
     $RemotePath = "/opt/workspace"
+}
+
+if ($BatchMode -eq "") {
+    $BatchMode = "no"
+}
+
+$BatchMode = $BatchMode.ToLowerInvariant()
+if ($BatchMode -notin @("yes", "no")) {
+    throw "BatchMode invalido. Use 'yes' para exigir chave SSH ou 'no' para permitir senha."
 }
 
 $LocalBasesPath = Join-Path $Workspace "bases"
@@ -75,7 +88,7 @@ else
 fi
 '@
 $RemoteCommand = "sh -lc " + "'" + ($RemoteCommand -replace "'", "'\''" -replace "`r`n", "`n" -replace "`r", "`n") + "'"
-$SshArgs = @("-o", "BatchMode=yes", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
+$SshArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
 
 Write-Host "[guard] Validando bases publicadas do servidor..." -ForegroundColor Cyan
 $PreviousErrorActionPreference = $ErrorActionPreference
