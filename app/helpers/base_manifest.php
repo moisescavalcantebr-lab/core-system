@@ -16,6 +16,10 @@ if (!function_exists('base_manifest_payload')) {
 
     function base_stage_label(array $base): string
     {
+        if ((string)($base['slug'] ?? '') === 'base') {
+            return 'Matriz';
+        }
+
         return match (base_normalize_stage($base['base_stage'] ?? null, (int)($base['is_protected'] ?? 0))) {
             'published' => 'Publicada',
             'legacy' => 'Legacy',

@@ -227,7 +227,7 @@ if (Test-Path $StageBasesPath) {
         $KeepBase = $false
 
         if ($BaseDir.Name -eq "base") {
-            $KeepBase = $false
+            $KeepBase = Test-Path $ManifestPath
         } elseif (Test-Path $ManifestPath) {
             try {
                 $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
@@ -386,7 +386,6 @@ $ForbiddenPackagePrefixes = @(
     ".codex/",
     ".agents/",
     ".vscode/",
-    "bases/base/",
     "bases/futebol-amador/",
     "storage/uploads/",
     "storage/logs/",

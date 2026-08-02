@@ -214,7 +214,7 @@ try {
 
     if (!in_array('base_stage', $baseColumns, true)) {
         $pdo->exec("ALTER TABLE bases ADD COLUMN base_stage ENUM('laboratory','published','legacy','archived') NOT NULL DEFAULT 'laboratory' AFTER status");
-        $pdo->exec("UPDATE bases SET base_stage = 'published' WHERE is_protected = 1");
+        $pdo->exec("UPDATE bases SET base_stage = 'published' WHERE is_protected = 1 AND slug <> 'base'");
     }
 
     $pdo->exec("ALTER TABLE bases ALTER COLUMN showcase_status SET DEFAULT 0");
