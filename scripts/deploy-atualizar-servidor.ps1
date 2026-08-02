@@ -578,6 +578,8 @@ docker exec app_php php -r 'require "/var/www/html/app/bootstrap/bootstrap.php";
 echo "[fix] permissao das pastas mutaveis"
 docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/`$path" ]; then chown -R www-data:www-data "/var/www/html/`$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/`$path"; fi; done'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'
+echo "[sync] registrando paginas publicas"
+docker exec app_php php /var/www/html/app/console/sync_pages.php
 echo "[db] deploy de arquivos concluido - schema do Core fica no instalador/reparo dedicado"
 echo "[check] host sync_preview.php"
 if ! grep -n base_slug $RemotePath/app/actions/projects/sync_preview.php; then
