@@ -1,0 +1,56 @@
+{
+  "blocks": [
+    {
+      "type": "blog_header",
+      "enabled": true,
+      "title": "Como organizar o financeiro com categorias, parcelas e recorrencias",
+      "subtitle": "Uma base simples ajuda a registrar despesas, receitas e compromissos sem transformar a rotina em uma planilha dificil de manter.",
+      "author": "Meu Projeto Web",
+      "date": "02/08/2026"
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Comece pelo essencial: saber o que entrou, saiu e ficou pendente",
+      "content": "<p>Um controle financeiro util nao precisa nascer complexo. Para a maioria dos projetos, o primeiro ganho esta em centralizar lancamentos, status e comprovantes em um lugar simples de consultar.</p><p>Com isso, o administrador deixa de depender de mensagens antigas, prints soltos e planilhas paralelas para entender o saldo real do projeto.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Categorias e subcategorias deixam o dinheiro mais facil de ler",
+      "content": "<p>No plano gratuito, categorias e subcategorias prontas ja ajudam a organizar os lancamentos. Em vez de olhar apenas para uma lista de valores, voce passa a enxergar de onde vem o dinheiro e para onde ele esta indo.</p><p>Esse modelo tambem simplifica casos comuns. Uma compra no cartao pode entrar como uma categoria de despesa, com subcategorias para bancos ou finalidades. A leitura fica clara sem exigir um modulo separado logo no inicio.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Quando o projeto cresce, o Start libera ajustes mais finos",
+      "content": "<p>Quando a rotina pede mais controle, o plano Start permite criar e editar a propria arvore de categorias. Assim, cada projeto adapta o financeiro ao seu jeito de trabalhar.</p><p>Tambem fica mais facil tratar despesas parceladas e lancamentos recorrentes. Uma mensalidade, uma assinatura ou uma compra dividida podem seguir um modelo mais organizado, reduzindo retrabalho e esquecimentos.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224154-22dec7ec8818?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "O objetivo e vender clareza, nao complexidade",
+      "content": "<p>O melhor sistema financeiro para um projeto pequeno e aquele que a pessoa consegue usar no dia a dia. Por isso, a base Meu Financeiro prioriza um fluxo direto: registrar, categorizar, acompanhar status e evoluir quando fizer sentido.</p><p>Esse caminho deixa o projeto pronto para comecar simples e crescer com recursos mais avancados apenas quando eles realmente forem necessarios.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224155-1696413565d3?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_cta",
+      "enabled": true,
+      "text": "Quer criar um financeiro simples para seu projeto?",
+      "button_text": "Ver base Meu Financeiro",
+      "link": "/web/p.php?slug=financeiro",
+      "align": "center"
+    }
+  ]
+}

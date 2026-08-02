@@ -1,0 +1,42 @@
+[
+  {
+    "title": "Meu Financeiro",
+    "slug": "financeiro",
+    "type": "page",
+    "model_slug": "model_page",
+    "category": "Produtos",
+    "sub_category": "Financeiro",
+    "status": "published",
+    "content_path": "page_financeiro.json"
+  },
+  {
+    "title": "Como organizar o financeiro de um projeto sem depender de planilhas soltas",
+    "slug": "blog-meu-financeiro-gestao",
+    "type": "blog",
+    "model_slug": "model_blog",
+    "category": "Financeiro",
+    "sub_category": "Gestao",
+    "status": "published",
+    "content_path": "blog_meu_financeiro_gestao.json"
+  },
+  {
+    "title": "Como organizar o financeiro com categorias, parcelas e recorrencias",
+    "slug": "blog-financeiro-categorias-lancamentos",
+    "type": "blog",
+    "model_slug": "model_blog",
+    "category": "Financeiro",
+    "sub_category": "Gestao",
+    "status": "published",
+    "content_path": "blog_financeiro_categorias_lancamentos.json"
+  },
+  {
+    "title": "Modelo Divulgacao Studio",
+    "slug": "modelo-divulgacao-studio",
+    "type": "page",
+    "model_slug": "model_page",
+    "category": "Produtos",
+    "sub_category": "Studio",
+    "status": "draft",
+    "content_path": "page_modelo_divulgacao_studio.json"
+  }
+]
