@@ -3,9 +3,7 @@ $footerPlanName = trim((string)($project['plan_name'] ?? 'Plano Gratis'));
 $footerPlanKey = strtolower($footerPlanName);
 $footerPlanLabel = 'Gratis';
 
-if (str_contains($footerPlanKey, 'plus')) {
-    $footerPlanLabel = 'Plus';
-} elseif (str_contains($footerPlanKey, 'start')) {
+if (str_contains($footerPlanKey, 'start')) {
     $footerPlanLabel = 'Start';
 }
 ?>

@@ -318,6 +318,82 @@ try {
         $pdo->exec("ALTER TABLE plan_prices ADD UNIQUE KEY uniq_plan_cycle (plan_id, billing_cycle)");
     }
 
+    $startPlanId = (int)$pdo->query("SELECT id FROM plans WHERE LOWER(name) LIKE '%start%' ORDER BY id ASC LIMIT 1")->fetchColumn();
+    if ($startPlanId > 0) {
+        $plusAnnualPrice = $pdo->query("
+            SELECT pp.price
+            FROM plan_prices pp
+            INNER JOIN plans pl ON pl.id = pp.plan_id
+            WHERE LOWER(pl.name) LIKE '%plus%'
+              AND pp.billing_cycle = 'annual'
+            ORDER BY pp.id ASC
+            LIMIT 1
+        ")->fetchColumn();
+
+        $startMonthlyPrice = $pdo->query("
+            SELECT price
+            FROM plan_prices
+            WHERE plan_id = {$startPlanId}
+              AND billing_cycle = 'monthly'
+            ORDER BY id ASC
+            LIMIT 1
+        ")->fetchColumn();
+
+        $startAnnualPrice = $plusAnnualPrice !== false
+            ? (float)$plusAnnualPrice
+            : (float)($startMonthlyPrice !== false ? $startMonthlyPrice : 0);
+
+        $upsertStartPrice = $pdo->prepare("
+            INSERT INTO plan_prices (plan_id, billing_cycle, price, status)
+            VALUES (?, ?, ?, 1)
+            ON DUPLICATE KEY UPDATE status = 1
+        ");
+        $upsertStartPrice->execute([$startPlanId, 'monthly', (float)($startMonthlyPrice !== false ? $startMonthlyPrice : 0)]);
+        $upsertStartPrice->execute([$startPlanId, 'annual', $startAnnualPrice]);
+
+        $startAnnualPriceId = (int)$pdo->query("
+            SELECT id
+            FROM plan_prices
+            WHERE plan_id = {$startPlanId}
+              AND billing_cycle = 'annual'
+            LIMIT 1
+        ")->fetchColumn();
+
+        if ($startAnnualPriceId > 0) {
+            $pdo->exec("
+                INSERT INTO base_plan_prices (base_id, plan_price_id, custom_price, status)
+                SELECT bpp.base_id, {$startAnnualPriceId}, bpp.custom_price, bpp.status
+                FROM base_plan_prices bpp
+                INNER JOIN plan_prices pp ON pp.id = bpp.plan_price_id
+                INNER JOIN plans pl ON pl.id = pp.plan_id
+                WHERE LOWER(pl.name) LIKE '%plus%'
+                  AND pp.billing_cycle = 'annual'
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM base_plan_prices existing
+                      WHERE existing.base_id = bpp.base_id
+                        AND existing.plan_price_id = {$startAnnualPriceId}
+                  )
+            ");
+        }
+
+        $pdo->exec("UPDATE plans SET billing_cycle = 'monthly', status = 1 WHERE id = {$startPlanId}");
+        $pdo->exec("
+            UPDATE plan_prices pp
+            INNER JOIN plans pl ON pl.id = pp.plan_id
+            SET pp.status = 0
+            WHERE LOWER(pl.name) LIKE '%plus%'
+        ");
+        $pdo->exec("
+            UPDATE base_plan_prices bpp
+            INNER JOIN plan_prices pp ON pp.id = bpp.plan_price_id
+            INNER JOIN plans pl ON pl.id = pp.plan_id
+            SET bpp.status = 0
+            WHERE LOWER(pl.name) LIKE '%plus%'
+        ");
+        $pdo->exec("UPDATE plans SET status = 0 WHERE LOWER(name) LIKE '%plus%'");
+    }
+
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS plan_upgrade_requests (
             id INT UNSIGNED NOT NULL AUTO_INCREMENT,

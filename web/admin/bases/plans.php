@@ -27,9 +27,8 @@ $plans = $pdo->query("
       AND pp.status = 1
       AND (
           pp.billing_cycle = 'free'
-          OR (LOWER(p.name) LIKE '%start%' AND pp.billing_cycle = 'monthly')
-          OR (LOWER(p.name) LIKE '%plus%' AND pp.billing_cycle = 'annual')
-          OR (LOWER(p.name) NOT LIKE '%start%' AND LOWER(p.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual'))
+          OR (LOWER(p.name) LIKE '%start%' AND pp.billing_cycle IN ('monthly', 'annual'))
+          OR (LOWER(p.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual'))
       )
     ORDER BY FIELD(p.billing_cycle, 'free', 'monthly', 'annual'), p.id ASC, FIELD(pp.billing_cycle, 'free', 'monthly', 'annual')
 ")->fetchAll(PDO::FETCH_ASSOC);

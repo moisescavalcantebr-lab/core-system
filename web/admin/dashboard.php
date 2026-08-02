@@ -150,13 +150,6 @@ $startProjects = dashboardQueryInt($pdo, "
     WHERE LOWER(pl.name) LIKE '%start%'
 ");
 
-$plusProjects = dashboardQueryInt($pdo, "
-    SELECT COUNT(*)
-    FROM projects p
-    JOIN plans pl ON pl.id = p.plan_id
-    WHERE LOWER(pl.name) LIKE '%plus%'
-");
-
 $pendingRequests = dashboardQueryInt($pdo, "
     SELECT COUNT(*)
     FROM leads

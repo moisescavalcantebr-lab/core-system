@@ -173,6 +173,5 @@ function creditCardPlanEnabled(): bool
     $cycle = strtolower((string)($project['billing_cycle'] ?? ''));
 
     return str_contains($planName, 'start')
-        || str_contains($planName, 'plus')
         || in_array($cycle, ['monthly', 'annual'], true);
 }

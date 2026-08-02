@@ -36,10 +36,6 @@ function upgradeRank(string $name): int
 {
     $key = strtolower($name);
 
-    if (str_contains($key, 'plus')) {
-        return 3;
-    }
-
     if (str_contains($key, 'start')) {
         return 2;
     }
@@ -61,11 +57,7 @@ function upgradeCycleAllowedForPlan(string $planName, string $cycle): bool
     $key = strtolower($planName);
 
     if (str_contains($key, 'start')) {
-        return $cycle === 'monthly';
-    }
-
-    if (str_contains($key, 'plus')) {
-        return $cycle === 'annual';
+        return in_array($cycle, ['monthly', 'annual'], true);
     }
 
     return in_array($cycle, ['free', 'monthly', 'annual'], true);
@@ -102,19 +94,6 @@ function upgradePlanFeatures(?string $limitsJson, ?string $baseSlug = null, ?str
     $planKey = strtolower((string)$planName);
 
     if ($baseSlug === 'financeiro') {
-        if (str_contains($planKey, 'plus')) {
-            return [
-                'Tudo do Plano Start',
-                'Pagamento anual com desconto',
-                'Subcategorias e tags financeiras',
-                'Graficos por categoria e subcategoria',
-                'Controle de entradas, saidas e pendencias',
-                'Carteira para upgrades instantaneos',
-                'Modulos incluidos conforme a base',
-                'Suporte prioritario',
-            ];
-        }
-
         if (str_contains($planKey, 'start')) {
             return [
                 'Dashboard financeira',
@@ -123,6 +102,7 @@ function upgradePlanFeatures(?string $limitsJson, ?string $baseSlug = null, ?str
                 'Subcategorias e tags',
                 'Graficos por categoria e subcategoria',
                 'Comprovantes nos lancamentos',
+                'Opcao mensal ou anual',
                 'Perfil e configuracoes',
                 'Suporte padrao',
             ];
@@ -196,9 +176,8 @@ function upgradeAvailablePlans(PDO $corePdo, int $baseId): array
           AND pl.status = 1
           AND (
               pp.billing_cycle = 'free'
-              OR (LOWER(pl.name) LIKE '%start%' AND pp.billing_cycle = 'monthly')
-              OR (LOWER(pl.name) LIKE '%plus%' AND pp.billing_cycle = 'annual')
-              OR (LOWER(pl.name) NOT LIKE '%start%' AND LOWER(pl.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual'))
+              OR (LOWER(pl.name) LIKE '%start%' AND pp.billing_cycle IN ('monthly', 'annual'))
+              OR (LOWER(pl.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual'))
           )
         GROUP BY pl.id
         ORDER BY FIELD(pl.billing_cycle, 'free', 'monthly', 'annual'), pl.id ASC
@@ -227,8 +206,8 @@ function upgradePlanPrices(PDO $corePdo, int $baseId, int $planId): array
           AND pp.billing_cycle IN ('monthly', 'annual')
           AND (
               (LOWER(pl.name) LIKE '%start%' AND pp.billing_cycle = 'monthly')
-              OR (LOWER(pl.name) LIKE '%plus%' AND pp.billing_cycle = 'annual')
-              OR (LOWER(pl.name) NOT LIKE '%start%' AND LOWER(pl.name) NOT LIKE '%plus%')
+              OR (LOWER(pl.name) LIKE '%start%' AND pp.billing_cycle = 'annual')
+              OR (LOWER(pl.name) NOT LIKE '%plus%')
           )
         ORDER BY FIELD(pp.billing_cycle, 'monthly', 'annual')
     ");

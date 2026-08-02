@@ -6,6 +6,7 @@
   "type": "project",
   "kind": "addon",
   "attach_to": ["financeiro"],
+  "access_scope": "start",
   "status": "draft",
   "category": "Organizacao",
   "segments": ["geral", "esporte", "igreja", "loja"],

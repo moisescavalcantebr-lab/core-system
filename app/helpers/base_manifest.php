@@ -135,9 +135,8 @@ if (!function_exists('base_ensure_plan_prices')) {
               AND pl.status = 1
               AND (
                   pp.billing_cycle = 'free'
-                  OR (LOWER(pl.name) LIKE '%start%' AND pp.billing_cycle = 'monthly')
-                  OR (LOWER(pl.name) LIKE '%plus%' AND pp.billing_cycle = 'annual')
-                  OR (LOWER(pl.name) NOT LIKE '%start%' AND LOWER(pl.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual'))
+                  OR (LOWER(pl.name) LIKE '%start%' AND pp.billing_cycle IN ('monthly', 'annual'))
+                  OR (LOWER(pl.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual'))
               )
               AND NOT EXISTS (
                   SELECT 1

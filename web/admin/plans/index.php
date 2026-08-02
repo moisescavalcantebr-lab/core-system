@@ -15,9 +15,8 @@ $plans = $pdo->query("
             CASE
                 WHEN pp.id IS NULL THEN NULL
                 WHEN pp.billing_cycle = 'free' THEN CONCAT(pp.billing_cycle, ':', FORMAT(pp.price, 2), ':', pp.status)
-                WHEN LOWER(p.name) LIKE '%start%' AND pp.billing_cycle = 'monthly' THEN CONCAT(pp.billing_cycle, ':', FORMAT(pp.price, 2), ':', pp.status)
-                WHEN LOWER(p.name) LIKE '%plus%' AND pp.billing_cycle = 'annual' THEN CONCAT(pp.billing_cycle, ':', FORMAT(pp.price, 2), ':', pp.status)
-                WHEN LOWER(p.name) NOT LIKE '%start%' AND LOWER(p.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual') THEN CONCAT(pp.billing_cycle, ':', FORMAT(pp.price, 2), ':', pp.status)
+                WHEN LOWER(p.name) LIKE '%start%' AND pp.billing_cycle IN ('monthly', 'annual') THEN CONCAT(pp.billing_cycle, ':', FORMAT(pp.price, 2), ':', pp.status)
+                WHEN LOWER(p.name) NOT LIKE '%plus%' AND pp.billing_cycle IN ('monthly', 'annual') THEN CONCAT(pp.billing_cycle, ':', FORMAT(pp.price, 2), ':', pp.status)
                 ELSE NULL
             END
             ORDER BY FIELD(pp.billing_cycle, 'free', 'monthly', 'annual')
@@ -38,11 +37,7 @@ function corePlanCycleAllowed(string $planName, string $cycle): bool
     }
 
     if (str_contains($key, 'start')) {
-        return $cycle === 'monthly';
-    }
-
-    if (str_contains($key, 'plus')) {
-        return $cycle === 'annual';
+        return in_array($cycle, ['monthly', 'annual'], true);
     }
 
     return true;
@@ -54,8 +49,7 @@ function corePlanProtected(string $planName): bool
 
     return str_contains($key, 'gratis')
         || str_contains($key, 'grátis')
-        || str_contains($key, 'start')
-        || str_contains($key, 'plus');
+        || str_contains($key, 'start');
 }
 
 $title = 'Planos';
@@ -79,7 +73,7 @@ ob_start();
 
         <div class="c-card c-plan-model">
             <strong>Modelo fixo</strong>
-            <p>O Core trabalha com três planos: Grátis, Start mensal e Plus anual. O valor final pode somar módulos configurados na base.</p>
+            <p>O Core trabalha com dois planos: Grátis e Start. O Start pode ser cobrado mensal ou anual, e o valor final pode somar módulos configurados na base.</p>
         </div>
 
         <div class="c-table-wrapper c-plans-table-wrapper">

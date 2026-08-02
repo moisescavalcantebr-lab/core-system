@@ -31,14 +31,13 @@ $currentPlan = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 $currentCycle = (string)($currentPlan['billing_cycle'] ?? '');
 $planKey = strtolower($name);
 $isStart = str_contains($planKey, 'start');
-$isPlus = str_contains($planKey, 'plus');
 
 $limits = $limitsJson !== '' ? json_decode($limitsJson, true) : [];
 $limits = is_array($limits) ? $limits : [];
 
-if ($isPlus) {
+if ($isStart) {
     if ($discountPercent < 0 || $discountPercent > 100) {
-        flash('error', 'Desconto do Plus deve ficar entre 0 e 100%.');
+        flash('error', 'Desconto anual do Start deve ficar entre 0 e 100%.');
         redirect('/web/admin/plans/edit.php?id=' . $id);
     }
 
@@ -61,7 +60,7 @@ if ($currentCycle === 'free') {
 
 $pdo->beginTransaction();
 
-$primaryCycle = $currentCycle === 'free' ? 'free' : ($isPlus ? 'annual' : 'monthly');
+$primaryCycle = $currentCycle === 'free' ? 'free' : 'monthly';
 $primaryPrice = match ($primaryCycle) {
     'free' => 0.0,
     'annual' => (float)($_POST['annual_price'] ?? 0),
@@ -101,27 +100,11 @@ if ($currentCycle === 'free') {
 
     if ($isStart) {
         $monthlyStatus = 1;
-        $annualStatus = 0;
-    }
-
-    if ($isPlus) {
-        $monthlyStatus = 0;
         $annualStatus = 1;
     }
 
     if ($isStart) {
-        if (isset($oldPrices['annual'])) {
-            $pdo->prepare("DELETE FROM base_plan_prices WHERE plan_price_id = ?")->execute([$oldPrices['annual']['id']]);
-            $pdo->prepare("DELETE FROM plan_prices WHERE id = ?")->execute([$oldPrices['annual']['id']]);
-        }
-
         $upsert->execute([$id, 'monthly', $monthlyPrice, $monthlyStatus]);
-    } elseif ($isPlus) {
-        if (isset($oldPrices['monthly'])) {
-            $pdo->prepare("DELETE FROM base_plan_prices WHERE plan_price_id = ?")->execute([$oldPrices['monthly']['id']]);
-            $pdo->prepare("DELETE FROM plan_prices WHERE id = ?")->execute([$oldPrices['monthly']['id']]);
-        }
-
         $upsert->execute([$id, 'annual', $annualPrice, $annualStatus]);
     } else {
         $upsert->execute([$id, 'monthly', $monthlyPrice, $monthlyStatus]);

@@ -420,7 +420,7 @@ function financeAdvancedCategoriesEnabled(): bool
         return false;
     }
 
-    return $cycle !== '' || str_contains($planName, 'start') || str_contains($planName, 'plus');
+    return $cycle !== '' || str_contains($planName, 'start');
 }
 
 function financeProjectIsFreePlan(): bool

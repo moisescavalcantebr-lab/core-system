@@ -80,14 +80,14 @@ ob_start();
                         );
                         $discountPercent = upgradePlanDiscountPercent($planItem['limits_json'] ?? null);
                         $includedModules = $isFree ? [] : upgradeAutoModules($availableModules);
-                        $startingCycle = $isFree ? 'free' : (str_contains(strtolower($planName), 'plus') ? 'annual' : 'monthly');
+                        $startingCycle = $isFree ? 'free' : 'monthly';
                         $startingPrice = upgradeTotalForCycle([
                             'billing_cycle' => $startingCycle,
                             'effective_price' => (float)$planItem['starting_price'],
                         ], $includedModules);
                         $priceCaption = $isFree
                             ? 'para comecar'
-                            : (str_contains(strtolower($planName), 'plus') ? 'anual + modulos incluidos' : 'mensal + modulos incluidos');
+                            : 'mensal ou anual + modulos incluidos';
                     ?>
                     <section class="c-card upgrade-card <?= $isCurrent ? 'is-current' : '' ?>">
                         <div class="upgrade-card-head">

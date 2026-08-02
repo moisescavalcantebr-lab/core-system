@@ -93,22 +93,6 @@ function upgradeReviewInstallRequestedModules(PDO $corePdo, array $project, arra
         $requestedModules = [];
     }
 
-    if (str_contains(strtolower((string)($request['plan_name'] ?? '')), 'plus')) {
-        foreach (['treinos_internos', 'classificacao'] as $standardModule) {
-            $alreadySelected = false;
-            foreach ($requestedModules as $module) {
-                if (upgradeReviewSafeModuleSlug((string)($module['slug'] ?? $module['name'] ?? '')) === $standardModule) {
-                    $alreadySelected = true;
-                    break;
-                }
-            }
-
-            if (!$alreadySelected) {
-                $requestedModules[] = ['slug' => $standardModule];
-            }
-        }
-    }
-
     if (empty($requestedModules)) {
         return [];
     }

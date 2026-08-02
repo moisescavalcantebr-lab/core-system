@@ -4,6 +4,7 @@
   "description": "Controle financeiro simples com entradas, saidas, categorias e status.",
   "version": "0.1.0",
   "type": "project",
+  "access_scope": "free",
   "status": "draft",
   "category": "Financeiro",
   "segments": ["geral", "esporte", "igreja", "loja"],

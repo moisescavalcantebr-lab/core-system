@@ -25,16 +25,14 @@ $stmt = $pdo->prepare("
     WHERE plan_id = ?
       AND (
           billing_cycle = 'free'
-          OR (? = 1 AND billing_cycle = 'monthly')
-          OR (? = 1 AND billing_cycle = 'annual')
-          OR (? = 0 AND ? = 0 AND billing_cycle IN ('monthly', 'annual'))
+          OR (? = 1 AND billing_cycle IN ('monthly', 'annual'))
+          OR (? = 0 AND billing_cycle IN ('monthly', 'annual'))
       )
     ORDER BY FIELD(billing_cycle, 'free', 'monthly', 'annual')
 ");
 $planKeyForPrices = strtolower((string)$plan['name']);
 $isStartForPrices = str_contains($planKeyForPrices, 'start') ? 1 : 0;
-$isPlusForPrices = str_contains($planKeyForPrices, 'plus') ? 1 : 0;
-$stmt->execute([$id, $isStartForPrices, $isPlusForPrices, $isStartForPrices, $isPlusForPrices]);
+$stmt->execute([$id, $isStartForPrices, $isStartForPrices]);
 $priceRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $prices = [];
 foreach ($priceRows as $priceRow) {
@@ -44,9 +42,8 @@ foreach ($priceRows as $priceRow) {
 $isFree = ($plan['billing_cycle'] ?? '') === 'free';
 $planKey = strtolower((string)$plan['name']);
 $isStart = str_contains($planKey, 'start');
-$isPlus = str_contains($planKey, 'plus');
-$isFixedPlan = $isFree || $isStart || $isPlus;
-$fixedCycleLabel = $isFree ? 'Gratis' : ($isStart ? 'Mensal' : ($isPlus ? 'Anual' : 'Personalizado'));
+$isFixedPlan = $isFree || $isStart;
+$fixedCycleLabel = $isFree ? 'Gratis' : ($isStart ? 'Mensal e anual' : 'Personalizado');
 $limits = json_decode((string)($plan['limits_json'] ?? ''), true);
 $limits = is_array($limits) ? $limits : [];
 $annualDiscountPercent = (float)($limits['annual_discount_percent'] ?? 0);
@@ -74,7 +71,7 @@ ob_start();
             <?php if ($isFixedPlan): ?>
                 <div class="c-plan-fixed-note">
                     <strong>Plano fixo</strong>
-                    <span><?= htmlspecialchars((string)$plan['name']) ?> usa somente o ciclo <?= htmlspecialchars($fixedCycleLabel) ?>.</span>
+                    <span><?= htmlspecialchars((string)$plan['name']) ?> usa <?= $isStart ? 'os ciclos' : 'o ciclo' ?> <?= htmlspecialchars($fixedCycleLabel) ?>.</span>
                 </div>
             <?php endif; ?>
 
@@ -110,7 +107,6 @@ ob_start();
                     </div>
                 <?php else: ?>
                     <div class="c-plan-price-grid">
-                        <?php if (!$isPlus): ?>
                         <div class="c-form-group">
                             <label><?= $isStart ? 'Valor mensal' : 'Mensal' ?></label>
                             <input class="c-input" type="number" step="0.01" min="0" name="monthly_price" value="<?= htmlspecialchars((string)($prices['monthly']['price'] ?? '0.00')) ?>">
@@ -124,15 +120,13 @@ ob_start();
                                 </label>
                             <?php endif; ?>
                         </div>
-                        <?php endif; ?>
 
-                        <?php if (!$isStart): ?>
                         <div class="c-form-group">
-                            <label><?= $isPlus ? 'Valor anual' : 'Anual' ?></label>
+                            <label><?= $isStart ? 'Valor anual' : 'Anual' ?></label>
                             <input class="c-input" type="number" step="0.01" min="0" name="annual_price" value="<?= htmlspecialchars((string)($prices['annual']['price'] ?? '0.00')) ?>">
-                            <?php if ($isPlus): ?>
+                            <?php if ($isStart): ?>
                                 <input type="hidden" name="annual_enabled" value="1">
-                                <p class="c-plan-cycle-note">Ciclo fixo do Plano Plus.</p>
+                                <p class="c-plan-cycle-note">Ciclo anual do Plano Start.</p>
                             <?php else: ?>
                                 <label class="c-check-line">
                                     <input type="checkbox" name="annual_enabled" value="1" <?= (int)($prices['annual']['status'] ?? 1) === 1 ? 'checked' : '' ?>>
@@ -140,16 +134,15 @@ ob_start();
                                 </label>
                             <?php endif; ?>
                         </div>
-                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
-                <?php if ($isPlus): ?>
+                <?php if ($isStart): ?>
                     <div class="c-plan-discount-grid">
                         <div class="c-form-group">
                             <label>Desconto anual em destaque (%)</label>
                             <input class="c-input" type="number" step="0.01" min="0" max="100" name="annual_discount_percent" value="<?= htmlspecialchars((string)$annualDiscountPercent) ?>">
-                            <p class="c-plan-cycle-note">Mostrado no Plano Plus para comparar com o pagamento mensal do Start.</p>
+                            <p class="c-plan-cycle-note">Mostrado no Start anual para comparar com o pagamento mensal.</p>
                         </div>
                     </div>
                 <?php endif; ?>

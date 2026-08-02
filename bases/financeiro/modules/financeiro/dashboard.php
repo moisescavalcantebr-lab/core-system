@@ -280,7 +280,7 @@ ob_start();
                 <h4>Subcategorias de <?= htmlspecialchars(strtolower($pieData['title'])) ?></h4>
             <?php if (!$advancedCategories): ?>
                 <div class="dash-upgrade-box">
-                    <strong>Recurso do Start e Plus</strong>
+                    <strong>Recurso do Start</strong>
                     <p>Faça upgrade para liberar graficos por subcategoria.</p>
                     <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/upgrade/index.php">Ver upgrade</a>
                 </div>
