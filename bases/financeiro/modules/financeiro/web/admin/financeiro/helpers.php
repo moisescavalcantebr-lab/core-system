@@ -189,11 +189,10 @@ function financeBackfillCategoryFormModels(PDO $pdo): void
 function financeCategoryOptions(PDO $pdo, ?bool $includeSubcategories = null): array
 {
     financeEnsureCategoryAddonSchema($pdo);
+    financeEnsureProjectCategoryDefaults($pdo);
 
-    $includeSubcategories = $includeSubcategories ?? financeAdvancedCategoriesEnabled();
-    $where = $includeSubcategories
-        ? "c.status = 'active'"
-        : "c.status = 'active' AND c.parent_id IS NULL AND COALESCE(c.is_system, 0) = 0";
+    $includeSubcategories = true;
+    $where = "c.status = 'active'";
 
     return $pdo->query("
         SELECT c.*, p.name AS parent_name
@@ -395,6 +394,19 @@ function financeSeedCategoryTemplate(PDO $pdo, string $templateKey): int
 function financeSeedPersonalCategories(PDO $pdo): int
 {
     return financeSeedCategoryTemplate($pdo, 'financeiro_pessoal');
+}
+
+function financeEnsureProjectCategoryDefaults(PDO $pdo): void
+{
+    financeEnsureCategoryAddonSchema($pdo);
+
+    $count = (int)$pdo->query("SELECT COUNT(*) FROM finance_categories")->fetchColumn();
+
+    if ($count > 0) {
+        return;
+    }
+
+    financeSeedCategoryTemplate($pdo, financeRecommendedCategoryTemplate($pdo));
 }
 
 function financeProjectPlanData(): array

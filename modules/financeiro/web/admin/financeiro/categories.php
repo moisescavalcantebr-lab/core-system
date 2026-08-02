@@ -8,10 +8,11 @@ require __DIR__ . '/helpers.php';
 
 requireProjectRole(['ADMIN', 'FINANCE']);
 financeEnsureCategoryAddonSchema($pdo);
+financeEnsureProjectCategoryDefaults($pdo);
 
 $title = 'Categorias Financeiras';
 $advancedCategories = financeAdvancedCategoriesEnabled();
-$where = $advancedCategories ? '' : 'WHERE c.parent_id IS NULL AND COALESCE(c.is_system, 0) = 0';
+$where = '';
 $categories = $pdo->query("
     SELECT c.*, p.name AS parent_name
     FROM finance_categories c
@@ -20,8 +21,6 @@ $categories = $pdo->query("
     ORDER BY COALESCE(p.sort_order, c.sort_order), COALESCE(p.name, c.name), c.parent_id IS NOT NULL, c.sort_order, c.name
 ")->fetchAll(PDO::FETCH_ASSOC);
 $parentCategories = array_values(array_filter($categories, fn(array $category) => empty($category['parent_id'])));
-$categoryTemplates = financeCategoryTemplates();
-$recommendedTemplate = financeRecommendedCategoryTemplate($pdo);
 $categoryTree = [];
 
 foreach ($categories as $category) {
@@ -55,15 +54,6 @@ foreach ($categories as $category) {
     }
 }
 
-if (!$advancedCategories) {
-    foreach ($parentCategories as $category) {
-        $categoryTree[(int)$category['id']] = [
-            'parent' => $category,
-            'children' => [],
-        ];
-    }
-}
-
 function financeCategoryTypeLabel(string $type): string
 {
     return match($type) {
@@ -73,8 +63,12 @@ function financeCategoryTypeLabel(string $type): string
     };
 }
 
-function financeCategoryActions(array $category): string
+function financeCategoryActions(array $category, bool $advancedCategories): string
 {
+    if (!$advancedCategories) {
+        return '<span class="c-badge c-badge--neutral">Start para editar</span>';
+    }
+
     ob_start();
     ?>
     <div class="finance-category-actions">
@@ -122,16 +116,16 @@ ob_start();
 
     <div class="c-page-content">
 
-        <form method="POST" action="<?= PROJECT_URL ?>/admin/financeiro/category_store.php" class="c-card">
-            <?= csrf_field(); ?>
+        <?php if ($advancedCategories): ?>
+            <form method="POST" action="<?= PROJECT_URL ?>/admin/financeiro/category_store.php" class="c-card">
+                <?= csrf_field(); ?>
 
-            <div class="finance-category-form-grid <?= $advancedCategories ? 'has-parent' : '' ?>">
-                <div class="c-form-group">
-                    <label>Nome</label>
-                    <input type="text" name="name" class="c-input" required>
-                </div>
+                <div class="finance-category-form-grid has-parent">
+                    <div class="c-form-group">
+                        <label>Nome</label>
+                        <input type="text" name="name" class="c-input" required>
+                    </div>
 
-                <?php if ($advancedCategories): ?>
                     <div class="c-form-group">
                         <label>Categoria pai</label>
                         <select name="parent_id" class="c-input">
@@ -143,18 +137,16 @@ ob_start();
                             <?php endforeach; ?>
                         </select>
                     </div>
-                <?php endif; ?>
 
-                <div class="c-form-group">
-                    <label>Tipo</label>
-                    <select name="type" class="c-input">
-                        <option value="both">Ambos</option>
-                        <option value="income">Entrada</option>
-                        <option value="expense">Saida</option>
-                    </select>
-                </div>
+                    <div class="c-form-group">
+                        <label>Tipo</label>
+                        <select name="type" class="c-input">
+                            <option value="both">Ambos</option>
+                            <option value="income">Entrada</option>
+                            <option value="expense">Saida</option>
+                        </select>
+                    </div>
 
-                <?php if ($advancedCategories): ?>
                     <div class="c-form-group">
                         <label>Modelo</label>
                         <select name="form_model" class="c-input">
@@ -165,39 +157,16 @@ ob_start();
                             <?php endforeach; ?>
                         </select>
                     </div>
-                <?php endif; ?>
-            </div>
 
-            <button class="c-btn-secondary">Adicionar Categoria</button>
-        </form>
-
-        <?php if ($advancedCategories): ?>
-            <div class="c-card">
-                <h3>Modelos de categorias</h3>
-                <p>Carregue um modelo pronto conforme o modo desta base. O sistema cria apenas categorias que ainda nao existem.</p>
-
-                <div class="finance-category-template-grid">
-                    <?php foreach ($categoryTemplates as $templateKey => $template): ?>
-                        <?php $isRecommended = $templateKey === $recommendedTemplate; ?>
-                        <form
-                            method="POST"
-                            action="<?= PROJECT_URL ?>/admin/financeiro/categories_seed.php"
-                            class="finance-category-template-card <?= $isRecommended ? 'is-recommended' : '' ?>"
-                            onsubmit="return confirm('Carregar este modelo de categorias? O sistema cria apenas categorias que ainda nao existem.');"
-                        >
-                            <?= csrf_field(); ?>
-                            <input type="hidden" name="template" value="<?= htmlspecialchars($templateKey) ?>">
-                            <div>
-                                <strong><?= htmlspecialchars((string)$template['label']) ?></strong>
-                                <?php if ($isRecommended): ?>
-                                    <span class="c-badge c-badge--success">Recomendado</span>
-                                <?php endif; ?>
-                            </div>
-                            <p><?= htmlspecialchars((string)$template['description']) ?></p>
-                            <button class="c-btn-secondary">Carregar modelo</button>
-                        </form>
-                    <?php endforeach; ?>
                 </div>
+
+                <button class="c-btn-secondary">Adicionar Categoria</button>
+            </form>
+
+        <?php else: ?>
+            <div class="c-card finance-category-free-note">
+                <h3>Categorias do projeto</h3>
+                <p>O plano Free usa categorias e subcategorias prontas para organizar lancamentos. No Start voce pode criar e editar sua propria arvore.</p>
             </div>
         <?php endif; ?>
 
@@ -239,7 +208,7 @@ ob_start();
                                         <span>Categoria principal</span>
                                         <strong><?= htmlspecialchars((string)$parent['name']) ?></strong>
                                     </div>
-                                    <?= financeCategoryActions($parent) ?>
+                                    <?= financeCategoryActions($parent, $advancedCategories) ?>
                                 </div>
 
                                 <?php if (empty($children)): ?>
@@ -274,7 +243,7 @@ ob_start();
                                                             </span>
                                                         </td>
                                                         <td style="text-align:right;">
-                                                            <?= financeCategoryActions($child) ?>
+                                                            <?= financeCategoryActions($child, $advancedCategories) ?>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>

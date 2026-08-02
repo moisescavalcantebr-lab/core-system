@@ -259,7 +259,13 @@ ob_start();
 
         <div class="dash-chart-card">
             <h4>Despesas por categoria</h4>
-            <?php if (!$categories): ?>
+            <?php if (!$advancedCategories): ?>
+                <div class="dash-upgrade-box">
+                    <strong>Recurso do Start</strong>
+                    <p>Faça upgrade para liberar o grafico de despesas por categoria.</p>
+                    <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/upgrade/index.php">Ver upgrade</a>
+                </div>
+            <?php elseif (!$categories): ?>
                 <p>Nenhuma despesa paga ainda.</p>
             <?php else: ?>
                 <div class="dash-rank">

@@ -258,10 +258,10 @@ ob_start();
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($advancedCategories && !empty($entry['parent_category_name'])): ?>
+                                        <?php if (!empty($entry['parent_category_name'])): ?>
                                             <span style="color:var(--text-secondary);"><?= htmlspecialchars((string)$entry['parent_category_name']) ?> &gt;</span>
                                         <?php endif; ?>
-                                        <?= htmlspecialchars(!$advancedCategories && !empty($entry['parent_category_name']) ? (string)$entry['parent_category_name'] : ($entry['category_name'] ?? '-')) ?>
+                                        <?= htmlspecialchars((string)($entry['category_name'] ?? '-')) ?>
                                         <?php if ($advancedCategories && !empty($entry['tags_text'])): ?>
                                             <div style="color:var(--text-secondary); font-size:12px;"><?= htmlspecialchars((string)$entry['tags_text']) ?></div>
                                         <?php endif; ?>

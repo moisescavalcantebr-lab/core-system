@@ -98,6 +98,7 @@ if (is_dir($rootModulesPath)) {
             'version' => $manifest['version'] ?? '',
             'status' => $manifest['status'] ?? 'draft',
             'kind' => $manifest['kind'] ?? 'main',
+            'access_scope' => $manifest['access_scope'] ?? 'start',
             'category' => $manifest['category'] ?? 'Geral',
             'commercial_category' => $config['commercial_category'] ?? ($manifest['commercial_category'] ?? 'extra'),
             'monthly_price' => $monthlyPrice,
@@ -166,21 +167,71 @@ function moduleRecommendedForBase(array $module, string $baseSlug): bool
         );
 }
 
-$modules = array_values(array_filter($modules, fn(array $module) => moduleRecommendedForBase($module, (string)$base['slug'])));
-usort($modules, function(array $a, array $b): int {
+function moduleVisibleForBase(array $module, string $baseSlug, array $installedModuleSlugs): bool
+{
+    if (moduleRecommendedForBase($module, $baseSlug)) {
+        return true;
+    }
+
+    if (($module['kind'] ?? 'main') !== 'addon') {
+        return false;
+    }
+
+    $attachedModules = array_values(array_filter(array_map('strval', $module['attach_to'] ?? [])));
+
+    foreach ($attachedModules as $attachedModule) {
+        if (in_array($attachedModule, $installedModuleSlugs, true)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function moduleParentSlug(array $module, array $moduleSlugs): string
+{
+    if (($module['kind'] ?? 'main') !== 'addon') {
+        return '';
+    }
+
+    foreach (array_values(array_filter(array_map('strval', $module['attach_to'] ?? []))) as $attachedModule) {
+        if (in_array($attachedModule, $moduleSlugs, true)) {
+            return $attachedModule;
+        }
+    }
+
+    return '';
+}
+
+$installedModuleSlugs = array_values(array_map(
+    static fn(array $module): string => (string)$module['slug'],
+    array_filter($modules, static fn(array $module): bool => !empty($module['installed']))
+));
+$moduleSlugs = array_values(array_map(static fn(array $module): string => (string)$module['slug'], $modules));
+$moduleLabels = [];
+foreach ($modules as $moduleForLabel) {
+    $moduleLabels[(string)$moduleForLabel['slug']] = (string)$moduleForLabel['label'];
+}
+
+$modules = array_values(array_filter($modules, fn(array $module) => moduleVisibleForBase($module, (string)$base['slug'], $installedModuleSlugs)));
+usort($modules, function(array $a, array $b) use ($moduleSlugs): int {
     $groupRank = static function(array $module): int {
-        if (empty($module['installed'])) {
-            return 2;
+        $kind = ($module['kind'] ?? 'main') === 'addon' ? 'addon' : 'main';
+
+        if (!empty($module['installed'])) {
+            return $kind === 'addon' ? 1 : 0;
         }
 
-        return ($module['kind'] ?? 'main') === 'addon' ? 1 : 0;
+        return $kind === 'addon' ? 3 : 2;
     };
 
     $aKind = ($a['kind'] ?? 'main') === 'addon' ? 1 : 0;
     $bKind = ($b['kind'] ?? 'main') === 'addon' ? 1 : 0;
+    $aParent = moduleParentSlug($a, $moduleSlugs);
+    $bParent = moduleParentSlug($b, $moduleSlugs);
 
-    return [$groupRank($a), $aKind, $a['display_order'], $a['label']]
-        <=> [$groupRank($b), $bKind, $b['display_order'], $b['label']];
+    return [$groupRank($a), $aParent, $aKind, $a['display_order'], $a['label']]
+        <=> [$groupRank($b), $bParent, $bKind, $b['display_order'], $b['label']];
 });
 
 function moduleSectionKey(array $module): string
@@ -198,20 +249,20 @@ function moduleSectionMeta(string $group): array
 {
     return match ($group) {
         'installed_addon' => [
-            'title' => 'Addons instalados',
-            'description' => 'Complementos acoplados aos modulos principais desta base.',
+            'title' => 'Complementos instalados',
+            'description' => 'Addons vinculados aos modulos principais ja ativos.',
         ],
         'available_main' => [
-            'title' => 'Modulos principais disponiveis',
-            'description' => 'Recursos centrais recomendados para esta base.',
+            'title' => 'Principais disponiveis',
+            'description' => 'Recursos centrais que ainda podem ser adicionados.',
         ],
         'available_addon' => [
-            'title' => 'Addons disponiveis',
-            'description' => 'Complementos recomendados para os modulos desta base.',
+            'title' => 'Complementos disponiveis',
+            'description' => 'Addons liberados pelos modulos instalados nesta base.',
         ],
         default => [
-            'title' => 'Modulos principais instalados',
-            'description' => 'Recursos centrais que estruturam a base.',
+            'title' => 'Modulos instalados',
+            'description' => 'Arvore principal desta base.',
         ],
     };
 }
@@ -249,6 +300,15 @@ function moduleCommercialStatusLabel(int $status): string
 function modulePriceLabel($value): string
 {
     return $value !== null ? 'R$ ' . number_format((float)$value, 2, ',', '.') : '-';
+}
+
+function moduleAccessScopeLabel(array $module): string
+{
+    return match ((string)($module['access_scope'] ?? 'start')) {
+        'free' => 'Free',
+        'start' => 'Start',
+        default => ucfirst((string)($module['access_scope'] ?? 'start')),
+    };
 }
 
 function participantTypeSlug(string $value): string
@@ -500,6 +560,8 @@ ob_start();
                             $financeLinkedLabel = financeModeLabelFromSettings($financeLinkedMode, $baseParticipantSettings);
                             $requiredModules = array_values(array_filter(array_map('strval', $module['attach_to'] ?? [])));
                             $missingRequiredModules = array_values(array_filter($requiredModules, fn(string $requiredModule) => !is_file($baseModulesPath . '/' . $requiredModule . '/module.json')));
+                            $parentModuleSlug = moduleParentSlug($module, $moduleSlugs);
+                            $parentModuleLabel = $parentModuleSlug !== '' ? ($moduleLabels[$parentModuleSlug] ?? $parentModuleSlug) : '';
                         ?>
 
                         <?php if ($currentModuleGroup !== $moduleSectionKey): ?>
@@ -527,7 +589,11 @@ ob_start();
                                     <span class="c-badge c-badge--neutral">v<?= htmlspecialchars($module['version']) ?></span>
                                     <?php if (($module['kind'] ?? 'main') === 'addon'): ?>
                                         <span class="c-badge c-badge--info">Acoplável</span>
+                                        <?php if ($parentModuleLabel !== ''): ?>
+                                            <span class="c-badge c-badge--neutral">Addon de <?= htmlspecialchars($parentModuleLabel) ?></span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
+                                    <span class="c-badge c-badge--neutral"><?= htmlspecialchars(moduleAccessScopeLabel($module)) ?></span>
                                     <?php if ($module['slug'] === 'financeiro'): ?>
                                         <span class="c-badge c-badge--neutral">
                                             Modo: <?= htmlspecialchars(financeModeLabelFromSettings($financeMode, $baseParticipantSettings)) ?>
@@ -547,25 +613,37 @@ ob_start();
                             </div>
 
                             <div class="c-module-summary">
+                                <span>Plano</span>
+                                <strong><?= htmlspecialchars(moduleAccessScopeLabel($module)) ?></strong>
+                            </div>
+
+                            <div class="c-module-summary">
                                 <span><?= htmlspecialchars(moduleCommercialCategoryLabel((string)$module['commercial_category'])) ?></span>
                                 <strong><?= htmlspecialchars(moduleCommercialStatusLabel((int)$module['commercial_status'])) ?></strong>
                             </div>
 
                             <div class="c-module-summary">
-                                <span>Mensal</span>
-                                <strong><?= htmlspecialchars(modulePriceLabel($module['monthly_price'])) ?></strong>
-                            </div>
-
-                            <div class="c-module-summary">
-                                <span>Anual</span>
-                                <strong><?= htmlspecialchars(modulePriceLabel($module['annual_price'])) ?></strong>
+                                <span>Valores</span>
+                                <strong><?= htmlspecialchars(modulePriceLabel($module['monthly_price'])) ?> / <?= htmlspecialchars(modulePriceLabel($module['annual_price'])) ?></strong>
                             </div>
 
                             <div class="c-module-actions">
                                 <?php if ($laboratoryEnabled): ?>
-                                    <button class="c-btn-secondary" type="button" data-module-config="<?= htmlspecialchars($panelId) ?>">
-                                        Editar modulo
-                                    </button>
+                                    <?php if (!$module['installed'] && !$baseLocked && empty($missingRequiredModules)): ?>
+                                        <form method="post" action="/app/actions/bases/module_install.php" onsubmit="return confirm('Instalar este módulo nesta base?');">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="base_id" value="<?= (int)$base['id'] ?>">
+                                            <input type="hidden" name="module" value="<?= htmlspecialchars($module['slug']) ?>">
+                                            <button class="c-btn-secondary c-btn-install">Instalar</button>
+                                        </form>
+                                        <button class="c-btn-secondary" type="button" data-module-config="<?= htmlspecialchars($panelId) ?>">
+                                            Detalhes
+                                        </button>
+                                    <?php else: ?>
+                                        <button class="c-btn-secondary" type="button" data-module-config="<?= htmlspecialchars($panelId) ?>">
+                                            <?= $module['installed'] ? 'Editar modulo' : 'Ver detalhes' ?>
+                                        </button>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <span class="c-badge c-badge--neutral">Somente leitura</span>
                                 <?php endif; ?>
@@ -818,6 +896,7 @@ ob_start();
     border: 1px solid var(--border);
     background: rgba(15, 23, 42, .42);
     padding: 12px;
+    position: relative;
 }
 
 .c-module-item--main {
@@ -828,6 +907,7 @@ ob_start();
     border-color: rgba(14, 165, 233, .32);
     border-left: 3px solid rgba(14, 165, 233, .7);
     background: linear-gradient(90deg, rgba(14, 165, 233, .08), rgba(15, 23, 42, .42) 34%);
+    margin-left: 22px;
 }
 
 .c-module-item--available {
@@ -840,6 +920,19 @@ ob_start();
     border-color: rgba(14, 165, 233, .3);
     border-left: 3px solid rgba(14, 165, 233, .68);
     background: linear-gradient(90deg, rgba(14, 165, 233, .07), rgba(15, 23, 42, .42) 34%);
+    margin-left: 22px;
+}
+
+.c-module-item--addon::before,
+.c-module-item--available-addon::before {
+    content: "";
+    position: absolute;
+    left: -17px;
+    top: -11px;
+    width: 14px;
+    height: calc(50% + 11px);
+    border-left: 1px solid rgba(14, 165, 233, .42);
+    border-bottom: 1px solid rgba(14, 165, 233, .42);
 }
 
 .c-module-main,
@@ -850,7 +943,7 @@ ob_start();
 
 .c-module-item {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) 110px 110px 110px 160px;
+    grid-template-columns: minmax(280px, 1fr) 82px 94px 142px 160px;
     gap: 12px;
     align-items: center;
 }
@@ -912,6 +1005,12 @@ ob_start();
     border-color: rgba(245, 158, 11, .45);
     background: rgba(245, 158, 11, .1);
     color: #f8d28a;
+}
+
+.c-btn-install {
+    border-color: rgba(34, 197, 94, .5);
+    background: rgba(34, 197, 94, .12);
+    color: #bbf7d0;
 }
 
 .c-module-config {
@@ -977,6 +1076,11 @@ ob_start();
 
     .c-module-item {
         grid-template-columns: 1fr;
+    }
+
+    .c-module-item--addon,
+    .c-module-item--available-addon {
+        margin-left: 12px;
     }
 
     .c-module-config-grid {

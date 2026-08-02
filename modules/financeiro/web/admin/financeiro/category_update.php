@@ -17,17 +17,18 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 csrf_verify();
 
+if (!$advancedCategories) {
+    flash('error', 'Editar categorias fica disponivel no plano Start.');
+    header('Location: ' . PROJECT_URL . '/admin/financeiro/categories.php');
+    exit;
+}
+
 $id = (int)($_GET['id'] ?? 0);
 $name = trim((string)($_POST['name'] ?? ''));
 $type = in_array($_POST['type'] ?? '', ['income', 'expense', 'both'], true) ? $_POST['type'] : 'both';
 $formModel = financeNormalizeFormModel((string)($_POST['form_model'] ?? 'simple'));
 $status = ($_POST['status'] ?? '') === 'inactive' ? 'inactive' : 'active';
 $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
-
-if (!$advancedCategories) {
-    $parentId = null;
-    $formModel = 'simple';
-}
 
 if ($id <= 0 || $name === '') {
     exit('Dados invalidos.');

@@ -16,6 +16,7 @@ $autoModules = [];
 $selectedPrice = null;
 $checkoutTotal = 0.0;
 $walletBalance = 0.0;
+$selectedBasePlanPriceId = (int)($_GET['base_plan_price_id'] ?? 0);
 $error = null;
 
 try {
@@ -42,7 +43,14 @@ try {
     $prices = upgradePlanPrices($corePdo, (int)$coreProject['base_id'], $planId);
     $availableModules = upgradeAvailableModules($corePdo, $coreProject);
     $autoModules = upgradeAutoModules($availableModules);
-    $selectedPrice = $prices[0] ?? null;
+    foreach ($prices as $priceOption) {
+        if ((int)$priceOption['base_plan_price_id'] === $selectedBasePlanPriceId) {
+            $selectedPrice = $priceOption;
+            break;
+        }
+    }
+
+    $selectedPrice = $selectedPrice ?: ($prices[0] ?? null);
 
     if ($selectedPrice) {
         $checkoutTotal = upgradeTotalForCycle($selectedPrice, $autoModules);
@@ -76,6 +84,27 @@ ob_start();
             <form method="post" action="<?= PROJECT_URL ?>/admin/upgrade/request.php" class="c-card upgrade-checkout">
                 <?= csrf_field() ?>
                 <input type="hidden" name="base_plan_price_id" value="<?= (int)$selectedPrice['base_plan_price_id'] ?>">
+
+                <?php if (count($prices) > 1): ?>
+                    <div class="upgrade-cycle-picker" aria-label="Escolha a forma de pagamento">
+                        <?php foreach ($prices as $priceOption): ?>
+                            <?php
+                                $optionTotal = upgradeTotalForCycle($priceOption, $autoModules);
+                                $isSelected = (int)$priceOption['base_plan_price_id'] === (int)$selectedPrice['base_plan_price_id'];
+                                $checkoutUrl = PROJECT_URL . '/admin/upgrade/checkout.php?plan_id=' . (int)$planId . '&base_plan_price_id=' . (int)$priceOption['base_plan_price_id'];
+                            ?>
+                            <a class="upgrade-cycle-option <?= $isSelected ? 'is-selected' : '' ?>" href="<?= htmlspecialchars($checkoutUrl) ?>">
+                                <span><?= htmlspecialchars(upgradeCycleLabel((string)$priceOption['billing_cycle'])) ?></span>
+                                <strong><?= htmlspecialchars(upgradeMoney($optionTotal)) ?></strong>
+                                <?php if ((string)$priceOption['billing_cycle'] === 'annual'): ?>
+                                    <small>Melhor custo no ano</small>
+                                <?php else: ?>
+                                    <small>Pagamento mensal</small>
+                                <?php endif; ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
                 <div class="upgrade-checkout-head">
                     <div>
@@ -115,7 +144,7 @@ ob_start();
                     <button class="c-btn-primary">Confirmar upgrade</button>
                     <p class="upgrade-muted">O valor sera debitado da carteira e o plano sera atualizado automaticamente.</p>
                 <?php else: ?>
-                    <a class="c-btn-primary upgrade-add-balance" href="<?= PROJECT_URL ?>/admin/saldo.php">Adicionar credito</a>
+                    <a class="c-btn-secondary upgrade-add-balance" href="<?= PROJECT_URL ?>/admin/saldo.php">Adicionar credito</a>
                 <?php endif; ?>
             </form>
         <?php else: ?>
@@ -127,6 +156,37 @@ ob_start();
 <style>
 .upgrade-checkout {
     max-width: 760px;
+}
+
+.upgrade-cycle-picker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.upgrade-cycle-option {
+    border: 1px solid var(--border-color);
+    background: rgba(15, 23, 42, .32);
+    color: var(--text-primary);
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    text-decoration: none;
+}
+
+.upgrade-cycle-option.is-selected {
+    border-color: rgba(59, 130, 246, .7);
+    background: rgba(59, 130, 246, .12);
+}
+
+.upgrade-cycle-option span,
+.upgrade-cycle-option small {
+    color: var(--text-secondary);
+}
+
+.upgrade-cycle-option strong {
+    font-size: 20px;
 }
 
 .upgrade-checkout-head,
@@ -189,11 +249,20 @@ ob_start();
 }
 
 .upgrade-add-balance {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
     text-align: center;
+    text-decoration: none;
+    width: fit-content;
 }
 
 @media (max-width: 760px) {
+    .upgrade-cycle-picker {
+        grid-template-columns: 1fr;
+    }
+
     .upgrade-checkout-head,
     .upgrade-line,
     .upgrade-balance {

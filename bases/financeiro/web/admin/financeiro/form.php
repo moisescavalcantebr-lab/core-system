@@ -26,7 +26,7 @@
                             <option
                                 value="<?= (int)$category['id'] ?>"
                                 data-type="<?= htmlspecialchars($category['type']) ?>"
-                                data-model="<?= htmlspecialchars((string)($category['form_model'] ?? 'simple')) ?>"
+                                data-model="<?= htmlspecialchars(!empty($advancedCategories) ? (string)($category['form_model'] ?? 'simple') : 'simple') ?>"
                                 <?= (string)($entry['category_id'] ?? '') === (string)$category['id'] ? 'selected' : '' ?>
                             >
                                 <?= htmlspecialchars(financeCategoryLabel($category)) ?>

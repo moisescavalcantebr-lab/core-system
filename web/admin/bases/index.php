@@ -348,6 +348,20 @@ ob_start();
                                                 Base oficial. Ajustes estruturais ficam no laboratorio e chegam pelo deploy.
                                             </span>
 
+                                            <?php if ($isRegistered && $hasFolder && (int)$baseData['total_projects'] > 0): ?>
+                                                <form method="post"
+                                                      action="/app/actions/bases/sync_projects.php"
+                                                      class="c-inline-form"
+                                                      onsubmit="return confirm('Atualizar todos os projetos desta base com os arquivos e modulos publicados?');">
+                                                    <?= csrf_field() ?>
+                                                    <input type="hidden" name="base_id" value="<?= (int)$baseData['id'] ?>">
+                                                    <input type="hidden" name="mode" value="all">
+                                                    <button class="c-btn-sync c-btn-sync-primary" title="Atualiza app, web e modulos de todos os projetos vinculados a esta base">
+                                                        Atualizar projetos desta base
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+
                                         <?php elseif ($folder !== 'base'): ?>
 
 
@@ -356,7 +370,7 @@ ob_start();
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="base_id" value="<?= (int)$baseData['id'] ?>">
                                                     <input type="hidden" name="mode" value="all">
-                                                    <button class="c-btn-sync" title="Sincroniza arquivos da base e módulos nos projetos vinculados">Sync Tudo</button>
+                                                    <button class="c-btn-sync c-btn-sync-primary" title="Sincroniza arquivos da base e módulos nos projetos vinculados">Atualizar projetos desta base</button>
                                                 </form>
 
                                                 <form method="post" action="/app/actions/bases/sync_projects.php" class="c-inline-form">
@@ -606,6 +620,17 @@ $content .= '
 .c-btn-sync:hover {
     background: #ffffff;
     color: #020617;
+}
+
+.c-btn-sync-primary {
+    border-color: rgba(59, 130, 246, .72);
+    background: rgba(59, 130, 246, .16);
+    color: #dbeafe;
+}
+
+.c-btn-sync-primary:hover {
+    background: rgba(59, 130, 246, .26);
+    color: #eff6ff;
 }
 
 .c-btn-register {
