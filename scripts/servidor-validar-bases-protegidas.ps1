@@ -118,7 +118,7 @@ $RemoteProtectedBases = @(
         ForEach-Object { [string]$_ } |
         Where-Object { $_ -ne "" -and $_ -notmatch "^mysql:" -and $_ -notmatch "^Warning:" } |
         ForEach-Object { $_.Trim() } |
-        Where-Object { $_ -ne "" }
+        Where-Object { $_ -match "^[a-z0-9][a-z0-9_-]*$" }
 )
 
 if ($RemoteProtectedBases.Count -eq 0) {
