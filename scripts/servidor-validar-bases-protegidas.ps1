@@ -82,12 +82,12 @@ if (Test-Path $LocalBasesPath) {
 
 $RemoteCommand = @'
 set -e
-HasBaseStage=$(docker exec app_db mysql -N -B -uroot -proot information_schema -e "SELECT COUNT(*) FROM COLUMNS WHERE TABLE_SCHEMA = 'core' AND TABLE_NAME = 'bases' AND COLUMN_NAME = 'base_stage';")
-if [ "$HasBaseStage" = "1" ]; then
-  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' AND slug <> 'base' ORDER BY slug;"
-else
-  docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 AND slug <> 'base' ORDER BY slug;"
+if docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' AND slug <> 'base' ORDER BY slug;" 2>/tmp/core-bases-published.err; then
+  rm -f /tmp/core-bases-published.err
+  exit 0
 fi
+rm -f /tmp/core-bases-published.err
+docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 AND slug <> 'base' ORDER BY slug;"
 '@
 $RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
 $SshArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
