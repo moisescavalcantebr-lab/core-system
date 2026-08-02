@@ -369,6 +369,34 @@ foreach ($File in $RequiredDeployFiles) {
     }
 }
 
+$PagesManifestPath = Join-Path $Stage "storage\paginas\pages_manifest.json"
+$PagesDir = Join-Path $Stage "storage\paginas\pages"
+try {
+    $PagesManifest = Get-Content -LiteralPath $PagesManifestPath -Raw | ConvertFrom-Json
+} catch {
+    throw "Manifesto de paginas invalido: storage\paginas\pages_manifest.json"
+}
+
+foreach ($PageManifestItem in $PagesManifest) {
+    $ContentPath = ""
+    if ($null -ne $PageManifestItem.PSObject.Properties["content_path"] -and $null -ne $PageManifestItem.content_path) {
+        $ContentPath = ([string]$PageManifestItem.content_path).Trim()
+    }
+
+    if ($ContentPath -eq "") {
+        throw "Pagina no manifesto sem content_path: $($PageManifestItem.slug)"
+    }
+
+    if ($ContentPath -match "[\\/]" -or $ContentPath -notmatch "\.json$") {
+        throw "content_path invalido no manifesto de paginas: $ContentPath"
+    }
+
+    $PageJsonPath = Join-Path $PagesDir $ContentPath
+    if (!(Test-Path $PageJsonPath)) {
+        throw "Pagina listada no manifesto sem JSON no pacote: $ContentPath"
+    }
+}
+
 $StageRoot = [System.IO.Path]::GetFullPath($Stage).TrimEnd('\', '/')
 $PackagedEntries = Get-ChildItem -Path $Stage -Recurse -Force | ForEach-Object {
     $_.FullName.Substring($StageRoot.Length).TrimStart([char[]]@('\', '/')).Replace('\', '/')

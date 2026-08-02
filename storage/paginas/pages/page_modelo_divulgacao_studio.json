@@ -1,0 +1,61 @@
+{
+  "show_title": false,
+  "media": {
+    "image_1": "/storage/paginas/images/imagen1.jpg",
+    "image_2": "/storage/paginas/images/imagen2.jpg"
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "enabled": true,
+      "title": "Modelo de divulgacao",
+      "subtitle": "Uma pagina simples para campanha, captura de leads e direcionamento.",
+      "cta_text": "Quero saber mais"
+    },
+    {
+      "type": "benefits_cards",
+      "enabled": true,
+      "title": "Estrutura rapida para campanhas",
+      "cards": [
+        {
+          "title": "Oferta clara",
+          "text": "Apresente o produto ou servico sem excesso de etapas."
+        },
+        {
+          "title": "Lead centralizado",
+          "text": "Capture nome, contato e origem da campanha no Core."
+        },
+        {
+          "title": "Pronto para o Studio",
+          "text": "Use como destino de campanhas planejadas no Content Studio."
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "enabled": true,
+      "content": "Use esta pagina como ponto de partida para campanhas de trafego, afiliados, produtos, servicos ou validacao de ofertas."
+    },
+    {
+      "type": "catalog_products",
+      "enabled": true,
+      "title": "Imagens do produto",
+      "items": [
+        {
+          "name": "Imagem principal",
+          "description": "Espaco opcional para destacar o produto ou oferta.",
+          "image": "{{media.image_1}}"
+        },
+        {
+          "name": "Imagem secundaria",
+          "description": "Use quando quiser mostrar outro angulo, bonus ou prova visual.",
+          "image": "{{media.image_2}}"
+        }
+      ]
+    },
+    {
+      "type": "form_lead_simple",
+      "enabled": true
+    }
+  ]
+}

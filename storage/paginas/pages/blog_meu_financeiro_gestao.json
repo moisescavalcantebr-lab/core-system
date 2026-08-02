@@ -1,0 +1,47 @@
+{
+  "blocks": [
+    {
+      "type": "blog_header",
+      "enabled": true,
+      "title": "Como organizar o financeiro de um projeto sem depender de planilhas soltas",
+      "subtitle": "Um painel simples ajuda a enxergar entradas, saidas, pendencias e comprovantes sem perder o fio da rotina.",
+      "author": "Meu Projeto Web",
+      "date": "31/05/2026"
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "O problema geralmente nao e falta de controle, e falta de lugar certo",
+      "content": "<p>Muitos projetos pequenos comecam controlando dinheiro em mensagens, anotacoes, comprovantes no celular e planilhas separadas. Isso funciona por um tempo, mas quando as entradas e saidas aumentam, a conferencia fica cansativa.</p><p>Uma base financeira simples resolve primeiro o basico: registrar o que entrou, o que saiu, o que esta pendente e qual e o saldo real.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Categorias ajudam a transformar dados em leitura",
+      "content": "<p>Entradas e saidas so ganham valor quando podem ser agrupadas. Categorias como receitas, despesas e geral ajudam a entender para onde o dinheiro esta indo e de onde ele esta vindo.</p><p>Com isso, o administrador deixa de olhar apenas para uma lista de valores e passa a acompanhar o comportamento financeiro do projeto.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224154-26032ffc0d07?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Comprovantes e status evitam confusao",
+      "content": "<p>Ter o status do lancamento e um comprovante opcional no mesmo lugar reduz retrabalho. O que esta pago, pendente ou cancelado fica claro para quem administra.</p><p>Essa estrutura tambem abre caminho para adaptar a mesma base a outros produtos: financeiro pessoal, pequenos grupos, igrejas, equipes e projetos com regras proprias.</p>",
+      "media_type": "image",
+      "image": "https://images.unsplash.com/photo-1554224154-22dec7ec8818?auto=format&fit=crop&w=1200&q=80",
+      "link": ""
+    },
+    {
+      "type": "blog_cta",
+      "enabled": true,
+      "text": "Conhecer a base Meu Financeiro",
+      "button_text": "Ver landing page",
+      "link": "/web/p.php?slug=meu-financeiro",
+      "align": "center"
+    }
+  ]
+}

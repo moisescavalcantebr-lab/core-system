@@ -16,11 +16,11 @@
       "cta_target": "_self"
     },
     {
-      "type": "form_lead_simple",
+      "type": "lead_form",
       "enabled": true,
       "title": "Vamos criar o projeto",
       "description": "Informe seu e-mail para receber o link de continuacao.",
-      "button_text": "Receber link"
+      "align": "center"
     }
   ]
 }

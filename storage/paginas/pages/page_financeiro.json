@@ -1,0 +1,27 @@
+{
+  "show_title": false,
+  "media": {
+    "image_1": "",
+    "image_2": ""
+  },
+  "blocks": [
+    {
+      "type": "hero",
+      "enabled": true,
+      "title": "Meu Financeiro",
+      "subtitle": "Uma base simples para registrar entradas, saidas, categorias e recorrencias sem depender de planilhas soltas.",
+      "cta_enabled": "1",
+      "cta_text": "Ler detalhes no blog",
+      "cta_url": "/web/p.php?slug=blog-financeiro-categorias-lancamentos",
+      "cta_target": "_self"
+    },
+    {
+      "type": "lead_form",
+      "enabled": true,
+      "title": "Vamos criar o projeto",
+      "description": "Informe seu e-mail para continuar a criacao do projeto Meu Financeiro.",
+      "base_slug": "financeiro",
+      "align": "center"
+    }
+  ]
+}
