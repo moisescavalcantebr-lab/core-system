@@ -265,7 +265,18 @@ if ($json === false) {
     exit('Erro ao salvar dados');
 }
 
-file_put_contents($jsonPath, $json);
+$saved = @file_put_contents($jsonPath, $json);
+
+if ($saved === false) {
+    error_log('Nao foi possivel salvar a pagina em JSON: ' . $jsonPath);
+
+    if (function_exists('flash')) {
+        flash('error', 'Nao foi possivel salvar a pagina. Verifique as permissoes de storage/paginas no servidor.');
+    }
+
+    header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$pageId}");
+    exit;
+}
 
 /* =========================
 REDIRECT

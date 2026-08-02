@@ -556,6 +556,10 @@ fi
 if [ -f "$RemoteRelease/README.md" ]; then
   cp -a "$RemoteRelease/README.md" "$RemotePath/README.md"
 fi
+if [ -d "$RemotePath/storage" ]; then
+  chown -R 33:33 "$RemotePath/storage"
+  chmod -R u+rwX,g+rwX,o+rX "$RemotePath/storage"
+fi
 echo "[container] aplicando release validada"
 docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
@@ -578,6 +582,8 @@ docker exec app_php php -r 'require "/var/www/html/app/bootstrap/bootstrap.php";
 echo "[fix] permissao das pastas mutaveis"
 docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/`$path" ]; then chown -R www-data:www-data "/var/www/html/`$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/`$path"; fi; done'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'
+echo "[check] storage gravavel pelo PHP"
+docker exec -u www-data app_php sh -lc 'touch /var/www/html/storage/paginas/pages/.write-test && rm -f /var/www/html/storage/paginas/pages/.write-test'
 echo "[sync] registrando paginas publicas"
 docker exec app_php php /var/www/html/app/console/sync_pages.php
 echo "[db] deploy de arquivos concluido - schema do Core fica no instalador/reparo dedicado"
