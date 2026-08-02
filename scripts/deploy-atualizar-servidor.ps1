@@ -465,21 +465,31 @@ echo "[docker] garantindo containers do servidor"
 cd "$RemotePath/docker"
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 echo "[docker] aguardando banco"
+DbReady=0
 for i in `$(seq 1 60); do
   if docker exec app_db mysqladmin ping -uroot -proot --silent >/dev/null 2>&1; then
+    DbReady=1
     break
   fi
   sleep 2
 done
-docker exec app_db mysqladmin ping -uroot -proot --silent >/dev/null
+if [ "`$DbReady" -ne 1 ]; then
+  echo "ERRO: banco nao respondeu dentro do tempo esperado"
+  exit 1
+fi
 echo "[docker] aguardando app php"
+PhpReady=0
 for i in `$(seq 1 40); do
   if docker exec app_php php -v >/dev/null 2>&1; then
+    PhpReady=1
     break
   fi
   sleep 1
 done
-docker exec app_php php -v >/dev/null
+if [ "`$PhpReady" -ne 1 ]; then
+  echo "ERRO: app php nao respondeu dentro do tempo esperado"
+  exit 1
+fi
 echo "[release] preparando pacote temporario no container"
 docker exec app_php sh -lc 'rm -rf /tmp/workspace-release && mkdir -p /tmp/workspace-release'
 docker cp "$RemoteRelease/." "app_php:/tmp/workspace-release"

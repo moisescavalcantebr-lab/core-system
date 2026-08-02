@@ -82,16 +82,12 @@ if (Test-Path $LocalBasesPath) {
 
 $RemoteCommand = @'
 set -e
-ColumnsFile="/tmp/core-bases-columns.txt"
-if ! docker exec app_db mysql -N -B -uroot -proot core -e "SHOW COLUMNS FROM bases LIKE 'base_stage';" > "$ColumnsFile"; then
-  exit 1
-fi
-if grep -q base_stage "$ColumnsFile"; then
+HasBaseStage=$(docker exec app_db mysql -N -B -uroot -proot information_schema -e "SELECT COUNT(*) FROM COLUMNS WHERE TABLE_SCHEMA = 'core' AND TABLE_NAME = 'bases' AND COLUMN_NAME = 'base_stage';")
+if [ "$HasBaseStage" = "1" ]; then
   docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE base_stage = 'published' AND slug <> 'base' ORDER BY slug;"
 else
   docker exec app_db mysql -N -B -uroot -proot core -e "SELECT slug FROM bases WHERE is_protected = 1 AND slug <> 'base' ORDER BY slug;"
 fi
-rm -f "$ColumnsFile"
 '@
 $RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
 $SshArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
