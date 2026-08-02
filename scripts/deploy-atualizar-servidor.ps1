@@ -463,7 +463,19 @@ if [ -d "$RemoteRelease/docker" ]; then
 fi
 echo "[docker] garantindo containers do servidor"
 cd "$RemotePath/docker"
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+ComposeReady=0
+for i in `$(seq 1 3); do
+  echo "[docker] compose tentativa `$i/3"
+  if docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build; then
+    ComposeReady=1
+    break
+  fi
+  sleep 8
+done
+if [ "`$ComposeReady" -ne 1 ]; then
+  echo "ERRO: docker compose nao concluiu dentro das tentativas"
+  exit 1
+fi
 echo "[docker] aguardando banco"
 DbReady=0
 for i in `$(seq 1 60); do
@@ -646,7 +658,7 @@ echo "[done] release aplicada e verificada"
 
 $RemoteCommand = $RemoteCommand -replace "`r`n", "`n" -replace "`r", "`n"
 $SshArgs = @("-o", "BatchMode=$BatchMode", "-o", "ConnectTimeout=20", "${User}@${Server}", $RemoteCommand)
-$Applied = Invoke-DeployNative "ssh" { & ssh.exe @SshArgs } 3 10
+$Applied = Invoke-DeployNative "ssh" { & ssh.exe @SshArgs } 1 10
 if (!$Applied) {
     throw "Falha ao aplicar/verificar arquivos no servidor."
 }
