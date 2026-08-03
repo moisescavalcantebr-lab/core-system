@@ -14,15 +14,21 @@ requireAdmin();
 
 $stmt = $pdo->query("
 SELECT
-id,
-name,
-email,
-phone,
-state,
-city,
-created_at
-FROM leads
-ORDER BY id DESC
+l.id,
+l.name,
+l.email,
+l.phone,
+l.state,
+l.city,
+l.base_id,
+l.referer,
+l.content_campaign_key,
+l.content_source,
+l.created_at,
+b.name AS base_name
+FROM leads l
+LEFT JOIN bases b ON b.id = l.base_id
+ORDER BY l.id DESC
 ");
 
 $leads = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -69,6 +75,7 @@ ob_start();
                             <th>Nome</th>
                             <th>Email</th>
                             <th>Telefone</th>
+                            <th>Origem</th>
                             <th>Estado</th>
                             <th>Cidade</th>
                             <th>Data</th>
@@ -84,16 +91,32 @@ ob_start();
                                 <td><?= $lead['id'] ?></td>
 
                                 <td>
-                                    <strong><?= htmlspecialchars($lead['name']) ?></strong>
+                                    <strong><?= htmlspecialchars((string)($lead['name'] ?? 'Sem nome')) ?></strong>
                                 </td>
 
-                                <td><?= htmlspecialchars($lead['email']) ?></td>
+                                <td><?= htmlspecialchars((string)($lead['email'] ?? '-')) ?></td>
 
-                                <td><?= htmlspecialchars($lead['phone']) ?></td>
+                                <td><?= htmlspecialchars((string)($lead['phone'] ?? '-')) ?></td>
 
-                                <td><?= htmlspecialchars($lead['state']) ?></td>
+                                <td>
+                                    <?php
+                                    $origin = trim((string)($lead['base_name'] ?? ''));
+                                    if ($origin === '') {
+                                        $origin = trim((string)($lead['content_campaign_key'] ?? ''));
+                                    }
+                                    if ($origin === '') {
+                                        $origin = trim((string)($lead['content_source'] ?? ''));
+                                    }
+                                    if ($origin === '') {
+                                        $origin = !empty($lead['referer']) ? 'Pagina externa' : 'Sem base';
+                                    }
+                                    ?>
+                                    <?= htmlspecialchars($origin) ?>
+                                </td>
 
-                                <td><?= htmlspecialchars($lead['city']) ?></td>
+                                <td><?= htmlspecialchars((string)($lead['state'] ?? '-')) ?></td>
+
+                                <td><?= htmlspecialchars((string)($lead['city'] ?? '-')) ?></td>
 
                                 <td><?= $lead['created_at'] ?? '-' ?></td>
 
