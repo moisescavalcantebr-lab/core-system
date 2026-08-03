@@ -80,6 +80,8 @@ if(file_exists($jsonPath)){
 }
 
 $blocks = $data['blocks'] ?? [];
+$data['page_slug'] = (string)($page['slug'] ?? $slug);
+$data['page_title'] = (string)($page['title'] ?? '');
 
 $lookupBaseSlug = $baseSlugParam !== '' ? $baseSlugParam : $slug;
 

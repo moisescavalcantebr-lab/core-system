@@ -54,6 +54,7 @@ class PageRenderService
             if (in_array($type, ['lead_form', 'form_lead_simple'], true)) {
                 $config['base_id'] = $config['base_id'] ?? ($globalData['base_id'] ?? '');
                 $config['base_slug'] = $config['base_slug'] ?? ($globalData['base_slug'] ?? '');
+                $config['page_slug'] = $config['page_slug'] ?? ($globalData['page_slug'] ?? '');
             }
 
             //  RESOLVE MEDIA

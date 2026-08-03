@@ -8,6 +8,7 @@ $align       = $config['align'] ?? 'center';
 $baseId      = (int)($config['base_id'] ?? 0);
 $baseSlug    = trim((string)($config['base_slug'] ?? ''));
 $externalUrl = trim((string)($config['external_url'] ?? ''));
+$pageSlug    = trim((string)($config['page_slug'] ?? ''));
 
 ?>
 
@@ -43,6 +44,9 @@ $externalUrl = trim((string)($config['external_url'] ?? ''));
             <?php endif; ?>
             <?php if ($externalUrl !== ''): ?>
                 <input type="hidden" name="external_url" value="<?= htmlspecialchars($externalUrl) ?>">
+            <?php endif; ?>
+            <?php if ($pageSlug !== ''): ?>
+                <input type="hidden" name="content_source" value="<?= htmlspecialchars($pageSlug) ?>">
             <?php endif; ?>
 
             <input type="email" name="email" placeholder="Seu e-mail" maxlength="150" autocomplete="email" required>

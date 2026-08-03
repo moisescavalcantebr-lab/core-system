@@ -102,10 +102,10 @@ ob_start();
                                     <?php
                                     $origin = trim((string)($lead['base_name'] ?? ''));
                                     if ($origin === '') {
-                                        $origin = trim((string)($lead['content_campaign_key'] ?? ''));
+                                        $origin = trim((string)($lead['content_source'] ?? ''));
                                     }
                                     if ($origin === '') {
-                                        $origin = trim((string)($lead['content_source'] ?? ''));
+                                        $origin = trim((string)($lead['content_campaign_key'] ?? ''));
                                     }
                                     if ($origin === '') {
                                         $origin = !empty($lead['referer']) ? 'Pagina externa' : 'Sem base';
