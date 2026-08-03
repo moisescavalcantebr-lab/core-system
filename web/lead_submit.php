@@ -15,6 +15,7 @@ $state = trim($_POST['state'] ?? '');
 $city = trim($_POST['city'] ?? '');
 $baseId = (int)($_POST['base_id'] ?? 0);
 $baseSlug = strtolower(trim((string)($_POST['base_slug'] ?? '')));
+$externalUrl = trim((string)($_POST['external_url'] ?? ''));
 $ipAddress = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? null;
 $ipAddress = $ipAddress ? trim(explode(',', (string)$ipAddress)[0]) : null;
 $userAgent = substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500);
@@ -27,6 +28,20 @@ $contentSource = $contentSource !== '' ? substr(preg_replace('/[^a-z0-9_\-]+/', 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     http_response_code(422);
     die('E-mail inválido.');
+}
+
+$validExternalUrl = null;
+if ($externalUrl !== '') {
+    $externalUrl = substr($externalUrl, 0, 500);
+    $externalParts = parse_url($externalUrl);
+    $externalScheme = strtolower((string)($externalParts['scheme'] ?? ''));
+
+    if (!filter_var($externalUrl, FILTER_VALIDATE_URL) || !in_array($externalScheme, ['http', 'https'], true)) {
+        http_response_code(422);
+        die('URL externa inválida.');
+    }
+
+    $validExternalUrl = $externalUrl;
 }
 
 function lead_continue_base_url(array $config): string
@@ -91,9 +106,76 @@ if (!$validBaseId && $baseSlug !== '') {
     $validBaseId = $stmt->fetchColumn() ?: null;
 }
 
-if (!$validBaseId) {
+if (!$validBaseId && $validExternalUrl === null) {
     http_response_code(422);
     die('Escolha uma base disponível para continuar.');
+}
+
+if (!$validBaseId && $validExternalUrl !== null) {
+    $stmt = $pdo->prepare("
+        SELECT id
+        FROM leads
+        WHERE LOWER(email) = :email
+        AND implementation_status != 'converted'
+        AND base_id IS NULL
+        ORDER BY id DESC
+        LIMIT 1
+    ");
+    $stmt->execute(['email' => $email]);
+    $existingLeadId = (int)($stmt->fetchColumn() ?: 0);
+
+    if ($existingLeadId > 0) {
+        $stmt = $pdo->prepare("
+            UPDATE leads
+            SET name = COALESCE(:name, name),
+                phone = COALESCE(:phone, phone),
+                state = COALESCE(:state, state),
+                city = COALESCE(:city, city),
+                ip_address = :ip_address,
+                user_agent = :user_agent,
+                referer = :referer,
+                content_campaign_key = COALESCE(:content_campaign_key, content_campaign_key),
+                content_source = COALESCE(:content_source, content_source),
+                status = 'new'
+            WHERE id = :id
+        ");
+
+        $stmt->execute([
+            'name' => $name !== '' ? $name : null,
+            'phone' => $phone !== '' ? $phone : null,
+            'state' => $state !== '' ? $state : null,
+            'city' => $city !== '' ? $city : null,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'referer' => $referer,
+            'content_campaign_key' => $contentCampaignKey,
+            'content_source' => $contentSource,
+            'id' => $existingLeadId,
+        ]);
+    } else {
+        $stmt = $pdo->prepare("
+            INSERT INTO leads
+            (name, phone, email, state, city, base_id, ip_address, user_agent, referer, content_campaign_key, content_source, created_at)
+            VALUES
+            (:name, :phone, :email, :state, :city, NULL, :ip_address, :user_agent, :referer, :content_campaign_key, :content_source, NOW())
+        ");
+
+        $stmt->execute([
+            'name' => $name !== '' ? $name : null,
+            'phone' => $phone !== '' ? $phone : null,
+            'email' => $email,
+            'state' => $state !== '' ? $state : null,
+            'city' => $city !== '' ? $city : null,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'referer' => $referer,
+            'content_campaign_key' => $contentCampaignKey,
+            'content_source' => $contentSource,
+        ]);
+    }
+
+    header('Location: ' . $validExternalUrl);
+    exit;
 }
 
 $continueToken = bin2hex(random_bytes(32));

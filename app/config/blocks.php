@@ -309,6 +309,12 @@ return [
                 'default' => ''
             ],
 
+            'external_url' => [
+                'label' => 'URL externa apos cadastro',
+                'type' => 'text',
+                'default' => ''
+            ],
+
             'align' => [
                 'label' => 'Alinhamento',
                 'type' => 'select',

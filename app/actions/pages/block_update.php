@@ -240,8 +240,8 @@ if ($type === 'lead_form') {
         if ($baseSlug) {
             $newBlock['base_slug'] = (string)$baseSlug;
         }
-    } elseif (!empty($oldBlock['base_slug'])) {
-        $newBlock['base_slug'] = (string)$oldBlock['base_slug'];
+    } else {
+        unset($newBlock['base_id'], $newBlock['base_slug']);
     }
 }/* =========================
 ATUALIZAR
