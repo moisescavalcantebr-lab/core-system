@@ -37,6 +37,15 @@
       "link": ""
     },
     {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "Resumo e proximo passo",
+      "content": "<p>Feche o artigo reforcando a ideia principal e indicando o caminho mais simples para o leitor continuar. Este bloco pode preparar a chamada final sem deixar o conteudo pesado.</p>",
+      "media_type": "none",
+      "image": "",
+      "link": ""
+    },
+    {
       "type": "blog_cta",
       "enabled": true,
       "text": "Quer ver uma pagina relacionada a este conteudo?",
