@@ -13,7 +13,7 @@
 
     <div class="c-page-content">
 
-        <form action="<?= htmlspecialchars($formAction) ?>" method="POST" enctype="multipart/form-data" class="c-card">
+        <form action="<?= htmlspecialchars($formAction) ?>" method="POST" enctype="multipart/form-data" class="c-card finance-entry-form">
 
             <?= csrf_field(); ?>
 
@@ -368,6 +368,27 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <style>
+.finance-entry-form,
+.finance-entry-form * {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.finance-entry-form .c-input {
+    width: 100%;
+    max-width: 100%;
+}
+
+.finance-entry-form input[type="date"],
+.finance-entry-form input[type="file"] {
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.finance-entry-form input[type="file"].c-input {
+    overflow: hidden;
+}
+
 .finance-model-hint {
     margin: -4px 0 14px;
     padding: 10px 12px;
@@ -383,6 +404,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 .finance-model-hint strong {
     color: var(--text-primary);
+}
+
+@media (max-width: 700px) {
+    .finance-entry-form {
+        padding: 14px;
+    }
+
+    .finance-entry-form .c-card {
+        padding: 12px;
+    }
 }
 </style>
 

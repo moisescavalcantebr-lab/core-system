@@ -98,6 +98,22 @@ ob_start();
     padding: 14px;
 }
 
+.finance-filter-card,
+.finance-filter-card * {
+    box-sizing: border-box;
+    min-width: 0;
+}
+
+.finance-filter-card .c-input {
+    width: 100%;
+    max-width: 100%;
+}
+
+.finance-filter-card input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+}
+
 .finance-filter-grid {
     display: grid;
     gap: 10px;
@@ -129,8 +145,61 @@ ob_start();
 }
 
 @media (max-width: 700px) {
+    .finance-filter-actions {
+        flex-wrap: wrap;
+    }
+
+    .finance-filter-actions .c-btn-secondary {
+        flex: 1 1 120px;
+        text-align: center;
+    }
+
     .finance-entry-actions {
         justify-content: flex-start;
+    }
+
+    .finance-entry-table-wrapper {
+        overflow: visible;
+    }
+
+    .finance-entry-table-wrapper table,
+    .finance-entry-table-wrapper thead,
+    .finance-entry-table-wrapper tbody,
+    .finance-entry-table-wrapper tr,
+    .finance-entry-table-wrapper th,
+    .finance-entry-table-wrapper td {
+        display: block;
+        width: 100%;
+    }
+
+    .finance-entry-table-wrapper thead {
+        display: none;
+    }
+
+    .finance-entry-table-wrapper tr {
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+
+    .finance-entry-table-wrapper td {
+        border: 0;
+        padding: 6px 0;
+        overflow-wrap: anywhere;
+    }
+
+    .finance-entry-table-wrapper td::before {
+        content: attr(data-label);
+        display: block;
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .finance-entry-table-wrapper td:first-child::before {
+        display: none;
     }
 }
 
@@ -217,7 +286,7 @@ ob_start();
             <?php if (empty($entries)): ?>
                 <p>Nenhum lancamento encontrado.</p>
             <?php else: ?>
-                <div class="c-table-wrapper">
+                <div class="c-table-wrapper finance-entry-table-wrapper">
                     <table class="c-table">
                         <thead>
                             <tr>
@@ -241,7 +310,7 @@ ob_start();
                                         && (string)$entry['due_date'] < date('Y-m-d');
                                 ?>
                                 <tr>
-                                    <td>
+                                    <td data-label="Titulo">
                                         <strong><?= htmlspecialchars((string)$entry['title']) ?></strong>
                                         <?php if (!empty($entry['payment_method'])): ?>
                                             <div>Pagamento: <?= htmlspecialchars(financePaymentMethodLabel($entry['payment_method'] ?? null)) ?></div>
@@ -250,14 +319,14 @@ ob_start();
                                             <a href="<?= PROJECT_URL ?>/<?= htmlspecialchars((string)$entry['receipt_path']) ?>" target="_blank" rel="noopener noreferrer">Ver comprovante</a>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= financeEntryTypeLabel($entry) ?></td>
-                                    <td>
+                                    <td data-label="Tipo"><?= financeEntryTypeLabel($entry) ?></td>
+                                    <td data-label="Parte">
                                         <?= htmlspecialchars(financePartyTypeLabel($entry['party_type'] ?? 'other')) ?>
                                         <?php if (!empty($entry['party_display'])): ?>
                                             <div><?= htmlspecialchars((string)$entry['party_display']) ?></div>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="Categoria">
                                         <?php if (!empty($entry['parent_category_name'])): ?>
                                             <span style="color:var(--text-secondary);"><?= htmlspecialchars((string)$entry['parent_category_name']) ?> &gt;</span>
                                         <?php endif; ?>
@@ -266,25 +335,25 @@ ob_start();
                                             <div style="color:var(--text-secondary); font-size:12px;"><?= htmlspecialchars((string)$entry['tags_text']) ?></div>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?= financeMoney((float)$entry['amount']) ?></td>
-                                    <td>
+                                    <td data-label="Valor"><?= financeMoney((float)$entry['amount']) ?></td>
+                                    <td data-label="Vencimento">
                                         <?= htmlspecialchars($entry['due_date'] ?? '-') ?>
                                         <?php if ($isOverdue): ?>
                                             <div><span class="c-badge c-badge--danger">Atrasado</span></div>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="Responsavel">
                                         <?= htmlspecialchars($entry['created_by_name'] ?? '-') ?>
                                         <?php if (!empty($entry['updated_by_name']) && $entry['updated_by_name'] !== $entry['created_by_name']): ?>
                                             <div>Alt.: <?= htmlspecialchars($entry['updated_by_name']) ?></div>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td data-label="Status">
                                         <span class="c-badge <?= financeStatusBadge((string)$entry['status']) ?>">
                                             <?= financeStatusLabel((string)$entry['status']) ?>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-label="Acoes">
                                         <div class="finance-entry-actions">
                                             <?php if ($isPending): ?>
                                                 <form method="post" action="<?= PROJECT_URL ?>/admin/financeiro/complete.php">
