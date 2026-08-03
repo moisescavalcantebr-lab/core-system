@@ -350,12 +350,14 @@ ob_start();
 
 @media (min-width: 1100px) {
     .finance-filter-grid {
-        grid-template-columns: minmax(220px, 1.6fr) minmax(120px, .7fr) minmax(120px, .7fr) minmax(160px, 1fr) minmax(130px, .8fr) minmax(130px, .8fr) auto;
+        grid-template-columns: minmax(220px, 1.6fr) minmax(120px, .7fr) minmax(120px, .7fr) minmax(160px, 1fr) minmax(130px, .8fr) minmax(130px, .8fr);
         align-items: end;
     }
 
     .finance-filter-actions {
-        padding-bottom: 1px;
+        align-items: flex-start;
+        grid-column: 1 / -1;
+        padding-bottom: 0;
     }
 }
 </style>
