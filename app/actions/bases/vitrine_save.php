@@ -64,12 +64,12 @@ function base_showcase_upload(string $field, string $slug): ?string
 
     $uploadDir = PUBLIC_PATH . '/assets/uploads/base_vitrine';
 
-    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-        throw new RuntimeException('A pasta de uploads nao tem permissao de escrita.');
+    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+        throw new RuntimeException('A pasta de uploads nao tem permissao de escrita: web/assets/uploads/base_vitrine.');
     }
 
     if (!is_writable($uploadDir)) {
-        throw new RuntimeException('A pasta de uploads nao tem permissao de escrita.');
+        throw new RuntimeException('A pasta de uploads nao tem permissao de escrita: web/assets/uploads/base_vitrine.');
     }
 
     $safeSlug = preg_replace('/[^a-z0-9_-]+/i', '-', $slug) ?: 'base';

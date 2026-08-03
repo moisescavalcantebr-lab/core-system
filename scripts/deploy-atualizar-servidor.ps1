@@ -511,6 +511,11 @@ if ! docker exec app_php test -f /tmp/workspace-release/app/actions/projects/syn
   exit 1
 fi
 echo "[host] aplicando release validada"
+rm -rf /tmp/workspace-preserve-public-uploads
+if [ -d "$RemotePath/web/assets/uploads" ]; then
+  mkdir -p /tmp/workspace-preserve-public-uploads
+  cp -a "$RemotePath/web/assets/uploads" /tmp/workspace-preserve-public-uploads/uploads
+fi
 rm -rf "$RemotePath/app" "$RemotePath/cron" "$RemotePath/docs" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web"
 if [ -d "$RemoteRelease/app" ]; then
   cp -a "$RemoteRelease/app" "$RemotePath/app"
@@ -543,6 +548,12 @@ fi
 if [ -d "$RemoteRelease/web" ]; then
   cp -a "$RemoteRelease/web" "$RemotePath/web"
 fi
+if [ -d /tmp/workspace-preserve-public-uploads/uploads ]; then
+  mkdir -p "$RemotePath/web/assets"
+  rm -rf "$RemotePath/web/assets/uploads"
+  cp -a /tmp/workspace-preserve-public-uploads/uploads "$RemotePath/web/assets/uploads"
+fi
+mkdir -p "$RemotePath/web/assets/uploads/base_vitrine"
 if [ -d "$RemoteRelease/storage/paginas" ]; then
   mkdir -p "$RemotePath/storage/paginas/pages"
   if [ -d "$RemoteRelease/storage/paginas/blocks" ]; then
@@ -567,7 +578,12 @@ if [ -d "$RemotePath/storage" ]; then
   chown -R 33:33 "$RemotePath/storage"
   chmod -R u+rwX,g+rwX,o+rX "$RemotePath/storage"
 fi
+if [ -d "$RemotePath/web/assets/uploads" ]; then
+  chown -R 33:33 "$RemotePath/web/assets/uploads"
+  chmod -R u+rwX,g+rwX,o+rX "$RemotePath/web/assets/uploads"
+fi
 echo "[container] aplicando release validada"
+docker exec app_php sh -lc 'rm -rf /tmp/workspace-preserve-public-uploads; if [ -d /var/www/html/web/assets/uploads ]; then mkdir -p /tmp/workspace-preserve-public-uploads && cp -a /var/www/html/web/assets/uploads /tmp/workspace-preserve-public-uploads/uploads; fi'
 docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; rm -rf /var/www/html/bases/base; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=`$(basename "`$base_dir"); rm -rf "/var/www/html/bases/`$base_name"; cp -a "`$base_dir" "/var/www/html/bases/`$base_name"; done; fi'
@@ -576,6 +592,7 @@ docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/docs ]; then cp -a /t
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/modules ]; then cp -a /tmp/workspace-release/modules /var/www/html/modules; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/scripts ]; then cp -a /tmp/workspace-release/scripts /var/www/html/scripts; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/web ]; then cp -a /tmp/workspace-release/web /var/www/html/web; fi'
+docker exec app_php sh -lc 'if [ -d /tmp/workspace-preserve-public-uploads/uploads ]; then mkdir -p /var/www/html/web/assets && rm -rf /var/www/html/web/assets/uploads && cp -a /tmp/workspace-preserve-public-uploads/uploads /var/www/html/web/assets/uploads; fi; mkdir -p /var/www/html/web/assets/uploads/base_vitrine'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/storage/paginas/pages; if [ -d /tmp/workspace-release/storage/paginas/blocks ]; then rm -rf /var/www/html/storage/paginas/blocks && cp -a /tmp/workspace-release/storage/paginas/blocks /var/www/html/storage/paginas/blocks; fi; if [ -d /tmp/workspace-release/storage/paginas/models ]; then rm -rf /var/www/html/storage/paginas/models && cp -a /tmp/workspace-release/storage/paginas/models /var/www/html/storage/paginas/models; fi'
 docker exec app_php sh -lc 'if [ -f /tmp/workspace-release/.htaccess ]; then cp -a /tmp/workspace-release/.htaccess /var/www/html/.htaccess; fi'
 docker exec app_php sh -lc 'if [ -f /tmp/workspace-release/index.php ]; then cp -a /tmp/workspace-release/index.php /var/www/html/index.php; fi'
@@ -589,8 +606,11 @@ docker exec app_php php -r 'require "/var/www/html/app/bootstrap/bootstrap.php";
 echo "[fix] permissao das pastas mutaveis"
 docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web; do if [ -e "/var/www/html/`$path" ]; then chown -R www-data:www-data "/var/www/html/`$path" && chmod -R u+rwX,g+rwX,o+rX "/var/www/html/`$path"; fi; done'
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'
+docker exec app_php sh -lc 'mkdir -p /var/www/html/web/assets/uploads/base_vitrine && chown -R www-data:www-data /var/www/html/web/assets/uploads && chmod -R u+rwX,g+rwX,o+rX /var/www/html/web/assets/uploads'
 echo "[check] storage gravavel pelo PHP"
 docker exec -u www-data app_php sh -lc 'touch /var/www/html/storage/paginas/pages/.write-test && rm -f /var/www/html/storage/paginas/pages/.write-test'
+echo "[check] uploads publicos gravaveis pelo PHP"
+docker exec -u www-data app_php sh -lc 'touch /var/www/html/web/assets/uploads/base_vitrine/.write-test && rm -f /var/www/html/web/assets/uploads/base_vitrine/.write-test'
 echo "[pages] modelos/blocos atualizados; paginas de producao preservadas"
 echo "[db] deploy de arquivos concluido - schema do Core fica no instalador/reparo dedicado"
 echo "[check] host sync_preview.php"
