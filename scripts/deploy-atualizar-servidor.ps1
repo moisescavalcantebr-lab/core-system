@@ -325,6 +325,8 @@ foreach ($Dir in $BlockedRootDirs) {
 $BlockedRelativePaths = @(
     "bases\futebol-amador",
     "scripts\deploy.local.ps1",
+    "storage\paginas\pages",
+    "storage\paginas\pages_manifest.json",
     "backup.sql",
     "Docker MySQL.session.sql"
 )
@@ -356,8 +358,6 @@ $RequiredDeployFiles = @(
     "modules\financeiro\web\admin\financeiro\wallet_requests.php",
     "modules\financeiro\web\admin\financeiro\wallet_request_store.php",
     "modules\financeiro\web\admin\financeiro\wallet_request_review.php",
-    "storage\paginas\pages",
-    "storage\paginas\pages_manifest.json",
     "storage\paginas\blocks",
     "storage\paginas\models"
 )
@@ -366,34 +366,6 @@ foreach ($File in $RequiredDeployFiles) {
     $RequiredPath = Join-Path $Stage $File
     if (!(Test-Path $RequiredPath)) {
         throw "Arquivo obrigatorio ausente no pacote: $File"
-    }
-}
-
-$PagesManifestPath = Join-Path $Stage "storage\paginas\pages_manifest.json"
-$PagesDir = Join-Path $Stage "storage\paginas\pages"
-try {
-    $PagesManifest = Get-Content -LiteralPath $PagesManifestPath -Raw | ConvertFrom-Json
-} catch {
-    throw "Manifesto de paginas invalido: storage\paginas\pages_manifest.json"
-}
-
-foreach ($PageManifestItem in $PagesManifest) {
-    $ContentPath = ""
-    if ($null -ne $PageManifestItem.PSObject.Properties["content_path"] -and $null -ne $PageManifestItem.content_path) {
-        $ContentPath = ([string]$PageManifestItem.content_path).Trim()
-    }
-
-    if ($ContentPath -eq "") {
-        throw "Pagina no manifesto sem content_path: $($PageManifestItem.slug)"
-    }
-
-    if ($ContentPath -match "[\\/]" -or $ContentPath -notmatch "\.json$") {
-        throw "content_path invalido no manifesto de paginas: $ContentPath"
-    }
-
-    $PageJsonPath = Join-Path $PagesDir $ContentPath
-    if (!(Test-Path $PageJsonPath)) {
-        throw "Pagina listada no manifesto sem JSON no pacote: $ContentPath"
     }
 }
 
@@ -539,7 +511,7 @@ if ! docker exec app_php test -f /tmp/workspace-release/app/actions/projects/syn
   exit 1
 fi
 echo "[host] aplicando release validada"
-rm -rf "$RemotePath/app" "$RemotePath/cron" "$RemotePath/docs" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web" "$RemotePath/storage/paginas"
+rm -rf "$RemotePath/app" "$RemotePath/cron" "$RemotePath/docs" "$RemotePath/modules" "$RemotePath/scripts" "$RemotePath/web"
 if [ -d "$RemoteRelease/app" ]; then
   cp -a "$RemoteRelease/app" "$RemotePath/app"
 fi
@@ -572,8 +544,15 @@ if [ -d "$RemoteRelease/web" ]; then
   cp -a "$RemoteRelease/web" "$RemotePath/web"
 fi
 if [ -d "$RemoteRelease/storage/paginas" ]; then
-  mkdir -p "$RemotePath/storage"
-  cp -a "$RemoteRelease/storage/paginas" "$RemotePath/storage/paginas"
+  mkdir -p "$RemotePath/storage/paginas/pages"
+  if [ -d "$RemoteRelease/storage/paginas/blocks" ]; then
+    rm -rf "$RemotePath/storage/paginas/blocks"
+    cp -a "$RemoteRelease/storage/paginas/blocks" "$RemotePath/storage/paginas/blocks"
+  fi
+  if [ -d "$RemoteRelease/storage/paginas/models" ]; then
+    rm -rf "$RemotePath/storage/paginas/models"
+    cp -a "$RemoteRelease/storage/paginas/models" "$RemotePath/storage/paginas/models"
+  fi
 fi
 if [ -f "$RemoteRelease/.htaccess" ]; then
   cp -a "$RemoteRelease/.htaccess" "$RemotePath/.htaccess"
@@ -589,7 +568,7 @@ if [ -d "$RemotePath/storage" ]; then
   chmod -R u+rwX,g+rwX,o+rX "$RemotePath/storage"
 fi
 echo "[container] aplicando release validada"
-docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web /var/www/html/storage/paginas
+docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/bases ]; then mkdir -p /var/www/html/bases; rm -rf /var/www/html/bases/base; find /tmp/workspace-release/bases -mindepth 1 -maxdepth 1 -type d | while read base_dir; do base_name=`$(basename "`$base_dir"); rm -rf "/var/www/html/bases/`$base_name"; cp -a "`$base_dir" "/var/www/html/bases/`$base_name"; done; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/cron ]; then cp -a /tmp/workspace-release/cron /var/www/html/cron; fi'
@@ -597,7 +576,7 @@ docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/docs ]; then cp -a /t
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/modules ]; then cp -a /tmp/workspace-release/modules /var/www/html/modules; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/scripts ]; then cp -a /tmp/workspace-release/scripts /var/www/html/scripts; fi'
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/web ]; then cp -a /tmp/workspace-release/web /var/www/html/web; fi'
-docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/storage/paginas ]; then mkdir -p /var/www/html/storage && cp -a /tmp/workspace-release/storage/paginas /var/www/html/storage/paginas; fi'
+docker exec app_php sh -lc 'mkdir -p /var/www/html/storage/paginas/pages; if [ -d /tmp/workspace-release/storage/paginas/blocks ]; then rm -rf /var/www/html/storage/paginas/blocks && cp -a /tmp/workspace-release/storage/paginas/blocks /var/www/html/storage/paginas/blocks; fi; if [ -d /tmp/workspace-release/storage/paginas/models ]; then rm -rf /var/www/html/storage/paginas/models && cp -a /tmp/workspace-release/storage/paginas/models /var/www/html/storage/paginas/models; fi'
 docker exec app_php sh -lc 'if [ -f /tmp/workspace-release/.htaccess ]; then cp -a /tmp/workspace-release/.htaccess /var/www/html/.htaccess; fi'
 docker exec app_php sh -lc 'if [ -f /tmp/workspace-release/index.php ]; then cp -a /tmp/workspace-release/index.php /var/www/html/index.php; fi'
 docker exec app_php sh -lc 'if [ -f /tmp/workspace-release/README.md ]; then cp -a /tmp/workspace-release/README.md /var/www/html/README.md; fi'
@@ -612,8 +591,7 @@ docker exec app_php sh -lc 'for path in app bases cron docs modules scripts web;
 docker exec app_php sh -lc 'mkdir -p /var/www/html/bases /var/www/html/projects /var/www/html/storage && chown -R www-data:www-data /var/www/html/bases /var/www/html/projects /var/www/html/storage && chmod -R u+rwX,g+rwX,o+rX /var/www/html/bases /var/www/html/projects /var/www/html/storage'
 echo "[check] storage gravavel pelo PHP"
 docker exec -u www-data app_php sh -lc 'touch /var/www/html/storage/paginas/pages/.write-test && rm -f /var/www/html/storage/paginas/pages/.write-test'
-echo "[sync] registrando paginas publicas"
-docker exec app_php php /var/www/html/app/console/sync_pages.php
+echo "[pages] modelos/blocos atualizados; paginas de producao preservadas"
 echo "[db] deploy de arquivos concluido - schema do Core fica no instalador/reparo dedicado"
 echo "[check] host sync_preview.php"
 if ! grep -n base_slug $RemotePath/app/actions/projects/sync_preview.php; then
@@ -649,18 +627,7 @@ if ! test -d $RemotePath/storage/paginas/pages || ! test -d $RemotePath/storage/
   ls -l $RemotePath/storage || true
   exit 1
 fi
-HostPagesCount=`$(find $RemotePath/storage/paginas/pages -maxdepth 1 -type f -name '*.json' | wc -l)
-ContainerPagesCount=`$(docker exec app_php find /var/www/html/storage/paginas/pages -maxdepth 1 -type f -name '*.json' | wc -l)
-if [ "`$HostPagesCount" -eq 0 ]; then
-  echo "ERRO: nenhuma pagina JSON encontrada no host"
-  ls -l $RemotePath/storage/paginas/pages
-  exit 1
-fi
-if [ "`$HostPagesCount" -ne "`$ContainerPagesCount" ]; then
-  echo "ERRO: quantidade de paginas no container difere do host. host=`$HostPagesCount container=`$ContainerPagesCount"
-  docker exec app_php ls -l /var/www/html/storage/paginas/pages
-  exit 1
-fi
+docker exec -u www-data app_php sh -lc 'touch /var/www/html/storage/paginas/pages/.write-test && rm -f /var/www/html/storage/paginas/pages/.write-test'
 echo "[check] host financeiro saldo"
 if ! grep -n Saldo $RemotePath/modules/financeiro/web/admin/financeiro/meu_saldo.php; then
   echo "ERRO: modulo financeiro no host nao contem a tela nova de saldo"

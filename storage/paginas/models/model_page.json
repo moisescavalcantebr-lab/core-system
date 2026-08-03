@@ -8,19 +8,50 @@
     {
       "type": "hero",
       "enabled": true,
-      "title": "Apresente sua oferta com clareza",
-      "subtitle": "Uma pagina direta para explicar a oferta, captar interessados e encaminhar o visitante para o proximo passo.",
-      "cta_enabled": "0",
+      "title": "Titulo principal da pagina",
+      "subtitle": "Uma chamada curta para explicar o assunto, oferta ou conteudo principal da pagina.",
+      "cta_enabled": "1",
       "cta_text": "Quero saber mais",
-      "cta_url": "",
+      "cta_url": "/web/blog.php",
       "cta_target": "_self"
     },
     {
-      "type": "lead_form",
+      "type": "benefits_cards",
       "enabled": true,
-      "title": "Vamos criar o projeto",
-      "description": "Informe seu e-mail para receber o link de continuacao.",
-      "align": "center"
+      "title": "Pontos principais",
+      "cards": [
+        {
+          "icon": "check",
+          "title": "Primeiro destaque",
+          "text": "Explique aqui o primeiro beneficio, recurso ou ideia central."
+        },
+        {
+          "icon": "chart",
+          "title": "Segundo destaque",
+          "text": "Use este espaco para mostrar uma aplicacao pratica ou resultado esperado."
+        },
+        {
+          "icon": "star",
+          "title": "Terceiro destaque",
+          "text": "Finalize com um argumento simples para orientar o proximo passo."
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "enabled": true,
+      "title": "Conteudo da pagina",
+      "content": "Edite este bloco para explicar melhor o assunto. Mantenha o texto direto, com foco no que o visitante precisa entender antes de clicar no proximo passo.",
+      "align": "left"
+    },
+    {
+      "type": "cta_button",
+      "enabled": true,
+      "text": "Continuar",
+      "link": "/web/blog.php",
+      "align": "center",
+      "target": "_self",
+      "style": "primary"
     }
   ]
 }

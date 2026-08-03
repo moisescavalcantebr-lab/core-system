@@ -145,10 +145,8 @@ ob_start();
                     <div class="c-form-group">
                         <label>Modelo</label>
                         <select name="model_slug" class="c-input" id="pageModelSelect" required>
-                            <option value="">Selecione</option>
-
                             <?php foreach ($models as $m): ?>
-                                <option value="<?= htmlspecialchars($m['slug']) ?>">
+                                <option value="<?= htmlspecialchars($m['slug']) ?>" <?= $m['slug'] === 'model_page' ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($m['title']) ?>
                                 </option>
                             <?php endforeach; ?>
@@ -243,7 +241,7 @@ function refreshBlogSubCategories() {
 
 function toggleBlogTaxonomyFields() {
     const isBlog = pageModelSelect && pageModelSelect.value === 'model_blog';
-    const isPage = pageModelSelect && pageModelSelect.value === 'model_page';
+    const isPage = !pageModelSelect || pageModelSelect.value === 'model_page';
 
     blogTaxonomyFields.forEach(function(field) {
         field.hidden = !isBlog;

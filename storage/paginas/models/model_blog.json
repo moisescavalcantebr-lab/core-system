@@ -5,15 +5,15 @@
       "type": "blog_header",
       "enabled": true,
       "title": "Titulo claro do artigo",
-      "subtitle": "Uma introducao curta que mostra o problema e prepara o leitor para o conteudo.",
+      "subtitle": "Uma introducao curta que mostra o assunto, o problema e o valor do conteudo para o leitor.",
       "author": "Meu Projeto Web",
-      "date": "31/07/2026"
+      "date": "02/08/2026"
     },
     {
       "type": "blog_content",
       "enabled": true,
-      "title": "O ponto principal do conteudo",
-      "content": "<p>Comece com um paragrafo direto, explicando o contexto e por que este assunto importa para quem esta organizando um projeto.</p><p>Use exemplos simples e mantenha o texto facil de adaptar para qualquer base.</p>",
+      "title": "Contexto do assunto",
+      "content": "<p>Comece explicando o cenario de forma simples. Mostre por que esse tema importa e qual dificuldade ele ajuda a resolver.</p><p>Use exemplos curtos para deixar o artigo facil de adaptar para diferentes assuntos.</p>",
       "media_type": "image",
       "image": "",
       "link": ""
@@ -22,17 +22,26 @@
       "type": "blog_content",
       "enabled": true,
       "title": "Como aplicar na pratica",
-      "content": "<p>Mostre os passos ou criterios que ajudam o leitor a tomar uma decisao. Esta parte pode receber uma imagem, print ou exemplo real.</p>",
+      "content": "<p>Mostre os passos, criterios ou cuidados que ajudam o leitor a tomar uma decisao. Esta parte pode receber uma imagem, print ou exemplo real.</p>",
       "media_type": "image",
+      "image": "",
+      "link": ""
+    },
+    {
+      "type": "blog_content",
+      "enabled": true,
+      "title": "O que observar antes de continuar",
+      "content": "<p>Use este bloco para complementar o artigo com uma recomendacao, comparacao ou resumo do caminho mais simples.</p>",
+      "media_type": "none",
       "image": "",
       "link": ""
     },
     {
       "type": "blog_cta",
       "enabled": true,
-      "text": "Quer transformar isso em um projeto?",
-      "button_text": "Ver bases prontas",
-      "link": "/web/bases.php",
+      "text": "Quer ver uma pagina relacionada a este conteudo?",
+      "button_text": "Ver pagina",
+      "link": "/web/blog.php",
       "align": "center"
     }
   ]

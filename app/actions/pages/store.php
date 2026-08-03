@@ -47,7 +47,7 @@ INPUT
 
 $title       = trim($_POST['title'] ?? '');
 $slug        = trim($_POST['slug'] ?? '');
-$modelSlug   = trim($_POST['model_slug'] ?? '');
+$modelSlug   = trim($_POST['model_slug'] ?? 'model_page');
 $category    = null;
 $subCategory = null;
 $categoryId = (int)($_POST['category_id'] ?? 0);
@@ -77,6 +77,7 @@ $slug = generateUniqueSlug($pdo, $slug);
 TIPO
 ========================= */
 
+$modelSlug = in_array($modelSlug, ['model_page', 'model_blog'], true) ? $modelSlug : 'model_page';
 $type = ($modelSlug === 'model_blog') ? 'blog' : 'page';
 
 if ($type === 'blog') {
