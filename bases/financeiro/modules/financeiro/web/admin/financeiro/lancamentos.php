@@ -21,6 +21,12 @@ $filters = [
     'date_from' => trim((string)($_GET['date_from'] ?? '')),
     'date_to' => trim((string)($_GET['date_to'] ?? '')),
 ];
+$hasFilters = $filters['q'] !== ''
+    || $filters['type'] !== ''
+    || $filters['status'] !== ''
+    || $filters['category_id'] > 0
+    || $filters['date_from'] !== ''
+    || $filters['date_to'] !== '';
 
 $where = ["COALESCE(e.source, 'manual') NOT IN ('balance_deposit', 'balance_usage')"];
 $params = [];
@@ -98,6 +104,14 @@ ob_start();
     padding: 14px;
 }
 
+.finance-filter-panel {
+    border: 0;
+}
+
+.finance-filter-toggle {
+    display: none;
+}
+
 .finance-filter-card,
 .finance-filter-card * {
     box-sizing: border-box;
@@ -144,7 +158,50 @@ ob_start();
     white-space: nowrap;
 }
 
+.finance-entry-mobile-list {
+    display: none;
+}
+
 @media (max-width: 700px) {
+    .finance-filter-panel {
+        display: block;
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+    }
+
+    .finance-filter-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        color: var(--text-primary);
+        font-weight: 800;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .finance-filter-toggle::-webkit-details-marker {
+        display: none;
+    }
+
+    .finance-filter-toggle::after {
+        content: '+';
+        color: var(--text-secondary);
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .finance-filter-panel[open] .finance-filter-toggle::after {
+        content: '-';
+    }
+
+    .finance-filter-card {
+        border: 0;
+        background: transparent;
+        padding: 0 14px 14px;
+    }
+
     .finance-filter-actions {
         flex-wrap: wrap;
     }
@@ -159,47 +216,92 @@ ob_start();
     }
 
     .finance-entry-table-wrapper {
-        overflow: visible;
+        display: none;
     }
 
-    .finance-entry-table-wrapper table,
-    .finance-entry-table-wrapper thead,
-    .finance-entry-table-wrapper tbody,
-    .finance-entry-table-wrapper tr,
-    .finance-entry-table-wrapper th,
-    .finance-entry-table-wrapper td {
+    .finance-entry-mobile-list {
+        display: grid;
+        gap: 8px;
+    }
+
+    .finance-entry-mobile-item {
+        border: 1px solid var(--border-color);
+        background: var(--bg-card);
+    }
+
+    .finance-entry-mobile-summary {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .finance-entry-mobile-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .finance-entry-mobile-title {
+        display: grid;
+        gap: 3px;
+        min-width: 0;
+    }
+
+    .finance-entry-mobile-title strong,
+    .finance-entry-mobile-title span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .finance-entry-mobile-title span,
+    .finance-entry-mobile-meta span,
+    .finance-entry-mobile-detail span {
+        color: var(--text-secondary);
+        font-size: 12px;
+    }
+
+    .finance-entry-mobile-meta {
+        display: grid;
+        gap: 5px;
+        justify-items: end;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .finance-entry-mobile-detail {
+        display: grid;
+        gap: 8px;
+        padding: 0 12px 12px;
+    }
+
+    .finance-entry-mobile-detail div {
         display: block;
+    }
+
+    .finance-entry-mobile-detail strong {
+        display: block;
+        font-weight: 700;
+    }
+
+    .finance-entry-mobile-actions {
+        padding-top: 4px;
+    }
+
+    .finance-entry-mobile-actions .finance-entry-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .finance-entry-mobile-actions .finance-entry-actions form,
+    .finance-entry-mobile-actions .finance-entry-actions .c-btn-secondary {
         width: 100%;
     }
 
-    .finance-entry-table-wrapper thead {
-        display: none;
-    }
-
-    .finance-entry-table-wrapper tr {
-        border: 1px solid var(--border-color);
-        background: var(--bg-card);
-        padding: 12px;
-        margin-bottom: 10px;
-    }
-
-    .finance-entry-table-wrapper td {
-        border: 0;
-        padding: 6px 0;
-        overflow-wrap: anywhere;
-    }
-
-    .finance-entry-table-wrapper td::before {
-        content: attr(data-label);
-        display: block;
-        color: var(--text-secondary);
-        font-size: 12px;
-        font-weight: 700;
-        margin-bottom: 2px;
-    }
-
-    .finance-entry-table-wrapper td:first-child::before {
-        display: none;
+    .finance-entry-mobile-actions .finance-entry-actions .c-btn-secondary {
+        text-align: center;
     }
 }
 
@@ -231,54 +333,57 @@ ob_start();
     <div class="c-page-content">
         <?php flash_show(); ?>
 
-        <form method="GET" class="finance-filter-card">
-            <div class="finance-filter-grid">
-                <div class="c-form-group">
-                    <label>Buscar</label>
-                    <input type="text" name="q" class="c-input" value="<?= htmlspecialchars($filters['q']) ?>" placeholder="Titulo, descricao ou parte...">
+        <details class="finance-filter-panel" open data-has-filters="<?= $hasFilters ? '1' : '0' ?>">
+            <summary class="finance-filter-toggle">Filtros<?= $hasFilters ? ' ativos' : '' ?></summary>
+            <form method="GET" class="finance-filter-card">
+                <div class="finance-filter-grid">
+                    <div class="c-form-group">
+                        <label>Buscar</label>
+                        <input type="text" name="q" class="c-input" value="<?= htmlspecialchars($filters['q']) ?>" placeholder="Titulo, descricao ou parte...">
+                    </div>
+                    <div class="c-form-group">
+                        <label>Tipo</label>
+                        <select name="type" class="c-input">
+                            <option value="">Todos</option>
+                            <option value="income" <?= $filters['type'] === 'income' ? 'selected' : '' ?>>Entrada</option>
+                            <option value="expense" <?= $filters['type'] === 'expense' ? 'selected' : '' ?>>Saida</option>
+                        </select>
+                    </div>
+                    <div class="c-form-group">
+                        <label>Status</label>
+                        <select name="status" class="c-input">
+                            <option value="">Todos</option>
+                            <option value="pending" <?= $filters['status'] === 'pending' ? 'selected' : '' ?>>Pendente</option>
+                            <option value="paid" <?= $filters['status'] === 'paid' ? 'selected' : '' ?>>Pago</option>
+                            <option value="canceled" <?= $filters['status'] === 'canceled' ? 'selected' : '' ?>>Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="c-form-group">
+                        <label>Categoria</label>
+                        <select name="category_id" class="c-input">
+                            <option value="0">Todas</option>
+                            <?php foreach ($categories as $category): ?>
+                                <option value="<?= (int)$category['id'] ?>" <?= $filters['category_id'] === (int)$category['id'] ? 'selected' : '' ?>>
+                                    <?= !empty($category['parent_id']) ? ' - ' : '' ?><?= htmlspecialchars((string)$category['name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="c-form-group">
+                        <label>Inicio</label>
+                        <input type="date" name="date_from" class="c-input" value="<?= htmlspecialchars($filters['date_from']) ?>">
+                    </div>
+                    <div class="c-form-group">
+                        <label>Fim</label>
+                        <input type="date" name="date_to" class="c-input" value="<?= htmlspecialchars($filters['date_to']) ?>">
+                    </div>
+                    <div class="finance-filter-actions">
+                        <button class="c-btn-secondary">Filtrar</button>
+                        <a href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php" class="c-btn-secondary">Limpar</a>
+                    </div>
                 </div>
-                <div class="c-form-group">
-                    <label>Tipo</label>
-                    <select name="type" class="c-input">
-                        <option value="">Todos</option>
-                        <option value="income" <?= $filters['type'] === 'income' ? 'selected' : '' ?>>Entrada</option>
-                        <option value="expense" <?= $filters['type'] === 'expense' ? 'selected' : '' ?>>Saida</option>
-                    </select>
-                </div>
-                <div class="c-form-group">
-                    <label>Status</label>
-                    <select name="status" class="c-input">
-                        <option value="">Todos</option>
-                        <option value="pending" <?= $filters['status'] === 'pending' ? 'selected' : '' ?>>Pendente</option>
-                        <option value="paid" <?= $filters['status'] === 'paid' ? 'selected' : '' ?>>Pago</option>
-                        <option value="canceled" <?= $filters['status'] === 'canceled' ? 'selected' : '' ?>>Cancelado</option>
-                    </select>
-                </div>
-                <div class="c-form-group">
-                    <label>Categoria</label>
-                    <select name="category_id" class="c-input">
-                        <option value="0">Todas</option>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?= (int)$category['id'] ?>" <?= $filters['category_id'] === (int)$category['id'] ? 'selected' : '' ?>>
-                                <?= !empty($category['parent_id']) ? ' - ' : '' ?><?= htmlspecialchars((string)$category['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="c-form-group">
-                    <label>Inicio</label>
-                    <input type="date" name="date_from" class="c-input" value="<?= htmlspecialchars($filters['date_from']) ?>">
-                </div>
-                <div class="c-form-group">
-                    <label>Fim</label>
-                    <input type="date" name="date_to" class="c-input" value="<?= htmlspecialchars($filters['date_to']) ?>">
-                </div>
-                <div class="finance-filter-actions">
-                    <button class="c-btn-secondary">Filtrar</button>
-                    <a href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php" class="c-btn-secondary">Limpar</a>
-                </div>
-            </div>
-        </form>
+            </form>
+        </details>
 
         <div class="c-card">
             <h3>Lancamentos</h3>
@@ -286,6 +391,89 @@ ob_start();
             <?php if (empty($entries)): ?>
                 <p>Nenhum lancamento encontrado.</p>
             <?php else: ?>
+                <div class="finance-entry-mobile-list">
+                    <?php foreach ($entries as $entry): ?>
+                        <?php
+                            $isPending = (string)$entry['status'] === 'pending';
+                            $isOverdue = $isPending
+                                && !empty($entry['due_date'])
+                                && (string)$entry['due_date'] < date('Y-m-d');
+                            $categoryLabel = trim((!empty($entry['parent_category_name']) ? (string)$entry['parent_category_name'] . ' > ' : '') . (string)($entry['category_name'] ?? '-'));
+                        ?>
+                        <details class="finance-entry-mobile-item">
+                            <summary class="finance-entry-mobile-summary">
+                                <span class="finance-entry-mobile-title">
+                                    <strong><?= htmlspecialchars((string)$entry['title']) ?></strong>
+                                    <span><?= htmlspecialchars($categoryLabel !== '' ? $categoryLabel : '-') ?></span>
+                                </span>
+                                <span class="finance-entry-mobile-meta">
+                                    <strong><?= financeMoney((float)$entry['amount']) ?></strong>
+                                    <span><?= financeStatusLabel((string)$entry['status']) ?></span>
+                                </span>
+                            </summary>
+                            <div class="finance-entry-mobile-detail">
+                                <div>
+                                    <span>Tipo</span>
+                                    <strong><?= financeEntryTypeLabel($entry) ?></strong>
+                                </div>
+                                <div>
+                                    <span>Vencimento</span>
+                                    <strong><?= htmlspecialchars($entry['due_date'] ?? '-') ?></strong>
+                                    <?php if ($isOverdue): ?>
+                                        <span class="c-badge c-badge--danger">Atrasado</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <span>Parte</span>
+                                    <strong><?= htmlspecialchars(financePartyTypeLabel($entry['party_type'] ?? 'other')) ?></strong>
+                                    <?php if (!empty($entry['party_display'])): ?>
+                                        <span><?= htmlspecialchars((string)$entry['party_display']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div>
+                                    <span>Responsavel</span>
+                                    <strong><?= htmlspecialchars($entry['created_by_name'] ?? '-') ?></strong>
+                                </div>
+                                <?php if (!empty($entry['payment_method']) || !empty($entry['receipt_path'])): ?>
+                                    <div>
+                                        <span>Pagamento</span>
+                                        <?php if (!empty($entry['payment_method'])): ?>
+                                            <strong><?= htmlspecialchars(financePaymentMethodLabel($entry['payment_method'] ?? null)) ?></strong>
+                                        <?php endif; ?>
+                                        <?php if (!empty($entry['receipt_path'])): ?>
+                                            <a href="<?= PROJECT_URL ?>/<?= htmlspecialchars((string)$entry['receipt_path']) ?>" target="_blank" rel="noopener noreferrer">Ver comprovante</a>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($advancedCategories && !empty($entry['tags_text'])): ?>
+                                    <div>
+                                        <span>Tags</span>
+                                        <strong><?= htmlspecialchars((string)$entry['tags_text']) ?></strong>
+                                    </div>
+                                <?php endif; ?>
+                                <div>
+                                    <span>Status</span>
+                                    <span class="c-badge <?= financeStatusBadge((string)$entry['status']) ?>">
+                                        <?= financeStatusLabel((string)$entry['status']) ?>
+                                    </span>
+                                </div>
+                                <div class="finance-entry-mobile-actions">
+                                    <div class="finance-entry-actions">
+                                        <?php if ($isPending): ?>
+                                            <form method="post" action="<?= PROJECT_URL ?>/admin/financeiro/complete.php">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="id" value="<?= (int)$entry['id'] ?>">
+                                                <button class="c-btn-secondary" type="submit">Concluir</button>
+                                            </form>
+                                        <?php endif; ?>
+                                        <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/edit.php?id=<?= (int)$entry['id'] ?>">Editar</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    <?php endforeach; ?>
+                </div>
+
                 <div class="c-table-wrapper finance-entry-table-wrapper">
                     <table class="c-table">
                         <thead>
@@ -374,6 +562,28 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const panel = document.querySelector('.finance-filter-panel');
+    if (!panel || panel.dataset.hasFilters === '1') return;
+
+    const media = window.matchMedia('(max-width: 700px)');
+    const syncFilterPanel = () => {
+        if (media.matches) {
+            panel.removeAttribute('open');
+        } else {
+            panel.setAttribute('open', '');
+        }
+    };
+
+    syncFilterPanel();
+
+    if (typeof media.addEventListener === 'function') {
+        media.addEventListener('change', syncFilterPanel);
+    }
+});
+</script>
 
 <?php
 $content = ob_get_clean();
