@@ -331,36 +331,71 @@ return [
 
             'title' => [
                 'label' => 'Título',
-                'type' => 'text'
+                'type' => 'text',
+                'default' => 'Depoimentos'
             ],
 
-            'items' => [
-                'label' => 'Depoimentos',
-                'type' => 'group',
+            'name_1' => [
+                'label' => 'Nome 1',
+                'type' => 'text',
+                'default' => 'Nome do cliente'
+            ],
+            'role_1' => [
+                'label' => 'Identificação 1',
+                'type' => 'text',
+                'default' => 'Cliente'
+            ],
+            'text_1' => [
+                'label' => 'Depoimento 1',
+                'type' => 'textarea',
+                'default' => 'Use este espaço para um depoimento curto e direto.'
+            ],
+            'image_1' => [
+                'label' => 'Imagem 1 (URL da Biblioteca)',
+                'type' => 'text',
+                'default' => ''
+            ],
 
-                'fields' => [
+            'name_2' => [
+                'label' => 'Nome 2',
+                'type' => 'text',
+                'default' => 'Nome do cliente'
+            ],
+            'role_2' => [
+                'label' => 'Identificação 2',
+                'type' => 'text',
+                'default' => 'Cliente'
+            ],
+            'text_2' => [
+                'label' => 'Depoimento 2',
+                'type' => 'textarea',
+                'default' => 'Conte aqui uma percepção, resultado ou experiência positiva.'
+            ],
+            'image_2' => [
+                'label' => 'Imagem 2 (URL da Biblioteca)',
+                'type' => 'text',
+                'default' => ''
+            ],
 
-                    'name' => [
-                        'label' => 'Nome',
-                        'type' => 'text'
-                    ],
-
-                    'role' => [
-                        'label' => 'Cargo',
-                        'type' => 'text'
-                    ],
-
-                    'text' => [
-                        'label' => 'Depoimento',
-                        'type' => 'textarea'
-                    ],
-
-                    'image' => [
-                        'label' => 'Imagem (URL)',
-                        'type' => 'text'
-                    ]
-
-                ]
+            'name_3' => [
+                'label' => 'Nome 3',
+                'type' => 'text',
+                'default' => 'Nome do cliente'
+            ],
+            'role_3' => [
+                'label' => 'Identificação 3',
+                'type' => 'text',
+                'default' => 'Cliente'
+            ],
+            'text_3' => [
+                'label' => 'Depoimento 3',
+                'type' => 'textarea',
+                'default' => 'Finalize com um terceiro depoimento simples para reforçar confiança.'
+            ],
+            'image_3' => [
+                'label' => 'Imagem 3 (URL da Biblioteca)',
+                'type' => 'text',
+                'default' => ''
             ]
         ]
     ],
