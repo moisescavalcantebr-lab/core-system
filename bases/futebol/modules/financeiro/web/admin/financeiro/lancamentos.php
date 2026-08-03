@@ -13,20 +13,41 @@ financeEnsureCategoryAddonSchema($pdo);
 $title = 'Lancamentos';
 $advancedCategories = financeAdvancedCategoriesEnabled();
 
+$today = new DateTimeImmutable('today');
+$currentMonthStart = $today->modify('first day of this month')->format('Y-m-d');
+$currentMonthEnd = $today->modify('last day of this month')->format('Y-m-d');
+$shortcut = trim((string)($_GET['period'] ?? 'month'));
+$allowedShortcuts = ['month', '30', '60', '90', 'custom'];
+
+if (!in_array($shortcut, $allowedShortcuts, true)) {
+    $shortcut = 'month';
+}
+
 $filters = [
     'q' => trim((string)($_GET['q'] ?? '')),
     'type' => trim((string)($_GET['type'] ?? '')),
     'status' => trim((string)($_GET['status'] ?? '')),
     'category_id' => (int)($_GET['category_id'] ?? 0),
-    'date_from' => trim((string)($_GET['date_from'] ?? '')),
-    'date_to' => trim((string)($_GET['date_to'] ?? '')),
+    'date_from' => trim((string)($_GET['date_from'] ?? $currentMonthStart)),
+    'date_to' => trim((string)($_GET['date_to'] ?? $currentMonthEnd)),
 ];
+
+if ($shortcut === '30' || $shortcut === '60' || $shortcut === '90') {
+    $days = (int)$shortcut;
+    $filters['date_from'] = $today->modify('-' . ($days - 1) . ' days')->format('Y-m-d');
+    $filters['date_to'] = $today->format('Y-m-d');
+} elseif ($shortcut === 'month' && !isset($_GET['date_from']) && !isset($_GET['date_to'])) {
+    $filters['date_from'] = $currentMonthStart;
+    $filters['date_to'] = $currentMonthEnd;
+} else {
+    $shortcut = 'custom';
+}
+
 $hasFilters = $filters['q'] !== ''
     || $filters['type'] !== ''
     || $filters['status'] !== ''
     || $filters['category_id'] > 0
-    || $filters['date_from'] !== ''
-    || $filters['date_to'] !== '';
+    || $shortcut !== 'month';
 
 $where = ["COALESCE(e.source, 'manual') NOT IN ('balance_deposit', 'balance_usage')"];
 $params = [];
@@ -133,6 +154,23 @@ ob_start();
     gap: 10px;
 }
 
+.finance-period-shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    grid-column: 1 / -1;
+}
+
+.finance-period-shortcuts .c-btn-secondary {
+    min-height: 32px;
+    padding: 7px 12px;
+}
+
+.finance-period-shortcuts .is-active {
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
 .finance-filter-actions {
     display: flex;
     align-items: flex-end;
@@ -208,6 +246,11 @@ ob_start();
 
     .finance-filter-actions .c-btn-secondary {
         flex: 1 1 120px;
+        text-align: center;
+    }
+
+    .finance-period-shortcuts .c-btn-secondary {
+        flex: 1 1 calc(50% - 8px);
         text-align: center;
     }
 
@@ -337,6 +380,12 @@ ob_start();
             <summary class="finance-filter-toggle">Filtros<?= $hasFilters ? ' ativos' : '' ?></summary>
             <form method="GET" class="finance-filter-card">
                 <div class="finance-filter-grid">
+                    <div class="finance-period-shortcuts" aria-label="Atalhos de periodo">
+                        <a class="c-btn-secondary <?= $shortcut === 'month' ? 'is-active' : '' ?>" href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php">Este mes</a>
+                        <a class="c-btn-secondary <?= $shortcut === '30' ? 'is-active' : '' ?>" href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php?period=30">30 dias</a>
+                        <a class="c-btn-secondary <?= $shortcut === '60' ? 'is-active' : '' ?>" href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php?period=60">60 dias</a>
+                        <a class="c-btn-secondary <?= $shortcut === '90' ? 'is-active' : '' ?>" href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php?period=90">90 dias</a>
+                    </div>
                     <div class="c-form-group">
                         <label>Buscar</label>
                         <input type="text" name="q" class="c-input" value="<?= htmlspecialchars($filters['q']) ?>" placeholder="Titulo, descricao ou parte...">
@@ -378,6 +427,7 @@ ob_start();
                         <input type="date" name="date_to" class="c-input" value="<?= htmlspecialchars($filters['date_to']) ?>">
                     </div>
                     <div class="finance-filter-actions">
+                        <input type="hidden" name="period" value="custom">
                         <button class="c-btn-secondary">Filtrar</button>
                         <a href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php" class="c-btn-secondary">Limpar</a>
                     </div>

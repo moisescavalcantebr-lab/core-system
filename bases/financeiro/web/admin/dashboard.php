@@ -418,6 +418,51 @@ ob_start();
 .dash-good { color: #22c55e; }
 .dash-bad { color: #ef4444; }
 
+.dash-chart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.dash-chart-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.dash-chart-tabs button {
+    border: 1px solid rgba(148, 163, 184, .28);
+    background: rgba(15, 23, 42, .52);
+    color: var(--text-secondary);
+    min-height: 26px;
+    padding: 4px 8px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.dash-chart-tabs button.is-active {
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+.dash-chart-sets {
+    overflow-x: auto;
+}
+
+.dash-chart-sets .dash-bars {
+    display: none;
+    min-width: min(100%, calc(var(--dash-chart-columns, 6) * 42px));
+    grid-template-columns: repeat(var(--dash-chart-columns, 6), minmax(32px, 1fr));
+}
+
+.dash-chart-sets .dash-bars.is-active {
+    display: grid;
+}
+
 .dash-bars {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -747,6 +792,15 @@ ob_start();
 
     .dash-pie-legend {
         width: 100%;
+    }
+
+    .dash-chart-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .dash-chart-tabs {
+        justify-content: flex-start;
     }
 }
 </style>

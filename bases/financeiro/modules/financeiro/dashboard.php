@@ -42,16 +42,34 @@ $balance = $summary['income'] - $summary['expense'];
 $pendingBalance = $summary['pending_income'] - $summary['pending_expense'];
 $advancedCategories = financeAdvancedCategoriesEnabled();
 
-$months = [];
-for ($i = 5; $i >= 0; $i--) {
-    $key = date('Y-m', strtotime("-{$i} months"));
-    $months[$key] = [
-        'label' => date('m/Y', strtotime($key . '-01')),
-        'income' => 0.0,
-        'expense' => 0.0,
-    ];
+function dashFinanceMonthBuckets(int $count): array
+{
+    $months = [];
+
+    for ($i = $count - 1; $i >= 0; $i--) {
+        $key = date('Y-m', strtotime("-{$i} months"));
+        $months[$key] = [
+            'label' => date('m/Y', strtotime($key . '-01')),
+            'income' => 0.0,
+            'expense' => 0.0,
+        ];
+    }
+
+    return $months;
 }
 
+function dashFinanceChartMax(array $items): float
+{
+    $max = 1.0;
+
+    foreach ($items as $item) {
+        $max = max($max, (float)($item['income'] ?? 0), (float)($item['expense'] ?? 0));
+    }
+
+    return $max;
+}
+
+$monthTotals = dashFinanceMonthBuckets(12);
 $stmt = $pdo->query("
     SELECT
         DATE_FORMAT(COALESCE(paid_at, due_date, DATE(created_at)), '%Y-%m') AS month_key,
@@ -60,7 +78,7 @@ $stmt = $pdo->query("
     FROM finance_entries
     WHERE status = 'paid'
       AND COALESCE(source, 'manual') NOT IN ('balance_deposit', 'balance_usage')
-      AND COALESCE(paid_at, due_date, DATE(created_at)) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 5 MONTH), '%Y-%m-01')
+      AND COALESCE(paid_at, due_date, DATE(created_at)) >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 11 MONTH), '%Y-%m-01')
     GROUP BY month_key, type
     ORDER BY month_key ASC
 ");
@@ -69,14 +87,78 @@ foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $monthRow) {
     $key = (string)$monthRow['month_key'];
     $type = (string)$monthRow['type'];
 
-    if (isset($months[$key]) && isset($months[$key][$type])) {
-        $months[$key][$type] = (float)$monthRow['total'];
+    if (isset($monthTotals[$key]) && isset($monthTotals[$key][$type])) {
+        $monthTotals[$key][$type] = (float)$monthRow['total'];
     }
 }
 
-$maxMonthly = 1.0;
-foreach ($months as $monthData) {
-    $maxMonthly = max($maxMonthly, $monthData['income'], $monthData['expense']);
+$months = array_slice($monthTotals, -6, 6, true);
+$yearMonths = [];
+$currentYear = date('Y');
+foreach ($monthTotals as $monthKey => $monthData) {
+    if (str_starts_with((string)$monthKey, $currentYear . '-')) {
+        $yearMonths[$monthKey] = $monthData;
+    }
+}
+
+$yearTotals = [];
+if ($advancedCategories) {
+    $startYear = (int)date('Y') - 4;
+    for ($year = $startYear; $year <= (int)date('Y'); $year++) {
+        $yearTotals[(string)$year] = [
+            'label' => (string)$year,
+            'income' => 0.0,
+            'expense' => 0.0,
+        ];
+    }
+
+    $yearStmt = $pdo->query("
+        SELECT
+            YEAR(COALESCE(paid_at, due_date, DATE(created_at))) AS year_key,
+            type,
+            COALESCE(SUM(amount), 0) AS total
+        FROM finance_entries
+        WHERE status = 'paid'
+          AND COALESCE(source, 'manual') NOT IN ('balance_deposit', 'balance_usage')
+          AND COALESCE(paid_at, due_date, DATE(created_at)) >= MAKEDATE(YEAR(CURDATE()) - 4, 1)
+        GROUP BY year_key, type
+        ORDER BY year_key ASC
+    ");
+
+    foreach ($yearStmt->fetchAll(PDO::FETCH_ASSOC) as $yearRow) {
+        $key = (string)$yearRow['year_key'];
+        $type = (string)$yearRow['type'];
+
+        if (isset($yearTotals[$key]) && isset($yearTotals[$key][$type])) {
+            $yearTotals[$key][$type] = (float)$yearRow['total'];
+        }
+    }
+}
+
+$chartSets = [
+    'm6' => [
+        'title' => 'Ultimos 6 meses',
+        'items' => $months,
+        'max' => dashFinanceChartMax($months),
+    ],
+    'm12' => [
+        'title' => 'Ultimos 12 meses',
+        'items' => $monthTotals,
+        'max' => dashFinanceChartMax($monthTotals),
+    ],
+];
+
+if ($advancedCategories) {
+    $chartSets['year'] = [
+        'title' => 'Ano atual',
+        'items' => $yearMonths,
+        'max' => dashFinanceChartMax($yearMonths),
+    ];
+    $chartSets['years'] = [
+        'title' => 'Comparar anos',
+        'items' => $yearTotals,
+        'max' => dashFinanceChartMax($yearTotals),
+    ];
 }
 
 $categoryNameExpression = $advancedCategories
@@ -243,15 +325,29 @@ ob_start();
         </div>
 
         <div class="dash-chart-card">
-            <h4>Ultimos 6 meses</h4>
-            <div class="dash-bars">
-                <?php foreach ($months as $month): ?>
-                    <div class="dash-bar-group">
-                        <div class="dash-bar-pair">
-                            <span class="dash-bar dash-bar--income" style="height:<?= max(4, (int)round(($month['income'] / $maxMonthly) * 84)) ?>px;"></span>
-                            <span class="dash-bar dash-bar--expense" style="height:<?= max(4, (int)round(($month['expense'] / $maxMonthly) * 84)) ?>px;"></span>
-                        </div>
-                        <small><?= htmlspecialchars($month['label']) ?></small>
+            <div class="dash-chart-head">
+                <h4 data-finance-chart-title>Ultimos 6 meses</h4>
+                <div class="dash-chart-tabs" aria-label="Periodo do grafico financeiro">
+                    <button type="button" class="is-active" data-finance-chart-tab="m6">6m</button>
+                    <button type="button" data-finance-chart-tab="m12">12m</button>
+                    <?php if ($advancedCategories): ?>
+                        <button type="button" data-finance-chart-tab="year">Ano</button>
+                        <button type="button" data-finance-chart-tab="years">Anos</button>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <div class="dash-chart-sets">
+                <?php foreach ($chartSets as $chartKey => $chartSet): ?>
+                    <div class="dash-bars <?= $chartKey === 'm6' ? 'is-active' : '' ?>" data-finance-chart-set="<?= htmlspecialchars((string)$chartKey) ?>" data-title="<?= htmlspecialchars((string)$chartSet['title']) ?>" style="--dash-chart-columns: <?= max(1, count($chartSet['items'])) ?>;">
+                        <?php foreach ($chartSet['items'] as $month): ?>
+                            <div class="dash-bar-group">
+                                <div class="dash-bar-pair">
+                                    <span class="dash-bar dash-bar--income" style="height:<?= max(4, (int)round(((float)$month['income'] / (float)$chartSet['max']) * 84)) ?>px;"></span>
+                                    <span class="dash-bar dash-bar--expense" style="height:<?= max(4, (int)round(((float)$month['expense'] / (float)$chartSet['max']) * 84)) ?>px;"></span>
+                                </div>
+                                <small><?= htmlspecialchars((string)$month['label']) ?></small>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -317,6 +413,30 @@ ob_start();
         <?php endforeach; ?>
     </div>
 </section>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.dash-module--finance').forEach((module) => {
+        const title = module.querySelector('[data-finance-chart-title]');
+        const tabs = module.querySelectorAll('[data-finance-chart-tab]');
+        const sets = module.querySelectorAll('[data-finance-chart-set]');
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const key = tab.dataset.financeChartTab;
+                const target = module.querySelector('[data-finance-chart-set="' + key + '"]');
+                if (!target) return;
+
+                tabs.forEach((item) => item.classList.toggle('is-active', item === tab));
+                sets.forEach((set) => set.classList.toggle('is-active', set === target));
+
+                if (title && target.dataset.title) {
+                    title.textContent = target.dataset.title;
+                }
+            });
+        });
+    });
+});
+</script>
 <?php
 
 return [
