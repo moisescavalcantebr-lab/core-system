@@ -191,31 +191,56 @@ return [
 
             'title' => [
                 'label' => 'Título',
-                'type' => 'text'
+                'type' => 'text',
+                'default' => 'Galeria'
             ],
 
-            'items' => [
-                'label' => 'Produtos',
-                'type' => 'group',
+            'image_1' => [
+                'label' => 'Imagem 1 (URL da Biblioteca)',
+                'type' => 'text',
+                'default' => ''
+            ],
+            'title_1' => [
+                'label' => 'Título 1',
+                'type' => 'text',
+                'default' => 'Primeiro destaque'
+            ],
+            'description_1' => [
+                'label' => 'Descrição 1',
+                'type' => 'textarea',
+                'default' => 'Use este card para mostrar uma imagem importante da pagina.'
+            ],
 
-                'fields' => [
+            'image_2' => [
+                'label' => 'Imagem 2 (URL da Biblioteca)',
+                'type' => 'text',
+                'default' => ''
+            ],
+            'title_2' => [
+                'label' => 'Título 2',
+                'type' => 'text',
+                'default' => 'Segundo destaque'
+            ],
+            'description_2' => [
+                'label' => 'Descrição 2',
+                'type' => 'textarea',
+                'default' => 'Cole aqui o link da imagem enviada para a Biblioteca.'
+            ],
 
-                    'name' => [
-                        'label' => 'Nome',
-                        'type' => 'text'
-                    ],
-
-                    'description' => [
-                        'label' => 'Descrição',
-                        'type' => 'textarea'
-                    ],
-
-                    'image' => [
-                        'label' => 'Imagem (URL)',
-                        'type' => 'text'
-                    ]
-
-                ]
+            'image_3' => [
+                'label' => 'Imagem 3 (URL da Biblioteca)',
+                'type' => 'text',
+                'default' => ''
+            ],
+            'title_3' => [
+                'label' => 'Título 3',
+                'type' => 'text',
+                'default' => 'Terceiro destaque'
+            ],
+            'description_3' => [
+                'label' => 'Descrição 3',
+                'type' => 'textarea',
+                'default' => 'Edite o texto para complementar a galeria.'
             ]
         ]
     ],
