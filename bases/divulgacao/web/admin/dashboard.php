@@ -705,6 +705,24 @@ ob_start();
 }
 
 @media (max-width: 760px) {
+    .dash-module--finance {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .dash-module--finance .dash-module-head {
+        padding: 0;
+    }
+
+    .dash-module--finance .dash-finance-layout {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
     .dash-header-actions,
     .dash-group-tabs {
         width: 100%;
