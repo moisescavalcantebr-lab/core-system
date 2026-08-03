@@ -1,47 +1,35 @@
 <?php
 declare(strict_types=1);
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
+require APP_PATH . '/helpers/flash.php';
 
 requireAdmin();
 
 global $pdo;
 
-/* =========================
-INPUT
-========================= */
-
 $pageId = (int)($_GET['page_id'] ?? 0);
-$index  = (int)($_GET['index'] ?? 0);
+$index = (int)($_GET['index'] ?? 0);
 
 if (!$pageId) {
-    exit('Página inválida');
+    exit('Pagina invalida');
 }
 
-/* =========================
-BUSCAR PÁGINA
-========================= */
-
 $stmt = $pdo->prepare("
-SELECT content_path
-FROM core_page_contents
-WHERE id = :id
+    SELECT content_path
+    FROM core_page_contents
+    WHERE id = :id
 ");
-
 $stmt->execute(['id' => $pageId]);
-
 $contentPath = $stmt->fetchColumn();
 
 if (!$contentPath) {
-    exit('Página não encontrada');
+    exit('Pagina nao encontrada');
 }
-
-/* =========================
-BASE URL
-========================= */
 
 $baseUrl = '';
 
@@ -49,59 +37,42 @@ if (defined('PROJECT_PATH')) {
     $baseUrl = '/projects/' . basename(PROJECT_PATH);
 }
 
-/* =========================
-CAMINHO JSON
-========================= */
-
 $jsonPath = STORAGE_PATH . '/paginas/pages/' . $contentPath;
-
-/* garantir pasta */
-
 $dir = dirname($jsonPath);
 
 if (!is_dir($dir)) {
-    mkdir($dir, 0755, true);
+    @mkdir($dir, 0775, true);
 }
 
-/* =========================
-CARREGAR JSON
-========================= */
+if (!is_dir($dir) || !is_writable($dir)) {
+    flash('error', 'Nao foi possivel alterar a pagina. A pasta storage/paginas/pages nao esta gravavel no servidor.');
+    header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$pageId}");
+    exit;
+}
 
 $data = [];
 
 if (file_exists($jsonPath)) {
-    $decoded = json_decode(file_get_contents($jsonPath), true);
+    $decoded = json_decode((string)file_get_contents($jsonPath), true);
     $data = is_array($decoded) ? $decoded : [];
 }
-
-/* garantir estrutura */
 
 $data['blocks'] = $data['blocks'] ?? [];
 $blocks = $data['blocks'];
 
-/* =========================
-REMOVER BLOCO
-========================= */
-
 if (isset($blocks[$index])) {
     unset($blocks[$index]);
-    $blocks = array_values($blocks); // reindexar
 }
 
-/* =========================
-SALVAR JSON
-========================= */
+$data['blocks'] = array_values($blocks);
+$json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
-$data['blocks'] = $blocks;
-
-file_put_contents(
-    $jsonPath,
-    json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-);
-
-/* =========================
-REDIRECT (PADRÃO CORE)
-========================= */
+if ($json === false || @file_put_contents($jsonPath, $json) === false) {
+    error_log('Nao foi possivel salvar a pagina em JSON: ' . $jsonPath);
+    flash('error', 'Nao foi possivel alterar a pagina. Verifique as permissoes de storage/paginas no servidor.');
+    header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$pageId}");
+    exit;
+}
 
 header("Location: {$baseUrl}/web/admin/pages/edit.php?id={$pageId}");
 exit;

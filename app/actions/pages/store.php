@@ -165,7 +165,13 @@ $jsonPath = $jsonDir . $fileName;
 
 /* garantir pasta */
 if (!is_dir($jsonDir)) {
-    mkdir($jsonDir, 0755, true);
+    @mkdir($jsonDir, 0775, true);
+}
+
+if (!is_dir($jsonDir) || !is_writable($jsonDir)) {
+    flash('error', 'Nao foi possivel criar a pagina. A pasta storage/paginas/pages nao esta gravavel no servidor.');
+    header("Location: {$baseUrl}/web/admin/pages/create.php");
+    exit;
 }
 
 /* =========================
@@ -203,10 +209,22 @@ if (!isset($data['blocks']) || !is_array($data['blocks'])) {
 SALVAR JSON
 ========================= */
 
-file_put_contents(
-    $jsonPath,
-    json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-);
+$pageJson = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+if ($pageJson === false) {
+    flash('error', 'Nao foi possivel gerar o conteudo da pagina.');
+    header("Location: {$baseUrl}/web/admin/pages/create.php");
+    exit;
+}
+
+$saved = @file_put_contents($jsonPath, $pageJson);
+
+if ($saved === false) {
+    error_log('Nao foi possivel criar a pagina em JSON: ' . $jsonPath);
+    flash('error', 'Nao foi possivel criar a pagina. Verifique as permissoes de storage/paginas no servidor.');
+    header("Location: {$baseUrl}/web/admin/pages/create.php");
+    exit;
+}
 
 /* =========================
 SALVAR NO BANCO

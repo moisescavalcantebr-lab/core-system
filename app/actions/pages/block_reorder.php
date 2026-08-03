@@ -40,6 +40,13 @@ JSON
 ========================= */
 
 $jsonPath = STORAGE_PATH . '/paginas/pages/' . $contentPath;
+$jsonDir = dirname($jsonPath);
+
+if (!is_dir($jsonDir) || !is_writable($jsonDir)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'storage/paginas/pages nao esta gravavel no servidor.']);
+    exit;
+}
 
 $dataJson = [];
 
@@ -68,9 +75,12 @@ $dataJson['blocks'] = $newBlocks;
 SALVAR
 ========================= */
 
-file_put_contents(
-    $jsonPath,
-    json_encode($dataJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
-);
+$json = json_encode($dataJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+if ($json === false || @file_put_contents($jsonPath, $json) === false) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Nao foi possivel salvar a ordem dos blocos.']);
+    exit;
+}
 
 echo json_encode(['success' => true]);
