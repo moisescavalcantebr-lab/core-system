@@ -1,9 +1,10 @@
-﻿{
+{
     "name":  "estatisticas",
     "label":  "Estatisticas",
     "description":  "Registro basico de estatisticas por jogador, contexto, competicao e partida.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "main",
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [

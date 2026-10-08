@@ -1,9 +1,11 @@
-﻿{
+{
     "name":  "escalacao",
     "label":  "Escalacao",
     "description":  "Montagem neutra de escalações, listas de participantes ou equipes por partida/evento.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "addon",
+    "attach_to": ["partidas"],
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [

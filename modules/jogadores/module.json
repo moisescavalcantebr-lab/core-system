@@ -1,9 +1,10 @@
-﻿{
+{
     "name":  "jogadores",
     "label":  "Jogadores",
     "description":  "Cadastro simples de jogadores para bases do segmento esportivo.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "addon",
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [

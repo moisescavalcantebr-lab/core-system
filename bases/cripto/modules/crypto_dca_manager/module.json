@@ -4,6 +4,7 @@
   "description": "Gestao pessoal de estrategia cripto DCA Spot por contas, grupos, ativos, ciclos e revisoes.",
   "version": "0.1.0",
   "type": "project",
+  "kind": "main",
   "status": "draft",
   "category": "Cripto",
   "segments": ["cripto", "investimentos", "pessoal"],

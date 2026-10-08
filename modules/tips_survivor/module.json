@@ -4,6 +4,7 @@
   "description": "Competicoes de palpites esportivos em modo survivor com vidas, pontos, tokens internos e ranking.",
   "version": "0.1.0",
   "type": "project",
+  "kind": "main",
   "status": "draft",
   "category": "Entretenimento",
   "segments": ["esporte", "entretenimento", "palpites"],

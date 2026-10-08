@@ -1,9 +1,11 @@
-﻿{
+{
     "name":  "competicoes",
     "label":  "Competicoes",
     "description":  "Organize competicoes e partidas do futebol. No gratis, a base usa Amistoso como competicao simples.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "addon",
+    "attach_to": ["meu_time"],
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [

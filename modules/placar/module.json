@@ -1,9 +1,11 @@
-﻿{
+{
     "name":  "placar",
     "label":  "Placar",
     "description":  "Controle neutro de placares para partidas, disputas ou acompanhamentos em tempo real.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "addon",
+    "attach_to": ["partidas"],
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [

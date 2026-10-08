@@ -1,9 +1,10 @@
-﻿{
+{
     "name":  "classificacao",
     "label":  "Classificacao",
     "description":  "Tabelas de classificacao e rankings individuais com campos configuraveis por base.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "main",
     "status":  "draft",
     "category":  "Gestao",
     "segments":  [

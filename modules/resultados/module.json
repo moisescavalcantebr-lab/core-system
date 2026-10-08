@@ -1,9 +1,11 @@
-﻿{
+{
     "name":  "resultados",
     "label":  "Resultados",
     "description":  "Registro neutro de resultados, decisões, métricas finais e histórico de eventos.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "addon",
+    "attach_to": ["partidas"],
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [

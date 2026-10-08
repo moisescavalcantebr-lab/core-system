@@ -1,9 +1,10 @@
-﻿{
+{
     "name":  "meu_time",
     "label":  "Meu Time",
     "description":  "Identidade do time, elenco ativo e base para escalações.",
     "version":  "0.1.0",
     "type":  "project",
+    "kind":  "main",
     "status":  "draft",
     "category":  "Esporte",
     "segments":  [
