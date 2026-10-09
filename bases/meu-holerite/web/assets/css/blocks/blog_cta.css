@@ -1,0 +1,15 @@
+/* =========================
+BLOG CTA
+========================= */
+
+.block-blog-cta {
+}
+
+.blog-cta-inner {
+    margin-top: 20px;
+}
+
+.block-blog-cta .btn {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+}

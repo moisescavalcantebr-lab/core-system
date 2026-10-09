@@ -1,0 +1,43 @@
+/* =========================
+BENEFITS BLOCK
+========================= */
+
+.block-benefits_cards {
+    text-align: center;
+}
+
+.block-benefits_cards .block-inner {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* GRID já vem do global */
+
+.benefits-grid {
+    margin-top: 40px;
+}
+
+/* CARD */
+
+.benefit-card {
+    padding: 10px;
+}
+
+/* ICON */
+
+.benefit-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+/* TEXT */
+
+.benefit-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+}
+
+.benefit-card p {
+    font-size: 0.95rem;
+    opacity: 0.85;
+}

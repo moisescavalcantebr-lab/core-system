@@ -1,0 +1,25 @@
+:root {
+    --bg-body: #0b1220;
+    --bg-card: #141e33;
+    --bg-sidebar: #070d18;
+    --bg-header: #050a12;
+    --bg-hover: #1f2a44;
+    --bg-input: #0b1220;
+
+
+    --text-primary: #e0e7ff;
+    --text-secondary: #9aa6d1;
+    --text-inverse: #0b1220;
+
+    --border-color: #2b3b5c;
+
+    --primary-color: #8b5cf6;
+    --primary-hover: #7c3aed;
+
+    --success-color: #22c55e;
+    --warning-color: #facc15;
+    --danger-color: #ef4444;
+    --info-color: #38bdf8;
+
+    --shadow-card: 0 5px 20px rgba(0,0,0,0.5);
+}

@@ -1,0 +1,23 @@
+/* =========================
+BLOG IMAGE
+========================= */
+
+.block-blog-image {
+}
+
+.blog-image-inner {
+    max-width: 800px;
+    margin: 20px auto;
+}
+
+.blog-image-media img {
+    width: 100%;
+    display: block;
+}
+
+.blog-image-caption {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-top: 8px;
+    text-align: center;
+}

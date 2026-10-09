@@ -1,0 +1,15 @@
+{
+    "name": "Meu Holerite",
+    "slug": "meu-holerite",
+    "description": "Base inicial do sistema (nao deletar)",
+    "allows_users": 1,
+    "max_admins": 1,
+    "status": 1,
+    "base_stage": "published",
+    "is_protected": 1,
+    "schema": {
+        "path": "app/database/schema.sql",
+        "hash": "3f438d9b711e3a8656225963a48c1c59",
+        "updated_at": "2026-10-09 01:06:04"
+    }
+}

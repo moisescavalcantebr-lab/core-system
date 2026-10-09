@@ -1,0 +1,25 @@
+/* =========================
+BLOG QUOTE
+========================= */
+
+.block-blog-quote {
+}
+
+.blog-quote-inner {
+    max-width: 700px;
+    margin: 30px auto;
+    padding-left: 15px;
+    border-left: 3px solid var(--border-color);
+}
+
+.blog-quote-text {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+.blog-quote-author {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    opacity: 0.7;
+}

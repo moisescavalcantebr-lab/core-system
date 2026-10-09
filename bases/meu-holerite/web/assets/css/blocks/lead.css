@@ -1,0 +1,26 @@
+.block-lead {
+    text-align: center;
+}
+
+.block-lead .block-description {
+    margin-bottom: 20px;
+    opacity: 0.85;
+}
+
+.lead-form-inner {
+    max-width: 500px;
+    margin: 30px auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lead-form-inner input {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.form-success {
+    margin-bottom: 15px;
+    color: green;
+}

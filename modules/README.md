@@ -23,7 +23,7 @@ Cada tabela deve ter um responsável definido. Um addon pode estender uma tabela
 
 | Papel | Recursos | Vínculo |
 | --- | --- | --- |
-| Principal | Financeiro, Participantes, Meu Time, DCA Strategy, Divulgação, Tips Survivor, Classificação, Estatísticas | Funcionalidades centrais |
+| Principal | Financeiro, Participantes, Meu Time, DCA Strategy, Divulgação, Tips Survivor, Classificação, Estatísticas, Meu Holerite | Funcionalidades centrais |
 | Addon | Categorias, Cartão de Crédito | Financeiro |
 | Addon | Jogadores | Participantes |
 | Addon | Competições, Treino | Meu Time |
