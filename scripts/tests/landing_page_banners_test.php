@@ -13,7 +13,7 @@ function copyTree(string $from, string $to): void {
     }
 }
 function runRoute(string $fixture, string $route, array $post = [], array $get = []): string {
-    $code = '$_POST='.var_export($post, true).';$_GET='.var_export($get, true).';require '.var_export($fixture.'/web/'.$route, true).';';
+    $code = '$_SERVER["REQUEST_METHOD"]='.var_export($post ? 'POST' : 'GET', true).';$_POST='.var_export($post, true).';$_GET='.var_export($get, true).';require '.var_export($fixture.'/web/'.$route, true).';';
     $process = proc_open([PHP_BINARY, '-r', $code], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
     if (!is_resource($process)) throw new RuntimeException('Processo indisponivel');
     $output = stream_get_contents($pipes[1]); $error = stream_get_contents($pipes[2]);
@@ -30,7 +30,7 @@ try {
     $pdo->exec('USE `'.$database.'`');
     $schema = (string)file_get_contents($root.'/modules/landing_page/database/schema.sql');
     // Simulate an existing project, then run the additive schema upgrade twice.
-    $pdo->exec(str_replace("    banners_json LONGTEXT NULL,\n", '', str_replace("\r\n", "\n", $schema)));
+    $pdo->exec(str_replace(["    banners_json LONGTEXT NULL,\n", "    lead_fields_json LONGTEXT NULL,\n"], '', str_replace("\r\n", "\n", $schema)));
     $pdo->exec("INSERT INTO landing_page_pages (title,slug,headline,offer_image_2) VALUES ('Legada','legada','Titulo','storage/uploads/legacy.png')");
     define('PROJECT_PATH', $root.'/bases/marketing');
     landingPageEnsureSchema($pdo); landingPageEnsureSchema($pdo);
@@ -86,7 +86,43 @@ try {
     runRoute($fixture, 'admin/landing_page/update.php', $post, ['id' => $id]);
     $html = runRoute($fixture, 'landing_page.php', [], ['slug' => 'pagina-teste']);
     expect(!str_contains($html, '<section class="banners"'), 'Secao vazia visivel');
+    expect(landingPageLeadFields($legacy) === ['name' => 'required', 'email' => 'required', 'phone' => 'optional'], 'Campos legados alterados');
+    $rejected = false;
+    try { landingPageSaveLeadFields(['lead_fields' => ['name' => 'hidden', 'email' => 'hidden', 'phone' => 'optional']]); }
+    catch (InvalidArgumentException $e) { $rejected = true; }
+    expect($rejected, 'Configuracao sem campo obrigatorio aceita');
+    $post['lead_fields'] = ['name' => 'hidden', 'email' => 'required', 'phone' => 'hidden'];
+    runRoute($fixture, 'admin/landing_page/update.php', $post, ['id' => $id]);
+    $emailHtml = runRoute($fixture, 'landing_page.php', [], ['slug' => 'pagina-teste']);
+    expect(!str_contains($emailHtml, 'name="name"') && !str_contains($emailHtml, 'name="phone"') && str_contains($emailHtml, 'name="email"'), 'Campos ocultos aparecem');
+    file_put_contents($publicDir.'/banners-public-email-preview.html', $emailHtml);
+    file_put_contents($publicDir.'/banners-form-preview.html', runRoute($fixture, 'admin/landing_page/edit.php', [], ['id' => $id]));
+    $capture = ['page_id' => $id, 'slug' => 'pagina-teste', 'email' => 'invalido'];
+    runRoute($fixture, 'landing_page-lead.php', $capture);
+    $capture['email'] = '';
+    runRoute($fixture, 'landing_page-lead.php', $capture);
+    expect($pdo->query('SELECT COUNT(*) FROM landing_page_leads')->fetchColumn() == 0, 'E-mail invalido capturado');
+    $capture['email'] = 'teste@example.com'; $capture['name'] = 'Ignorar'; $capture['phone'] = 'Ignorar';
+    runRoute($fixture, 'landing_page-lead.php', $capture);
+    $lead = $pdo->query('SELECT * FROM landing_page_leads ORDER BY id DESC LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+    expect($lead['email'] === 'teste@example.com' && $lead['name'] === '' && $lead['phone'] === '', 'Captura nao respeitou campos ocultos');
+    runRoute($fixture, 'admin/landing_page/leads.php', ['id' => $lead['id'], 'status' => 'contatado']);
+    expect($pdo->query('SELECT status FROM landing_page_leads WHERE id='.(int)$lead['id'])->fetchColumn() === 'contatado', 'Atualizacao do lead falhou');
+    $post['lead_fields'] = ['name' => 'hidden', 'email' => 'optional', 'phone' => 'required'];
+    runRoute($fixture, 'admin/landing_page/update.php', $post, ['id' => $id]);
+    runRoute($fixture, 'landing_page-lead.php', ['page_id' => $id, 'slug' => 'pagina-teste', 'phone' => '11999999999']);
+    expect($pdo->query('SELECT COUNT(*) FROM landing_page_leads')->fetchColumn() == 2, 'Telefone sem e-mail nao capturado');
+    $post['lead_fields'] = ['name' => 'required', 'email' => 'required', 'phone' => 'optional'];
+    runRoute($fixture, 'admin/landing_page/update.php', $post, ['id' => $id]);
+    runRoute($fixture, 'landing_page-lead.php', ['page_id' => $id, 'email' => 'teste@example.com']);
+    expect($pdo->query('SELECT COUNT(*) FROM landing_page_leads')->fetchColumn() == 2, 'Nome obrigatorio ignorado');
+    $post['status'] = 'draft';
+    runRoute($fixture, 'admin/landing_page/update.php', $post, ['id' => $id]);
+    runRoute($fixture, 'landing_page-lead.php', ['page_id' => $id, 'name' => 'Teste', 'email' => 'teste@example.com']);
+    expect($pdo->query('SELECT COUNT(*) FROM landing_page_leads')->fetchColumn() == 2, 'Rascunho recebeu lead');
+    file_put_contents($publicDir.'/banners-leads-preview.html', runRoute($fixture, 'admin/landing_page/leads.php'));
     echo "OK: schema legado, preservacao, URLs, limite, criacao, edicao, banners opcionais, destinos e leads isolados.\n";
+    echo "OK: campos legados, campos ocultos, captura so de e-mail, telefone sem e-mail, validacao, rascunhos e status de leads.\n";
 } finally {
     $pdo->exec('DROP DATABASE `'.$database.'`');
     if (is_dir($fixture) && str_starts_with($fixture, sys_get_temp_dir().'/test_landing_banners_')) {

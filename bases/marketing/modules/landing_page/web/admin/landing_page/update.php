@@ -20,9 +20,15 @@ $formLanguage = landingPageFormLanguage((string)($_POST['form_language'] ?? 'pt'
 $formTexts = landingPageFormTexts($formLanguage);
 $actionType = landingPageActionType((string)($_POST['action_type'] ?? 'capture'));
 $destinationUrl = landingPageExternalUrl((string)($_POST['destination_url'] ?? ''));
-$currentStmt = $pdo->prepare('SELECT offer_image, offer_image_2, banners_json FROM landing_page_pages WHERE id = ? LIMIT 1');
+$currentStmt = $pdo->prepare('SELECT offer_image, offer_image_2, banners_json, lead_fields_json FROM landing_page_pages WHERE id = ? LIMIT 1');
 $currentStmt->execute([$id]);
 $currentPage = $currentStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+try {
+    $leadFieldsJson = landingPageSaveLeadFields($_POST, $currentPage);
+} catch (InvalidArgumentException $e) {
+    flash('error', $e->getMessage());
+    redirect(PROJECT_URL . '/admin/landing_page/edit.php?id=' . $id);
+}
 $offerImage = (string)($currentPage['offer_image'] ?? '');
 $bannersJson = landingPageSaveBanners($currentPage, $_POST, $_FILES);
 if (!empty($_POST['remove_offer_image'])) {
@@ -51,6 +57,7 @@ try {
             body = ?,
             offer_image = ?,
             banners_json = ?,
+            lead_fields_json = ?,
             cta_text = ?,
             whatsapp = ?,
             action_type = ?,
@@ -70,6 +77,7 @@ try {
         trim((string)($_POST['body'] ?? '')),
         $offerImage,
         $bannersJson,
+        $leadFieldsJson,
         trim((string)($_POST['cta_text'] ?? $template['cta'])),
         trim((string)($_POST['whatsapp'] ?? '')),
         $actionType,

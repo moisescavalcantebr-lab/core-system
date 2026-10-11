@@ -48,7 +48,7 @@ ob_start();
     <?php if (empty($leads)): ?>
         <p>Nenhum lead capturado ainda.</p>
     <?php else: ?>
-        <div class="c-table-wrap">
+        <div class="c-table-wrap landing_page-leads-wrap">
             <table class="c-table">
                 <thead>
                     <tr>
@@ -64,9 +64,14 @@ ob_start();
                     <?php foreach ($leads as $lead): ?>
                         <tr>
                             <td>
-                                <strong><?= htmlspecialchars((string)$lead['name']) ?></strong><br>
-                                <?= htmlspecialchars((string)$lead['phone']) ?><br>
-                                <small><?= htmlspecialchars((string)($lead['email'] ?? '')) ?></small>
+                                <?php $contact = trim((string)$lead['name']) ?: (trim((string)($lead['email'] ?? '')) ?: (trim((string)$lead['phone']) ?: 'Contato')); ?>
+                                <strong><?= htmlspecialchars($contact) ?></strong>
+                                <?php if (!empty($lead['phone']) && $lead['phone'] !== $contact): ?>
+                                    <br><?= htmlspecialchars((string)$lead['phone']) ?>
+                                <?php endif; ?>
+                                <?php if (!empty($lead['email']) && $lead['email'] !== $contact): ?>
+                                    <br><small><?= htmlspecialchars((string)$lead['email']) ?></small>
+                                <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars((string)($lead['page_title'] ?? '-')) ?></td>
                             <td><?= nl2br(htmlspecialchars((string)($lead['message'] ?? ''))) ?></td>
@@ -80,7 +85,7 @@ ob_start();
                                 <form method="post" class="lead-status-form">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="id" value="<?= (int)$lead['id'] ?>">
-                                    <select name="status">
+                                    <select class="c-input" name="status" aria-label="Status do lead <?= (int)$lead['id'] ?>">
                                         <?php foreach (['novo', 'contatado', 'convertido', 'arquivado'] as $status): ?>
                                             <option value="<?= $status ?>" <?= (string)$lead['status'] === $status ? 'selected' : '' ?>>
                                                 <?= landingPageLeadStatusLabel($status) ?>
@@ -99,8 +104,13 @@ ob_start();
 </div>
 
 <style>
+.landing_page-leads-wrap { max-width:100%; overflow-x:auto; }
+.landing_page-leads-wrap .c-table { min-width:760px; width:100%; font-family:inherit; font-size:13px; }
+.landing_page-leads-wrap td { vertical-align:middle; }
 .lead-status-form { display:flex; gap:8px; align-items:center; }
-@media (max-width: 760px) { .lead-status-form { flex-direction: column; align-items: stretch; } }
+.lead-status-form .c-input { width:140px; min-height:36px; margin:0; font-family:inherit; }
+.lead-status-form .c-input:focus-visible { outline:2px solid var(--color-primary, #3b82f6); outline-offset:2px; }
+.lead-status-form .c-btn-secondary { min-height:36px; margin:0; }
 </style>
 <?php
 $content = ob_get_clean();

@@ -16,7 +16,11 @@ Na lista, paginas publicadas possuem um botao para copiar o endereco completo. O
 
 Teste de regressao: `docker exec app_php php /var/www/html/scripts/tests/landing_page_banners_test.php`.
 
-## Atualizacao
+## Campos de captura
+
+Cada pagina configura Nome, E-mail e Telefone como oculto, opcional ou obrigatorio em `lead_fields_json`. Pelo menos um campo deve ser obrigatorio. Paginas sem essa configuracao preservam o padrao anterior: nome/e-mail obrigatorios e telefone opcional. A validacao no servidor segue a configuracao salva, ignora campos ocultos e valida e-mails preenchidos; rascunhos nao recebem leads. Nome e telefone ausentes sao strings vazias, e e-mail ausente e NULL, sem alterar registros antigos. Na lista, o contato e identificado pelo primeiro dado disponivel.
+
+## Deploy
 
 O deploy executa `app/console/migrate_marketing_identity.php --apply` antes do bootstrap. A migracao preserva o ID da base, os vinculos com planos e os precos do modulo. Pode ser simulada sem `--apply` e repetida sem duplicar registros.
 

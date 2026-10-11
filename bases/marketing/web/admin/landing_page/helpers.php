@@ -36,6 +36,9 @@ function landingPageEnsurePageColumns(PDO $pdo): void
     if (!isset($columns['banners_json'])) {
         $pdo->exec('ALTER TABLE landing_page_pages ADD COLUMN banners_json LONGTEXT NULL AFTER offer_image_2');
     }
+    if (!isset($columns['lead_fields_json'])) {
+        $pdo->exec('ALTER TABLE landing_page_pages ADD COLUMN lead_fields_json LONGTEXT NULL AFTER banners_json');
+    }
 
     if (!isset($columns['action_type'])) {
         $pdo->exec("ALTER TABLE landing_page_pages ADD COLUMN action_type ENUM('capture', 'redirect', 'whatsapp') NOT NULL DEFAULT 'capture' AFTER whatsapp");
@@ -148,6 +151,54 @@ function landingPageFormLanguage(string $value): string
     return array_key_exists($value, landingPageFormLanguages()) ? $value : 'pt';
 }
 
+function landingPageLeadFields(array $page): array
+{
+    $default = ['name' => 'required', 'email' => 'required', 'phone' => 'optional'];
+    $stored = json_decode((string)($page['lead_fields_json'] ?? ''), true);
+    if (!is_array($stored)) return $default;
+    $fields = [];
+    foreach ($default as $key => $mode) {
+        $fields[$key] = in_array($stored[$key] ?? null, ['hidden', 'optional', 'required'], true) ? $stored[$key] : 'hidden';
+    }
+    return in_array('required', $fields, true) ? $fields : $default;
+}
+
+function landingPageSaveLeadFields(array $post, array $current = []): string
+{
+    if (!array_key_exists('lead_fields', $post)) {
+        return json_encode(landingPageLeadFields($current), JSON_THROW_ON_ERROR);
+    }
+    $submitted = is_array($post['lead_fields']) ? $post['lead_fields'] : [];
+    $fields = [];
+    foreach (['name', 'email', 'phone'] as $key) {
+        $mode = $submitted[$key] ?? 'hidden';
+        if (!in_array($mode, ['hidden', 'optional', 'required'], true)) {
+            throw new InvalidArgumentException('Configuracao de campo invalida.');
+        }
+        $fields[$key] = $mode;
+    }
+    if (!in_array('required', $fields, true)) {
+        throw new InvalidArgumentException('Defina pelo menos um campo obrigatorio para captar o lead.');
+    }
+    return json_encode($fields, JSON_THROW_ON_ERROR);
+}
+
+function landingPageLeadValues(array $page, array $post): ?array
+{
+    $values = [];
+    $limits = ['name' => 140, 'email' => 180, 'phone' => 40];
+    foreach (landingPageLeadFields($page) as $key => $mode) {
+        $raw = $post[$key] ?? '';
+        if ($mode !== 'hidden' && !is_string($raw)) return null;
+        $value = $mode === 'hidden' ? '' : trim($raw);
+        $length = @iconv_strlen($value, 'UTF-8');
+        if (($mode === 'required' && $value === '') || $length === false || $length > $limits[$key]) return null;
+        if ($key === 'email' && $value !== '' && !filter_var($value, FILTER_VALIDATE_EMAIL)) return null;
+        $values[$key] = $value;
+    }
+    return $values;
+}
+
 function landingPageFormTexts(string $language): array
 {
     return match (landingPageFormLanguage($language)) {
@@ -157,6 +208,8 @@ function landingPageFormTexts(string $language): array
             'name' => 'Name',
             'email' => 'Email',
             'phone' => 'Phone',
+            'optional' => 'optional',
+            'invalid' => 'Please check the required fields and your email address.',
             'success' => 'Received. We will contact you soon.',
         ],
         default => [
@@ -165,6 +218,8 @@ function landingPageFormTexts(string $language): array
             'name' => 'Nome',
             'email' => 'E-mail',
             'phone' => 'Telefone',
+            'optional' => 'opcional',
+            'invalid' => 'Confira os campos obrigatorios e o endereco de e-mail.',
             'success' => 'Recebido. Em breve entraremos em contato.',
         ],
     };

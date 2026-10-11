@@ -22,6 +22,7 @@ $projectName = function_exists('getSetting') ? getSetting('project_name', 'Meu P
 $logo = function_exists('getSetting') ? getSetting('project_logo', '') : '';
 $theme = (string)($page['theme'] ?? 'dark');
 $formTexts = landingPageFormTexts((string)($page['form_language'] ?? 'pt'));
+$leadFields = landingPageLeadFields($page);
 $success = isset($_GET['lead']) && $_GET['lead'] === 'success';
 $successMessage = trim((string)($page['success_message'] ?? ''));
 if ($successMessage === '') {
@@ -90,6 +91,7 @@ $banners = landingPageBanners($page, true);
         button, .cta { border:0; border-radius:8px; padding:12px 18px; font-weight:700; background:var(--accent); color:#fff; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
         button { width:100%; margin-top:10px; }
         .success { border:1px solid rgba(34,197,94,.5); background:rgba(34,197,94,.12); padding:12px; border-radius:8px; color:var(--text); margin-bottom:12px; }
+        .form-error { border:1px solid #ef4444; padding:12px; border-radius:8px; margin-bottom:12px; }
         @media (max-width: 860px) {
             .hero { padding:24px 18px; }
             .capture-column { display:contents; }
@@ -128,13 +130,20 @@ $banners = landingPageBanners($page, true);
             <?php if ($success): ?>
                 <div class="success"><?= htmlspecialchars($successMessage) ?></div>
             <?php endif; ?>
+            <?php if (isset($_GET['lead']) && $_GET['lead'] === 'invalid'): ?>
+                <div class="form-error" role="alert"><?= htmlspecialchars($formTexts['invalid']) ?></div>
+            <?php endif; ?>
             <form method="post" action="<?= PROJECT_URL ?>/landing_page-lead.php">
                 <?= csrf_field() ?>
                 <input type="hidden" name="page_id" value="<?= (int)$page['id'] ?>">
                 <input type="hidden" name="slug" value="<?= htmlspecialchars((string)$page['slug']) ?>">
-                <label><?= htmlspecialchars($formTexts['name']) ?><input name="name" required></label>
-                <label><?= htmlspecialchars($formTexts['email']) ?><input type="email" name="email" required></label>
-                <label><?= htmlspecialchars($formTexts['phone']) ?><input name="phone" inputmode="tel"></label>
+                <?php foreach ($leadFields as $field => $mode): ?>
+                    <?php if ($mode === 'hidden') continue; ?>
+                    <label>
+                        <?= htmlspecialchars($formTexts[$field]) ?><?= $mode === 'optional' ? ' ('.htmlspecialchars($formTexts['optional']).')' : '' ?>
+                        <input type="<?= $field === 'email' ? 'email' : ($field === 'phone' ? 'tel' : 'text') ?>" name="<?= $field ?>" autocomplete="<?= $field === 'phone' ? 'tel' : $field ?>" maxlength="<?= ['name' => 140, 'email' => 180, 'phone' => 40][$field] ?>" <?= $mode === 'required' ? 'required' : '' ?>>
+                    </label>
+                <?php endforeach; ?>
                 <button type="submit"><?= htmlspecialchars(trim((string)$page['cta_text']) !== '' ? (string)$page['cta_text'] : $formTexts['title']) ?></button>
             </form>
         </aside>

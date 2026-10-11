@@ -9,16 +9,13 @@ csrf_verify();
 
 $pageId = (int)($_POST['page_id'] ?? 0);
 $slug = landingPageSlug((string)($_POST['slug'] ?? ''));
-$name = trim((string)($_POST['name'] ?? ''));
-$phone = trim((string)($_POST['phone'] ?? ''));
-$email = trim((string)($_POST['email'] ?? ''));
 $message = trim((string)($_POST['message'] ?? ''));
 
-if ($pageId <= 0 || $name === '' || $email === '') {
+if ($pageId <= 0) {
     redirect(PROJECT_URL . '/landing_page.php?slug=' . urlencode($slug));
 }
 
-$stmt = $pdo->prepare('SELECT id, slug, action_type, destination_url, whatsapp FROM landing_page_pages WHERE id = ? LIMIT 1');
+$stmt = $pdo->prepare("SELECT id, slug, action_type, destination_url, whatsapp, lead_fields_json FROM landing_page_pages WHERE id = ? AND status = 'published' LIMIT 1");
 $stmt->execute([$pageId]);
 $page = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -28,8 +25,9 @@ if (!$page) {
 
 $slug = (string)$page['slug'];
 
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    redirect(PROJECT_URL . '/landing_page.php?slug=' . urlencode($slug));
+$values = landingPageLeadValues($page, $_POST);
+if ($values === null) {
+    redirect(PROJECT_URL . '/landing_page.php?slug=' . urlencode($slug) . '&lead=invalid');
 }
 
 $stmt = $pdo->prepare("
@@ -40,9 +38,9 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([
     $pageId,
-    $name,
-    $phone,
-    $email,
+    $values['name'],
+    $values['phone'],
+    $values['email'] !== '' ? $values['email'] : null,
     $message,
     $_SERVER['REMOTE_ADDR'] ?? null,
     substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),

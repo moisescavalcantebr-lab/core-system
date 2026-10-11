@@ -125,6 +125,22 @@
     </div>
 
     <section class="landing_page-flow">
+        <h3>Campos da captura</h3>
+        <div class="c-form-grid">
+            <?php $leadFieldLabels = ['name' => 'Nome', 'email' => 'E-mail', 'phone' => 'Telefone']; ?>
+            <?php foreach (landingPageLeadFields($page) as $field => $mode): ?>
+                <label><?= $leadFieldLabels[$field] ?>
+                    <select class="c-input" name="lead_fields[<?= $field ?>]">
+                        <?php foreach (['hidden' => 'Oculto', 'optional' => 'Opcional', 'required' => 'Obrigatorio'] as $value => $label): ?>
+                            <option value="<?= $value ?>" <?= $mode === $value ? 'selected' : '' ?>><?= $label ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+            <?php endforeach; ?>
+        </div>
+    </section>
+
+    <section class="landing_page-flow">
         <h3>Divulgacao complementar</h3>
         <?php foreach (landingPageBanners($page) as $i => $banner): ?>
             <fieldset class="landing_page-banner-fields">

@@ -30,16 +30,22 @@ const { chromium } = require('playwright');
         const page = await context.newPage();
         for (const width of [1280, 360]) {
             await page.setViewportSize({ width, height: 900 });
-            for (const kind of ['public', 'public-four', 'form', 'index']) {
+            for (const kind of ['public', 'public-four', 'public-email', 'form', 'index', 'leads']) {
                 await page.goto('http://localhost:8000/test-preview/' + kind);
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
                 if (overflow) throw new Error(kind + ': overflow em ' + width);
                 if (kind.startsWith('public')) {
-                    if (await page.locator('.primary-image').count() !== 1 || await page.locator('a.banner').count() !== (kind === 'public-four' ? 4 : 2)) throw new Error('Quantidade incorreta');
-                    await page.locator('.banner img').first().scrollIntoViewIfNeeded();
+                    const expectedBanners = kind === 'public-four' ? 4 : (kind === 'public-email' ? 0 : 2);
+                    if (await page.locator('.primary-image').count() !== 1 || await page.locator('a.banner').count() !== expectedBanners) throw new Error('Quantidade incorreta');
+                    if (kind === 'public-email') {
+                        if (await page.locator('.lead-card input:not([type=hidden])').count() !== 1 || (await page.locator('input[name=email]').getAttribute('required')) === null) throw new Error('Captura de e-mail incorreta');
+                        await page.locator('input[name=email]').fill('teste@example.com');
+                        if (!await page.locator('.lead-card form').evaluate(form => form.checkValidity())) throw new Error('Formulario so e-mail invalido');
+                    }
+                    if (expectedBanners) await page.locator('.banner img').first().scrollIntoViewIfNeeded();
                     await page.waitForFunction(() => [...document.images].every(img => img.complete && img.naturalWidth > 0));
                     const boxes = await page.locator('.banner').evaluateAll(items => items.map(el => el.getBoundingClientRect().toJSON()));
-                    if (width > 860 && Math.abs(boxes[0].width - boxes[1].width) > 1) throw new Error('Banners com tamanhos distintos');
+                    if (width > 860 && boxes.length > 1 && Math.abs(boxes[0].width - boxes[1].width) > 1) throw new Error('Banners com tamanhos distintos');
                     const heading = await page.locator('.page-intro').boundingBox();
                     const image = await page.locator('.primary-image').boundingBox();
                     const copy = await page.locator('.page-copy').boundingBox();
@@ -51,10 +57,16 @@ const { chromium } = require('playwright');
                         if (width <= 860 && (Math.abs(boxes[0].y - boxes[1].y) > 1 || Math.abs(boxes[2].y - boxes[3].y) > 1 || boxes[2].y <= boxes[0].y)) throw new Error('Grade mobile nao e 2x2');
                     }
                 }
+                if (kind === 'leads') {
+                    const select = page.locator('.lead-status-form select').first();
+                    const styled = await select.evaluate(el => getComputedStyle(el).backgroundColor !== 'rgb(255, 255, 255)' && el.getBoundingClientRect().height >= 36);
+                    if (!styled) throw new Error('Status de lead sem estilo');
+                }
                 await page.screenshot({ path: path.join(root, '_deploy/banners-' + kind + '-' + width + '.png'), fullPage: true });
                 console.log(kind + ' ' + width + ': OK');
             }
         }
+        await page.goto('http://localhost:8000/test-preview/index');
         await page.locator('[data-copy-link]').click();
         await page.getByText('Link copiado', { exact: true }).waitFor();
         const copied = await page.evaluate(() => navigator.clipboard.readText());

@@ -19,6 +19,12 @@ $formLanguage = landingPageFormLanguage((string)($_POST['form_language'] ?? 'pt'
 $formTexts = landingPageFormTexts($formLanguage);
 $actionType = landingPageActionType((string)($_POST['action_type'] ?? 'capture'));
 $destinationUrl = landingPageExternalUrl((string)($_POST['destination_url'] ?? ''));
+try {
+    $leadFieldsJson = landingPageSaveLeadFields($_POST);
+} catch (InvalidArgumentException $e) {
+    flash('error', $e->getMessage());
+    redirect(PROJECT_URL . '/admin/landing_page/create.php');
+}
 $offerImage = isset($_FILES['offer_image']) && is_array($_FILES['offer_image']) ? landingPageUploadOfferImage($_FILES['offer_image']) : '';
 $bannersJson = landingPageSaveBanners([], $_POST, $_FILES);
 
@@ -30,9 +36,9 @@ if ($title === '' || $headline === '') {
 try {
     $stmt = $pdo->prepare("
         INSERT INTO landing_page_pages
-            (title, slug, template_key, theme, form_language, headline, subtitle, body, offer_image, banners_json, cta_text, whatsapp, action_type, destination_url, success_message, status)
+            (title, slug, template_key, theme, form_language, headline, subtitle, body, offer_image, banners_json, lead_fields_json, cta_text, whatsapp, action_type, destination_url, success_message, status)
         VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
         $title,
@@ -45,6 +51,7 @@ try {
         trim((string)($_POST['body'] ?? '')),
         $offerImage,
         $bannersJson,
+        $leadFieldsJson,
         trim((string)($_POST['cta_text'] ?? $template['cta'])),
         trim((string)($_POST['whatsapp'] ?? '')),
         $actionType,
