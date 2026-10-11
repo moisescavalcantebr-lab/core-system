@@ -1,0 +1,18 @@
+{
+  "name": "beneficios",
+  "label": "Beneficios",
+  "description": "Creditos mensais de vale-transporte e vale-alimentacao disponibilizados pela empresa.",
+  "version": "0.1.0",
+  "type": "project",
+  "kind": "addon",
+  "attach_to": ["meu_holerite"],
+  "access_scope": "free",
+  "status": "draft",
+  "category": "Pessoal",
+  "segments": ["pessoal"],
+  "recommended_bases": ["meu-trabalho"],
+  "tags": ["beneficios", "vale-transporte", "vale-alimentacao"],
+  "menu": {"section": "Gestao", "label": "Beneficios", "url": "/admin/beneficios/index.php", "key": "beneficios", "order": 55},
+  "database": {"schema": "database/schema.sql", "tables": ["holerite_benefits"]},
+  "copy": [{"from": "web/admin/beneficios", "to": "web/admin/beneficios"}]
+}

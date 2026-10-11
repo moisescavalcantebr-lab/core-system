@@ -2,7 +2,7 @@
   "name": "meu_holerite",
   "label": "Meu Holerite",
   "description": "Acompanhamento pessoal de holerites, descontos e evolucao da remuneracao.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "project",
   "kind": "main",
   "access_scope": "free",
@@ -20,7 +20,7 @@
   },
   "database": {
     "schema": "database/schema.sql",
-    "tables": ["holerite_receipts", "holerite_items"]
+    "tables": ["holerite_receipts", "holerite_items", "holerite_attachments"]
   },
   "copy": [{"from": "web/admin/meu_holerite", "to": "web/admin/meu_holerite"}]
 }

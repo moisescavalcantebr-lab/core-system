@@ -1,0 +1,16 @@
+{
+  "name": "Meu Trabalho",
+  "slug": "meu-trabalho",
+  "previous_slug": "meu-holerite",
+  "description": "Gestao pessoal de trabalho, holerites, beneficios, contas e leituras.",
+  "allows_users": 1,
+  "max_admins": 1,
+  "status": 1,
+  "base_stage": "published",
+  "is_protected": 1,
+  "schema": {
+    "path": "app/database/schema.sql",
+    "hash": "59d5cf260c67862bd2d9e48ca411d253",
+    "updated_at": "2026-10-11 13:47:25"
+  }
+}

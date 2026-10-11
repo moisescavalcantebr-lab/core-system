@@ -17,7 +17,7 @@ Modulo principal para acompanhamento pessoal, historico, comparacao entre compet
 
 Use a instalacao de modulos do core para copiar o pacote a uma base e a sincronizacao de modulos para instalar no projeto. O manifesto declara o esquema e os destinos; `dashboard.php` fornece um resumo do ano da ultima competencia cadastrada.
 
-Este pacote nao instala automaticamente em bases ou projetos, nao inclui dados pessoais e nao depende do Financeiro. Nao ha PDF anexado, importacao automatica nem lancamento financeiro nesta versao. Esses recursos podem ser adicionados posteriormente por addons.
+Este pacote nao instala automaticamente em bases ou projetos, nao inclui dados pessoais e nao depende do Financeiro. Permite arquivar um PDF de ate 2 MB por holerite, com validacao de extensao, assinatura e MIME. O documento fica na tabela privada `holerite_attachments`, sem URL publica; download, substituicao e remocao respeitam o dono do registro. A exclusao do holerite remove o anexo em cascata. Nao ha importacao automatica do PDF nem lancamento financeiro nesta versao.
 
 ## Verificacao
 

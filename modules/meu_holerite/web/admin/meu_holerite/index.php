@@ -14,6 +14,22 @@ $error = '';
 $entry = [];
 $items = [];
 
+if (isset($_GET['pdf']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $pdfId = filter_var($_GET['pdf'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $attachment = $pdfId ? holeriteAttachment($pdo, $owner, $pdfId) : null;
+    if (!$attachment) {
+        http_response_code(404);
+        exit('PDF nao encontrado.');
+    }
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="holerite-' . $pdfId . '.pdf"');
+    header('Content-Length: ' . strlen($attachment['pdf']));
+    header('Cache-Control: private, no-store');
+    header('X-Content-Type-Options: nosniff');
+    echo $attachment['pdf'];
+    exit;
+}
+
 if ($view === 'edit' && $id > 0) {
     $entry = holeriteFind($pdo, $owner, $id);
     if (!$entry) {
@@ -47,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (($_POST['form_complete'] ?? '') !== '1') {
                 throw new InvalidArgumentException('Envio incompleto. Confira os itens e tente novamente.');
             }
-            holeriteSave($pdo, $owner, $id, holeriteNormalize($_POST));
+            $data = holeriteNormalize($_POST);
+            $attachment = holeritePdfUpload($_FILES['holerite_pdf'] ?? null);
+            holeriteSave($pdo, $owner, $id, $data, $attachment, ($_POST['remove_pdf'] ?? '') === '1');
             flash('success', 'Holerite salvo.');
         } else {
             throw new InvalidArgumentException('Operacao invalida.');
@@ -65,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $pdo->prepare('SELECT * FROM holerite_receipts WHERE owner_user_id = ? ORDER BY reference_month DESC, id DESC');
+$stmt = $pdo->prepare('SELECT r.*, (SELECT original_name FROM holerite_attachments WHERE receipt_id = r.id) AS attachment_name FROM holerite_receipts r WHERE owner_user_id = ? ORDER BY reference_month DESC, id DESC');
 $stmt->execute([$owner]);
 $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $years = array_unique([date('Y'), ...array_map(static fn($row) => substr($row['reference_month'], 0, 4), $records)]);
@@ -95,6 +113,7 @@ ob_start();
     <div class="c-page-header">
         <div><h1 class="c-page-title">Meu Holerite</h1></div>
         <div class="c-page-actions">
+            <?php if (is_file(PROJECT_PATH . '/modules/beneficios/module.json')): ?><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/beneficios/index.php">Beneficios</a><?php endif; ?>
             <a class="c-btn-secondary" href="<?= holeriteEscape($view === 'edit' ? $url : $url . '?view=edit') ?>"><?= $view === 'edit' ? 'Historico' : 'Novo holerite' ?></a>
         </div>
     </div>
@@ -151,7 +170,7 @@ ob_start();
                     <td><?= date('m/Y', strtotime($row['reference_month'])) ?></td><td><?= holeriteEscape($row['employer']) ?><small><?= holeriteTypes()[$row['receipt_type']] ?? holeriteEscape($row['receipt_type']) ?> / <?= (int)$row['sequence_number'] ?></small></td>
                     <?php foreach (['base_salary', 'gross_amount', 'deductions_amount', 'net_amount'] as $field): ?><td><?= holeriteMoney($row[$field]) ?></td><?php endforeach; ?>
                     <td><?= (int)$row['received'] === 1 ? 'Sim' : 'Nao' ?></td>
-                    <td><div class="h-actions"><a class="c-btn-secondary" href="<?= holeriteEscape($url . '?view=edit&id=' . $row['id']) ?>">Abrir</a><form method="post" data-holerite-delete><?= csrf_field() ?><input type="hidden" name="operation" value="delete"><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><button class="c-btn-secondary" type="submit">Excluir</button></form></div></td>
+                    <td><div class="h-actions"><a class="c-btn-secondary" href="<?= holeriteEscape($url . '?view=edit&id=' . $row['id']) ?>">Abrir</a><?php if (!empty($row['attachment_name'])): ?><a class="c-btn-secondary" href="<?= holeriteEscape($url . '?pdf=' . $row['id']) ?>" title="Baixar PDF do holerite">PDF</a><?php endif; ?><form method="post" data-holerite-delete><?= csrf_field() ?><input type="hidden" name="operation" value="delete"><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><button class="c-btn-secondary" type="submit">Excluir</button></form></div></td>
                 </tr><?php endforeach; ?>
                 <?php if (!$filtered): ?><tr><td colspan="8">Nenhum holerite encontrado.</td></tr><?php endif; ?>
                 </tbody></table></div>

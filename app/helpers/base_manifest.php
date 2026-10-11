@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__.'/base_identity.php';
+
 if (!function_exists('base_manifest_payload')) {
     function base_normalize_stage(?string $stage, int $isProtected = 0): string
     {
@@ -45,7 +47,7 @@ if (!function_exists('base_manifest_payload')) {
         $isProtected = (int)($base['is_protected'] ?? 0);
         $stage = base_normalize_stage($base['base_stage'] ?? null, $isProtected);
 
-        return [
+        $payload = [
             'name' => (string)($base['name'] ?? ''),
             'slug' => (string)($base['slug'] ?? ''),
             'description' => (string)($base['description'] ?? ''),
@@ -60,6 +62,11 @@ if (!function_exists('base_manifest_payload')) {
                 'updated_at' => date('Y-m-d H:i:s'),
             ],
         ];
+        $existing = is_file($basePath.'/base.json') ? json_decode((string)file_get_contents($basePath.'/base.json'),true) : [];
+        if (is_array($existing) && isset($existing['previous_slug']) && preg_match('/^[a-z0-9][a-z0-9-]*$/D',(string)$existing['previous_slug'])) {
+            $payload['previous_slug'] = $existing['previous_slug'];
+        }
+        return $payload;
     }
 }
 
@@ -164,7 +171,9 @@ if (!function_exists('base_register_manifests')) {
             return;
         }
 
+        $renames = baseManifestRenames(BASES_PATH);
         foreach ($folders as $folder) {
+            if (isset($renames[$folder])) continue;
             if ($folder === '.' || $folder === '..') {
                 continue;
             }
@@ -187,6 +196,8 @@ if (!function_exists('base_register_manifests')) {
             }
 
             $name = trim((string)($manifest['name'] ?? $slug));
+            $previousSlug = array_search($slug,$renames,true);
+            if ($previousSlug !== false) baseRenameIdentity($pdo,$previousSlug,$slug,$name);
             $description = (string)($manifest['description'] ?? '');
             $allowsUsers = (int)($manifest['allows_users'] ?? 1);
             $maxAdmins = (int)($manifest['max_admins'] ?? 1);

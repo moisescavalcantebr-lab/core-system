@@ -44,7 +44,18 @@ $negative = holeriteNormalize(array_replace($input, ['items' => [['description' 
 holeriteCheck($negative['record']['net_amount'] === '-10.00', 'Liquido negativo.');
 $months = holeriteMonths([$data['record'], $negative['record']]);
 holeriteCheck($months['2025-02']['net_amount'] === 93999 && $months['2025-02']['count'] === 2, 'Agrupamento da competencia.');
-echo "Meu Holerite: validacao de dinheiro, datas, itens, totais e agrupamento OK.\n";
+$pdf = "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n";
+$attachment = holeritePdfValidate('holerite.pdf', $pdf);
+holeriteCheck($attachment['pdf'] === $pdf && $attachment['name'] === 'holerite.pdf', 'PDF valido.');
+holeriteReject(static fn() => holeritePdfValidate('holerite.txt', $pdf));
+holeriteReject(static fn() => holeritePdfValidate('holerite.pdf', '<html>nao e PDF</html>'));
+holeriteReject(static fn() => holeritePdfValidate('holerite.pdf', ''));
+holeriteReject(static fn() => holeritePdfValidate('holerite.pdf', $pdf . str_repeat('x', 2 * 1024 * 1024)));
+holeriteCheck(holeritePdfUpload(null) === null && holeritePdfUpload(['error' => UPLOAD_ERR_NO_FILE]) === null, 'Anexo opcional.');
+holeriteReject(static fn() => holeritePdfUpload(['error' => UPLOAD_ERR_INI_SIZE]));
+holeriteReject(static fn() => holeritePdfUpload(['error' => [], 'name' => []]));
+holeriteReject(static fn() => holeritePdfUpload(['error' => UPLOAD_ERR_OK, 'name' => 'fake.pdf', 'tmp_name' => __FILE__]));
+echo "Meu Holerite: validacao de dinheiro, datas, itens, totais, agrupamento e PDF OK.\n";
 
 if (getenv('HOLERITE_MYSQL_TEST') === '1') {
     $database = 'holerite_verify_' . bin2hex(random_bytes(5));
@@ -54,7 +65,9 @@ if (getenv('HOLERITE_MYSQL_TEST') === '1') {
         $pdo = new PDO('mysql:host=app_db;dbname=' . $database . ';charset=utf8mb4', 'root', 'root', [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
         holeriteEnsureSchema($pdo);
         holeriteEnsureSchema($pdo);
-        $id = holeriteSave($pdo, 10, 0, $data);
+        $id = holeriteSave($pdo, 10, 0, $data, $attachment);
+        holeriteCheck(holeriteAttachment($pdo, 10, $id)['pdf'] === $pdf, 'Persistencia do PDF.');
+        holeriteCheck(holeriteAttachment($pdo, 11, $id) === null, 'Isolamento do download.');
         holeriteCheck(holeriteFind($pdo, 10, $id)['net_amount'] === '949.99', 'Persistencia.');
         holeriteCheck(holeriteFind($pdo, 11, $id) === null, 'Isolamento de leitura.');
         try {
@@ -70,10 +83,18 @@ if (getenv('HOLERITE_MYSQL_TEST') === '1') {
             holeriteCheck((int)$e->errorInfo[1] === 1062, 'Duplicidade bloqueada.');
         }
         holeriteSave($pdo, 10, $id, $negative);
+        holeriteCheck(holeriteAttachment($pdo, 10, $id)['pdf'] === $pdf, 'Preservacao do PDF sem novo upload.');
+        $replacement = holeritePdfValidate('novo.pdf', $pdf . '\n');
+        holeriteSave($pdo, 10, $id, $negative, $replacement);
+        holeriteCheck(holeriteFind($pdo, 10, $id)['attachment_name'] === 'novo.pdf', 'Substituicao do PDF.');
+        holeriteSave($pdo, 10, $id, $negative, null, true);
+        holeriteCheck(holeriteAttachment($pdo, 10, $id) === null, 'Remocao explicita do PDF.');
+        holeriteSave($pdo, 10, $id, $negative, $attachment);
         holeriteCheck((int)$pdo->query('SELECT COUNT(*) FROM holerite_items')->fetchColumn() === 1, 'Substituicao dos itens.');
         holeriteSave($pdo, 11, 0, $data);
         $pdo->prepare('DELETE FROM holerite_receipts WHERE id = ? AND owner_user_id = ?')->execute([$id, 10]);
         holeriteCheck((int)$pdo->query('SELECT COUNT(*) FROM holerite_items')->fetchColumn() === 3, 'Exclusao em cascata isolada.');
+        holeriteCheck((int)$pdo->query('SELECT COUNT(*) FROM holerite_attachments')->fetchColumn() === 0, 'Exclusao do PDF em cascata.');
         echo "Meu Holerite: MySQL, duplicidade, edicao, isolamento e exclusao OK.\n";
     } finally {
         $server->exec('DROP DATABASE `' . $database . '`');

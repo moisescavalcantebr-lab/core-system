@@ -127,9 +127,21 @@ if ($RemoteProtectedBases.Count -eq 0) {
 }
 
 $Missing = @()
+$RenamedBases = @{}
+foreach ($LocalBase in $LocalBases) {
+    $Manifest = Get-Content -LiteralPath (Join-Path $LocalBasesPath "$LocalBase/base.json") -Raw | ConvertFrom-Json
+    if ($Manifest.previous_slug -and $Manifest.slug -eq $LocalBase -and $Manifest.previous_slug -match '^[a-z0-9][a-z0-9-]*$') {
+        if ($RenamedBases.ContainsKey([string]$Manifest.previous_slug)) { throw 'Alias de base ambiguo.' }
+        $RenamedBases[[string]$Manifest.previous_slug] = $LocalBase
+    }
+}
 foreach ($Base in $RemoteProtectedBases) {
     if ($LocalBases -notcontains $Base) {
-        $Missing += $Base
+        if ($RenamedBases.ContainsKey($Base)) {
+            Write-Host "[guard] Renomeacao declarada: $Base -> $($RenamedBases[$Base])" -ForegroundColor Cyan
+        } else {
+            $Missing += $Base
+        }
     }
 }
 

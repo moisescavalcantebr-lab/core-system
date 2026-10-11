@@ -601,6 +601,8 @@ if ! docker exec app_php test -f /var/www/html/index.php; then
   echo "ERRO: index.php ausente no container apos aplicar release"
   exit 1
 fi
+echo "[identity] migrando Meu Trabalho e Leituras com preservacao de dados"
+docker exec app_php php /var/www/html/app/console/migrate_work_identity.php --apply
 echo "[bootstrap] migrando/registrando Core"
 docker exec app_php php -r 'require "/var/www/html/app/bootstrap/bootstrap.php"; echo "[bootstrap] OK\n";'
 echo "[fix] permissao das pastas mutaveis"

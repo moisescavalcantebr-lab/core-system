@@ -143,12 +143,59 @@ function holeriteEnsureSchema(PDO $pdo): void
 
 function holeriteFind(PDO $pdo, int $owner, int $id): ?array
 {
-    $stmt = $pdo->prepare('SELECT * FROM holerite_receipts WHERE id = ? AND owner_user_id = ?');
+    $stmt = $pdo->prepare('SELECT r.*, (SELECT original_name FROM holerite_attachments WHERE receipt_id = r.id) AS attachment_name FROM holerite_receipts r WHERE id = ? AND owner_user_id = ?');
     $stmt->execute([$id, $owner]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-function holeriteSave(PDO $pdo, int $owner, int $id, array $data): int
+function holeritePdfValidate(string $name, string $pdf): array
+{
+    if (strlen($pdf) === 0 || strlen($pdf) > 2 * 1024 * 1024) {
+        throw new InvalidArgumentException('O PDF deve ter no maximo 2 MB.');
+    }
+    $name = basename(str_replace('\\', '/', $name));
+    if (strtolower(pathinfo($name, PATHINFO_EXTENSION)) !== 'pdf'
+        || !str_starts_with($pdf, '%PDF-')
+        || (new finfo(FILEINFO_MIME_TYPE))->buffer($pdf) !== 'application/pdf') {
+        throw new InvalidArgumentException('Anexe um arquivo PDF valido.');
+    }
+    $name = preg_replace('/[\x00-\x1F\x7F]/', '', $name);
+    return ['name' => mb_substr($name, 0, 200), 'pdf' => $pdf];
+}
+
+function holeritePdfUpload($file): ?array
+{
+    if ($file === null) {
+        return null;
+    }
+    if (!is_array($file) || !is_int($file['error'] ?? null)) {
+        throw new InvalidArgumentException('Envio do PDF invalido.');
+    }
+    if ($file['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        throw new InvalidArgumentException('Nao foi possivel receber o PDF. Confira o limite de 2 MB e tente novamente.');
+    }
+    if (!is_string($file['tmp_name'] ?? null) || !is_string($file['name'] ?? null)
+        || !is_uploaded_file($file['tmp_name']) || filesize($file['tmp_name']) > 2 * 1024 * 1024) {
+        throw new InvalidArgumentException('Envio do PDF invalido ou maior que 2 MB.');
+    }
+    $pdf = file_get_contents($file['tmp_name']);
+    if ($pdf === false) {
+        throw new RuntimeException('Nao foi possivel ler o PDF.');
+    }
+    return holeritePdfValidate($file['name'], $pdf);
+}
+
+function holeriteAttachment(PDO $pdo, int $owner, int $id): ?array
+{
+    $stmt = $pdo->prepare('SELECT a.original_name, a.pdf FROM holerite_attachments a INNER JOIN holerite_receipts r ON r.id = a.receipt_id WHERE r.id = ? AND r.owner_user_id = ?');
+    $stmt->execute([$id, $owner]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+function holeriteSave(PDO $pdo, int $owner, int $id, array $data, ?array $attachment = null, bool $removeAttachment = false): int
 {
     $record = $data['record'];
     $fields = array_keys($record);
@@ -171,6 +218,12 @@ function holeriteSave(PDO $pdo, int $owner, int $id, array $data): int
         $stmt = $pdo->prepare('INSERT INTO holerite_items (receipt_id, event_code, description, reference_value, item_type, amount, display_order) VALUES (?, ?, ?, ?, ?, ?, ?)');
         foreach ($data['items'] as $order => $item) {
             $stmt->execute([$id, $item['event_code'], $item['description'], $item['reference_value'], $item['item_type'], $item['amount'], $order]);
+        }
+        if ($attachment !== null) {
+            $stmt = $pdo->prepare('INSERT INTO holerite_attachments (receipt_id, original_name, pdf) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE original_name = VALUES(original_name), pdf = VALUES(pdf)');
+            $stmt->execute([$id, $attachment['name'], $attachment['pdf']]);
+        } elseif ($removeAttachment) {
+            $pdo->prepare('DELETE FROM holerite_attachments WHERE receipt_id = ?')->execute([$id]);
         }
         $pdo->commit();
         return $id;

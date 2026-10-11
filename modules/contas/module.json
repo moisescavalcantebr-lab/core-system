@@ -1,0 +1,17 @@
+{
+  "name": "contas",
+  "label": "Contas a Pagar e Receber",
+  "description": "Contas pessoais, vencimentos e pagamentos ou recebimentos totais e parciais.",
+  "version": "0.1.0",
+  "type": "project",
+  "kind": "main",
+  "access_scope": "free",
+  "status": "draft",
+  "category": "Pessoal",
+  "segments": ["pessoal", "financeiro"],
+  "recommended_bases": ["meu-trabalho"],
+  "tags": ["contas", "vencimentos", "pagamentos", "recebimentos"],
+  "menu": {"section": "Gestao", "label": "Contas", "url": "/admin/contas/index.php", "key": "contas", "order": 56},
+  "database": {"schema": "database/schema.sql", "tables": ["accounts_entries", "accounts_payments"]},
+  "copy": [{"from": "web/admin/contas", "to": "web/admin/contas"}]
+}

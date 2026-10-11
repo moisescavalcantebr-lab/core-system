@@ -28,6 +28,14 @@ CREATE TABLE IF NOT EXISTS holerite_receipts (
     INDEX idx_holerite_owner_month (owner_user_id, reference_month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS holerite_attachments (
+    receipt_id INT UNSIGNED PRIMARY KEY,
+    original_name VARCHAR(200) NOT NULL,
+    pdf MEDIUMBLOB NOT NULL,
+    CONSTRAINT fk_holerite_attachment_receipt FOREIGN KEY (receipt_id)
+        REFERENCES holerite_receipts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS holerite_items (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     receipt_id INT UNSIGNED NOT NULL,

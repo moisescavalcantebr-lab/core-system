@@ -10,7 +10,7 @@ if (!$items) {
     $items = [['description' => '', 'item_type' => 'income', 'amount' => ''], ['description' => '', 'item_type' => 'deduction', 'amount' => '']];
 }
 ?>
-<form method="post" action="<?= holeriteEscape($url . '?view=edit' . ($id ? '&id=' . $id : '')) ?>" id="holerite-form">
+<form method="post" enctype="multipart/form-data" action="<?= holeriteEscape($url . '?view=edit' . ($id ? '&id=' . $id : '')) ?>" id="holerite-form">
     <?= csrf_field() ?><input type="hidden" name="operation" value="save">
     <section class="h-section">
         <h2><?= $id ? 'Editar holerite' : 'Novo holerite' ?></h2>
@@ -56,6 +56,14 @@ if (!$items) {
             <label><?= $label ?><input class="c-input" name="<?= $field ?>" inputmode="decimal" maxlength="30" value="<?= holeriteEscape($entry[$field] ?? '') ?>"></label>
         <?php endforeach; ?></div>
         <label class="h-notes">Observacoes<textarea class="c-input" name="notes" rows="3" maxlength="4000"><?= holeriteEscape($entry['notes'] ?? '') ?></textarea></label>
+    </section>
+    <section class="h-section">
+        <h2>Documento</h2>
+        <label>PDF do holerite (ate 2 MB)<input class="c-input" type="file" name="holerite_pdf" accept=".pdf,application/pdf"></label>
+        <?php if (!empty($entry['attachment_name'])): ?>
+            <p><a href="<?= holeriteEscape($url . '?pdf=' . $id) ?>"><?= holeriteEscape($entry['attachment_name']) ?></a></p>
+            <label class="h-check"><input type="checkbox" name="remove_pdf" value="1"> Remover PDF anexado</label>
+        <?php endif; ?>
     </section>
     <input type="hidden" name="form_complete" value="1">
     <div class="h-actions"><button class="c-btn-secondary" type="submit">Salvar holerite</button><a class="c-btn-secondary" href="<?= holeriteEscape($url) ?>">Cancelar</a></div>

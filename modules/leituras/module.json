@@ -1,0 +1,17 @@
+{
+  "name": "leituras",
+  "label": "Leituras",
+  "description": "Producao diaria de leituras, razoes reutilizaveis e comparacao mensal.",
+  "version": "0.2.0",
+  "type": "project",
+  "kind": "main",
+  "access_scope": "free",
+  "status": "draft",
+  "category": "Trabalho",
+  "segments": ["pessoal", "trabalho"],
+  "recommended_bases": ["meu-trabalho"],
+  "tags": ["leituras", "producao", "razoes"],
+  "menu": {"section": "Gestao", "label": "Leituras", "url": "/admin/leituras/index.php", "key": "leituras", "order": 57},
+  "database": {"schema": "database/schema.sql", "tables": ["leituras_reasons", "leituras_readings", "leituras_workspaces", "leituras_periods"]},
+  "copy": [{"from": "web/admin/leituras", "to": "web/admin/leituras"}]
+}
