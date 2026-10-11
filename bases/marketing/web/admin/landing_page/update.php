@@ -20,24 +20,17 @@ $formLanguage = landingPageFormLanguage((string)($_POST['form_language'] ?? 'pt'
 $formTexts = landingPageFormTexts($formLanguage);
 $actionType = landingPageActionType((string)($_POST['action_type'] ?? 'capture'));
 $destinationUrl = landingPageExternalUrl((string)($_POST['destination_url'] ?? ''));
-$currentStmt = $pdo->prepare('SELECT offer_image, offer_image_2 FROM landing_page_pages WHERE id = ? LIMIT 1');
+$currentStmt = $pdo->prepare('SELECT offer_image, offer_image_2, banners_json FROM landing_page_pages WHERE id = ? LIMIT 1');
 $currentStmt->execute([$id]);
 $currentPage = $currentStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 $offerImage = (string)($currentPage['offer_image'] ?? '');
-$offerImage2 = (string)($currentPage['offer_image_2'] ?? '');
+$bannersJson = landingPageSaveBanners($currentPage, $_POST, $_FILES);
 if (!empty($_POST['remove_offer_image'])) {
     $offerImage = '';
-}
-if (!empty($_POST['remove_offer_image_2'])) {
-    $offerImage2 = '';
 }
 $uploadedImage = isset($_FILES['offer_image']) && is_array($_FILES['offer_image']) ? landingPageUploadOfferImage($_FILES['offer_image']) : '';
 if ($uploadedImage !== '') {
     $offerImage = $uploadedImage;
-}
-$uploadedImage2 = isset($_FILES['offer_image_2']) && is_array($_FILES['offer_image_2']) ? landingPageUploadOfferImage($_FILES['offer_image_2']) : '';
-if ($uploadedImage2 !== '') {
-    $offerImage2 = $uploadedImage2;
 }
 
 if ($id <= 0 || $title === '' || $headline === '') {
@@ -57,7 +50,7 @@ try {
             subtitle = ?,
             body = ?,
             offer_image = ?,
-            offer_image_2 = ?,
+            banners_json = ?,
             cta_text = ?,
             whatsapp = ?,
             action_type = ?,
@@ -76,7 +69,7 @@ try {
         trim((string)($_POST['subtitle'] ?? '')),
         trim((string)($_POST['body'] ?? '')),
         $offerImage,
-        $offerImage2,
+        $bannersJson,
         trim((string)($_POST['cta_text'] ?? $template['cta'])),
         trim((string)($_POST['whatsapp'] ?? '')),
         $actionType,

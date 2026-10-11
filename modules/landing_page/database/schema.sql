@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS landing_page_pages (
     body TEXT NULL,
     offer_image VARCHAR(255) NULL,
     offer_image_2 VARCHAR(255) NULL,
+    banners_json LONGTEXT NULL,
     cta_text VARCHAR(80) NOT NULL DEFAULT 'Quero saber mais',
     whatsapp VARCHAR(40) NULL,
     action_type ENUM('capture', 'redirect', 'whatsapp') NOT NULL DEFAULT 'capture',

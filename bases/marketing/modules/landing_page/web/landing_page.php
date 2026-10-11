@@ -28,8 +28,7 @@ if ($successMessage === '') {
     $successMessage = $formTexts['success'];
 }
 $offerImage = trim((string)($page['offer_image'] ?? ''));
-$offerImage2 = trim((string)($page['offer_image_2'] ?? ''));
-$offerImages = array_values(array_filter([$offerImage, $offerImage2], static fn (string $image): bool => $image !== ''));
+$banners = landingPageBanners($page, true);
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -66,14 +65,22 @@ $offerImages = array_values(array_filter([$offerImage, $offerImage2], static fn 
         * { box-sizing: border-box; }
         body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
         a { color: inherit; }
-        .hero { display:grid; grid-template-columns:minmax(0, 1fr) minmax(310px, .78fr); gap:28px; align-items:center; min-height:100vh; max-width:1100px; margin:0 auto; padding:28px clamp(18px, 4.5vw, 54px); }
-        h1 { font-size: clamp(32px, 4.8vw, 56px); line-height: 1; margin:0 0 14px; letter-spacing:0; max-width:660px; }
-        .subtitle { color:var(--muted); font-size: clamp(15px, 1.45vw, 18px); max-width:640px; line-height:1.48; }
+        .hero { max-width:1100px; margin:0 auto; padding:32px 24px; }
+        .page-intro { display:flex; align-items:center; gap:28px; margin-bottom:24px; }
+        .page-heading { flex:1; min-width:0; }
+        .primary-image { width:260px; max-width:100%; height:auto; aspect-ratio:16/9; object-fit:contain; border-radius:8px; }
+        .page-content { display:grid; grid-template-columns:minmax(0, 1fr) minmax(310px, .78fr); gap:28px; align-items:start; }
+        h1 { font-size:40px; line-height:1.12; margin:0 0 14px; letter-spacing:0; overflow-wrap:anywhere; }
+        .subtitle { color:var(--muted); font-size:17px; max-width:640px; line-height:1.48; }
         .body { margin-top:18px; color:var(--muted); max-width:620px; line-height:1.52; white-space:pre-line; }
-        .offer-images { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; margin-top:22px; max-width:580px; }
-        .offer-images.is-single { grid-template-columns:minmax(0, .78fr); }
-        .offer-image { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--panel); }
-        .offer-image img { width:100%; aspect-ratio:16/9; max-height:220px; display:block; object-fit:cover; }
+        .banners { margin-top:28px; padding-top:20px; border-top:1px solid var(--line); }
+        .banners h2 { font-size:16px; margin:0 0 12px; }
+        .banner-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; max-width:580px; }
+        .banner { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--panel); display:flex; align-items:center; justify-content:center; aspect-ratio:16/9; text-decoration:none; }
+        .banner img { width:100%; height:100%; display:block; object-fit:contain; }
+        .banner span { padding:16px; overflow-wrap:anywhere; text-align:center; }
+        .banner:hover { border-color:var(--accent); }
+        .banner:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
         .lead-card { background:var(--panel); border:1px solid var(--line); padding:24px; border-radius:8px; max-width:420px; width:100%; justify-self:end; }
         .lead-card h2 { margin:0 0 8px; }
         .lead-card p { color:var(--muted); margin-top:0; }
@@ -83,31 +90,33 @@ $offerImages = array_values(array_filter([$offerImage, $offerImage2], static fn 
         button { width:100%; margin-top:10px; }
         .success { border:1px solid rgba(34,197,94,.5); background:rgba(34,197,94,.12); padding:12px; border-radius:8px; color:var(--text); margin-bottom:12px; }
         @media (max-width: 860px) {
-            .hero { grid-template-columns:1fr; min-height:auto; padding-top:30px; }
+            .hero { padding:24px 18px; }
+            .page-intro { flex-direction:column-reverse; align-items:stretch; gap:18px; }
+            .primary-image { align-self:center; }
+            h1 { font-size:32px; }
+            .page-content { grid-template-columns:1fr; }
             .lead-card { justify-self:stretch; max-width:none; }
-            .offer-images, .offer-images.is-single { grid-template-columns:1fr; max-width:none; }
-            .offer-image img { max-height:260px; }
+            .banner-grid { grid-template-columns:1fr; }
         }
     </style>
 </head>
 <body class="theme-<?= htmlspecialchars($theme) ?>">
     <main class="hero">
-        <section>
+        <header class="page-intro">
+          <div class="page-heading">
             <h1><?= htmlspecialchars((string)$page['headline']) ?></h1>
             <?php if (!empty($page['subtitle'])): ?>
                 <div class="subtitle"><?= nl2br(htmlspecialchars((string)$page['subtitle'])) ?></div>
             <?php endif; ?>
+          </div>
+          <?php if ($offerImage !== ''): ?>
+            <img class="primary-image" src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim($offerImage, '/')) ?>" alt="<?= htmlspecialchars((string)$page['title']) ?>">
+          <?php endif; ?>
+        </header>
+        <div class="page-content">
+        <section>
             <?php if (!empty($page['body'])): ?>
                 <div class="body"><?= htmlspecialchars((string)$page['body']) ?></div>
-            <?php endif; ?>
-            <?php if ($offerImages !== []): ?>
-                <div class="offer-images <?= count($offerImages) === 1 ? 'is-single' : '' ?>">
-                    <?php foreach ($offerImages as $image): ?>
-                        <div class="offer-image">
-                            <img src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim($image, '/')) ?>" alt="">
-                        </div>
-                    <?php endforeach; ?>
-                </div>
             <?php endif; ?>
         </section>
 
@@ -127,6 +136,23 @@ $offerImages = array_values(array_filter([$offerImage, $offerImage2], static fn 
                 <button type="submit"><?= htmlspecialchars(trim((string)$page['cta_text']) !== '' ? (string)$page['cta_text'] : $formTexts['title']) ?></button>
             </form>
         </aside>
+        </div>
+        <?php if ($banners !== []): ?>
+            <section class="banners" aria-label="Divulgacao complementar">
+                <h2>Confira tambem</h2>
+                <div class="banner-grid">
+                    <?php foreach ($banners as $banner): ?>
+                        <a class="banner" href="<?= htmlspecialchars($banner['url']) ?>" rel="noopener">
+                            <?php if ($banner['image'] !== ''): ?>
+                                <img src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim($banner['image'], '/')) ?>" alt="<?= htmlspecialchars($banner['title'] !== '' ? $banner['title'] : 'Abrir pagina') ?>" loading="lazy">
+                            <?php else: ?>
+                                <span><?= htmlspecialchars($banner['title'] !== '' ? $banner['title'] : $banner['url']) ?></span>
+                            <?php endif; ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php endif; ?>
     </main>
 </body>
 </html>

@@ -33,6 +33,10 @@ function landingPageEnsurePageColumns(PDO $pdo): void
         $columns[(string)$column['Field']] = true;
     }
 
+    if (!isset($columns['banners_json'])) {
+        $pdo->exec('ALTER TABLE landing_page_pages ADD COLUMN banners_json LONGTEXT NULL AFTER offer_image_2');
+    }
+
     if (!isset($columns['action_type'])) {
         $pdo->exec("ALTER TABLE landing_page_pages ADD COLUMN action_type ENUM('capture', 'redirect', 'whatsapp') NOT NULL DEFAULT 'capture' AFTER whatsapp");
     }
@@ -174,6 +178,48 @@ function landingPageExternalUrl(string $value): string
     }
 
     return preg_match('#^https?://#i', $value) === 1 ? $value : '';
+}
+
+function landingPageBannerUrl(string $value): string
+{
+    $value = trim($value);
+    return filter_var($value, FILTER_VALIDATE_URL) && preg_match('#^https?://#i', $value) === 1 ? $value : '';
+}
+
+function landingPageBanners(array $page, bool $linkedOnly = false): array
+{
+    $stored = json_decode((string)($page['banners_json'] ?? ''), true);
+    if (!is_array($stored)) {
+        $stored = [['image' => (string)($page['offer_image_2'] ?? '')]];
+    }
+    $banners = [];
+    for ($i = 0; $i < 4; $i++) {
+        $item = is_array($stored[$i] ?? null) ? $stored[$i] : [];
+        $url = landingPageBannerUrl((string)($item['url'] ?? ''));
+        if ($linkedOnly && $url === '') continue;
+        $banners[] = [
+            'url' => $url,
+            'title' => trim((string)($item['title'] ?? '')),
+            'image' => trim((string)($item['image'] ?? '')),
+        ];
+    }
+    return $banners;
+}
+
+function landingPageSaveBanners(array $current, array $post, array $files): string
+{
+    $banners = landingPageBanners($current);
+    $submitted = is_array($post['banners'] ?? null) ? $post['banners'] : [];
+    for ($i = 0; $i < 4; $i++) {
+        $item = is_array($submitted[$i] ?? null) ? $submitted[$i] : [];
+        $banners[$i]['url'] = landingPageBannerUrl((string)($item['url'] ?? ''));
+        $banners[$i]['title'] = trim((string)($item['title'] ?? ''));
+        if (!empty($item['remove_image'])) $banners[$i]['image'] = '';
+        $file = $files['banner_image_'.$i] ?? null;
+        $uploaded = is_array($file) ? landingPageUploadOfferImage($file) : '';
+        if ($uploaded !== '') $banners[$i]['image'] = $uploaded;
+    }
+    return json_encode($banners, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 }
 
 function landingPageUploadOfferImage(array $file): string

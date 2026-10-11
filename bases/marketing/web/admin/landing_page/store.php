@@ -20,7 +20,7 @@ $formTexts = landingPageFormTexts($formLanguage);
 $actionType = landingPageActionType((string)($_POST['action_type'] ?? 'capture'));
 $destinationUrl = landingPageExternalUrl((string)($_POST['destination_url'] ?? ''));
 $offerImage = isset($_FILES['offer_image']) && is_array($_FILES['offer_image']) ? landingPageUploadOfferImage($_FILES['offer_image']) : '';
-$offerImage2 = isset($_FILES['offer_image_2']) && is_array($_FILES['offer_image_2']) ? landingPageUploadOfferImage($_FILES['offer_image_2']) : '';
+$bannersJson = landingPageSaveBanners([], $_POST, $_FILES);
 
 if ($title === '' || $headline === '') {
     flash('error', 'Informe titulo e headline.');
@@ -30,7 +30,7 @@ if ($title === '' || $headline === '') {
 try {
     $stmt = $pdo->prepare("
         INSERT INTO landing_page_pages
-            (title, slug, template_key, theme, form_language, headline, subtitle, body, offer_image, offer_image_2, cta_text, whatsapp, action_type, destination_url, success_message, status)
+            (title, slug, template_key, theme, form_language, headline, subtitle, body, offer_image, banners_json, cta_text, whatsapp, action_type, destination_url, success_message, status)
         VALUES
             (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
@@ -44,7 +44,7 @@ try {
         trim((string)($_POST['subtitle'] ?? '')),
         trim((string)($_POST['body'] ?? '')),
         $offerImage,
-        $offerImage2,
+        $bannersJson,
         trim((string)($_POST['cta_text'] ?? $template['cta'])),
         trim((string)($_POST['whatsapp'] ?? '')),
         $actionType,

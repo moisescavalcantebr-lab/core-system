@@ -57,7 +57,7 @@ ob_start();
     <?php if (empty($pages)): ?>
         <p>Nenhuma pagina criada ainda.</p>
     <?php else: ?>
-        <div class="c-table-wrap">
+        <div class="c-table-wrap landing_page-table-wrap">
             <table class="c-table">
                 <thead>
                     <tr>
@@ -88,8 +88,13 @@ ob_start();
                                 </span>
                             </td>
                             <td>
+                              <div class="landing_page-row-actions">
                                 <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/landing_page/edit.php?id=<?= (int)$page['id'] ?>">Editar</a>
                                 <a class="c-btn-secondary" href="<?= landingPagePublicUrl((string)$page['slug']) ?>" target="_blank" rel="noopener noreferrer">Ver</a>
+                                <?php if ($page['status'] === 'published'): ?>
+                                    <button class="c-btn-secondary landing_page-copy" type="button" title="Copiar link" aria-label="Copiar link de <?= htmlspecialchars((string)$page['title']) ?>" data-copy-link="<?= htmlspecialchars(landingPagePublicUrl((string)$page['slug'])) ?>">&#x29C9;</button>
+                                <?php endif; ?>
+                              </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -99,7 +104,46 @@ ob_start();
     <?php endif; ?>
 </div>
 
+<p class="landing_page-copy-status" role="status" aria-live="polite"></p>
+<script>
+document.querySelectorAll('[data-copy-link]').forEach(button => {
+    button.addEventListener('click', async () => {
+        const url = new URL(button.dataset.copyLink, window.location.href).href;
+        const status = document.querySelector('.landing_page-copy-status');
+        button.disabled = true;
+        try {
+            try {
+                if (!navigator.clipboard) throw new Error('Clipboard indisponivel');
+                await navigator.clipboard.writeText(url);
+            } catch (error) {
+                const field = document.createElement('textarea');
+                field.value = url;
+                field.style.cssText = 'position:fixed;left:-9999px;top:0';
+                document.body.appendChild(field);
+                try {
+                    field.select();
+                    if (!document.execCommand('copy')) throw new Error('Nao foi possivel copiar');
+                } finally {
+                    field.remove();
+                    button.focus();
+                }
+            }
+            status.textContent = 'Link copiado';
+        } catch (error) {
+            status.textContent = 'Nao foi possivel copiar o link. Abra a pagina em Ver.';
+        } finally {
+            button.disabled = false;
+        }
+    });
+});
+</script>
 <style>
+.landing_page-table-wrap { max-width:100%; overflow-x:auto; }
+.landing_page-table-wrap .c-table { min-width:600px; }
+.landing_page-row-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.landing_page-row-actions .c-btn-secondary { margin-right:0; }
+.landing_page-copy { width:30px; height:30px; padding:0; font-size:18px; display:inline-flex; align-items:center; justify-content:center; }
+.landing_page-copy-status { min-height:18px; margin:8px 0; color:var(--text-secondary); }
 .landing_page-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .landing_page-actions a { display:inline-flex; align-items:center; justify-content:center; min-height:30px; box-sizing:border-box; margin-right:0; white-space:nowrap; }
 .landing_page-actions .c-btn-primary { background:var(--primary-color, var(--color-primary, #3b82f6)); border:1px solid var(--primary-color, var(--color-primary, #3b82f6)); }

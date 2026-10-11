@@ -80,10 +80,6 @@
                 Imagem principal
                 <input class="c-input" type="file" name="offer_image" accept="image/jpeg,image/png,image/webp">
             </label>
-            <label>
-                Imagem complementar
-                <input class="c-input" type="file" name="offer_image_2" accept="image/jpeg,image/png,image/webp">
-            </label>
         </div>
         <div class="landing_page-image-preview-grid">
             <?php if (!empty($page['offer_image'])): ?>
@@ -92,15 +88,6 @@
                     <label class="landing_page-remove-image">
                         <input type="checkbox" name="remove_offer_image" value="1">
                         Remover principal
-                    </label>
-                </div>
-            <?php endif; ?>
-            <?php if (!empty($page['offer_image_2'])): ?>
-                <div class="landing_page-image-preview">
-                    <img src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim((string)$page['offer_image_2'], '/')) ?>" alt="">
-                    <label class="landing_page-remove-image">
-                        <input type="checkbox" name="remove_offer_image_2" value="1">
-                        Remover complementar
                     </label>
                 </div>
             <?php endif; ?>
@@ -137,6 +124,33 @@
         </div>
     </div>
 
+    <section class="landing_page-flow">
+        <h3>Divulgacao complementar</h3>
+        <?php foreach (landingPageBanners($page) as $i => $banner): ?>
+            <fieldset class="landing_page-banner-fields">
+                <legend>Banner <?= $i + 1 ?></legend>
+                <div class="c-form-grid">
+                    <label>Link
+                        <input class="c-input" type="url" name="banners[<?= $i ?>][url]" value="<?= htmlspecialchars($banner['url']) ?>" placeholder="https://...">
+                    </label>
+                    <label>Titulo
+                        <input class="c-input" type="text" name="banners[<?= $i ?>][title]" value="<?= htmlspecialchars($banner['title']) ?>">
+                    </label>
+                    <label>Imagem
+                        <input class="c-input" type="file" name="banner_image_<?= $i ?>" accept="image/jpeg,image/png,image/webp">
+                    </label>
+                </div>
+                <?php if ($banner['image'] !== ''): ?>
+                    <div class="landing_page-image-preview">
+                        <img src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim($banner['image'], '/')) ?>" alt="<?= htmlspecialchars($banner['title']) ?>">
+                        <label class="landing_page-remove-image">
+                            <input type="checkbox" name="banners[<?= $i ?>][remove_image]" value="1"> Remover imagem
+                        </label>
+                    </div>
+                <?php endif; ?>
+            </fieldset>
+        <?php endforeach; ?>
+    </section>
     <button class="c-btn-primary" type="submit">Salvar pagina</button>
 </form>
 
@@ -151,6 +165,9 @@
 .landing_page-form > .c-btn-primary { justify-self:start; min-height:36px; padding:8px 14px; margin-right:0; background:var(--primary-color, var(--color-primary, #3b82f6)); border:1px solid var(--primary-color, var(--color-primary, #3b82f6)); }
 .landing_page-flow { display:grid; gap:10px; padding-top:16px; border-top:1px solid var(--border-color); }
 .landing_page-flow h3 { margin:0; }
+.landing_page-banner-fields { min-width:0; margin:0; padding:12px 0; border:0; border-bottom:1px solid var(--border-color); }
+.landing_page-banner-fields legend { padding:0; color:var(--text-secondary); }
+.landing_page-banner-fields .landing_page-image-preview { margin-top:10px; }
 .landing_page-flow p { margin:0; color:var(--text-secondary); }
 .landing_page-image-field { display:grid; gap:10px; }
 .landing_page-image-preview-grid { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
