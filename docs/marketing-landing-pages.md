@@ -8,7 +8,7 @@ O modulo cria paginas e captura leads no banco do proprio projeto. As rotas pass
 
 ## Imagens e banners
 
-A imagem principal acompanha o titulo. `banners_json` guarda ate quatro destinos opcionais, com titulo e imagem. Um link HTTP/HTTPS valido e obrigatorio para exibir cada banner; sem imagem, ele aparece como link textual. Campos vazios ou imagens sem destino nao aparecem. A segunda imagem antiga e preservada no primeiro espaco de banner ate o cliente configurar seu link.
+A pagina fica centralizada em duas colunas: titulo e conteudo a esquerda, imagem principal acima do formulario a direita. No celular, a ordem e titulo, imagem, conteudo e formulario. Os banners ocupam quatro colunas no desktop e duas no celular. `banners_json` guarda ate quatro destinos opcionais, com titulo e imagem. Um link HTTP/HTTPS valido e obrigatorio para exibir cada banner; sem imagem, ele aparece como link textual. Campos vazios ou imagens sem destino nao aparecem. A segunda imagem antiga e preservada no primeiro espaco de banner ate o cliente configurar seu link.
 
 Os banners sao links diretos: nao passam pelo formulario nem criam leads na origem. Uma pagina de destino do sistema continua usando suas proprias regras de captura. Esta alteracao nao adiciona contadores de acessos ou cliques.
 

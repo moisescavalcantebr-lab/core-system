@@ -23,23 +23,33 @@ const { chromium } = require('playwright');
             } else {
                 const kind = url.pathname.split('/').pop();
                 const content = read('_deploy/banners-' + kind + '-preview.html');
-                const body = kind === 'public' ? content : '<style>' + css + '</style><body class="c-app"><main style="padding:20px">' + content + '</main></body>';
+                const body = kind.startsWith('public') ? content : '<style>' + css + '</style><body class="c-app"><main style="padding:20px">' + content + '</main></body>';
                 await route.fulfill({ body, contentType: 'text/html' });
             }
         });
         const page = await context.newPage();
         for (const width of [1280, 360]) {
             await page.setViewportSize({ width, height: 900 });
-            for (const kind of ['public', 'form', 'index']) {
+            for (const kind of ['public', 'public-four', 'form', 'index']) {
                 await page.goto('http://localhost:8000/test-preview/' + kind);
                 const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
                 if (overflow) throw new Error(kind + ': overflow em ' + width);
-                if (kind === 'public') {
-                    if (await page.locator('.primary-image').count() !== 1 || await page.locator('a.banner').count() !== 2) throw new Error('Quantidade incorreta');
-                    await page.locator('.banner img').scrollIntoViewIfNeeded();
+                if (kind.startsWith('public')) {
+                    if (await page.locator('.primary-image').count() !== 1 || await page.locator('a.banner').count() !== (kind === 'public-four' ? 4 : 2)) throw new Error('Quantidade incorreta');
+                    await page.locator('.banner img').first().scrollIntoViewIfNeeded();
                     await page.waitForFunction(() => [...document.images].every(img => img.complete && img.naturalWidth > 0));
                     const boxes = await page.locator('.banner').evaluateAll(items => items.map(el => el.getBoundingClientRect().toJSON()));
                     if (width > 860 && Math.abs(boxes[0].width - boxes[1].width) > 1) throw new Error('Banners com tamanhos distintos');
+                    const heading = await page.locator('.page-intro').boundingBox();
+                    const image = await page.locator('.primary-image').boundingBox();
+                    const copy = await page.locator('.page-copy').boundingBox();
+                    const form = await page.locator('.lead-card').boundingBox();
+                    if (width > 860 && (Math.abs(heading.y - image.y) > 1 || Math.abs(image.x - form.x) > 1 || Math.abs(image.width - form.width) > 1 || image.y + image.height > form.y)) throw new Error('Colunas desalinhadas');
+                    if (width <= 860 && !(heading.y < image.y && image.y < copy.y && copy.y < form.y)) throw new Error('Ordem mobile incorreta');
+                    if (kind === 'public-four') {
+                        if (width > 860 && boxes.some(box => Math.abs(box.y - boxes[0].y) > 1)) throw new Error('Banners fora da mesma linha');
+                        if (width <= 860 && (Math.abs(boxes[0].y - boxes[1].y) > 1 || Math.abs(boxes[2].y - boxes[3].y) > 1 || boxes[2].y <= boxes[0].y)) throw new Error('Grade mobile nao e 2x2');
+                    }
                 }
                 await page.screenshot({ path: path.join(root, '_deploy/banners-' + kind + '-' + width + '.png'), fullPage: true });
                 console.log(kind + ' ' + width + ': OK');

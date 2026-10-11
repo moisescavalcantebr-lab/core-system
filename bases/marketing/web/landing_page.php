@@ -66,16 +66,17 @@ $banners = landingPageBanners($page, true);
         body { margin: 0; font-family: Arial, sans-serif; background: var(--bg); color: var(--text); }
         a { color: inherit; }
         .hero { max-width:1100px; margin:0 auto; padding:32px 24px; }
-        .page-intro { display:flex; align-items:center; gap:28px; margin-bottom:24px; }
-        .page-heading { flex:1; min-width:0; }
-        .primary-image { width:260px; max-width:100%; height:auto; aspect-ratio:16/9; object-fit:contain; border-radius:8px; }
-        .page-content { display:grid; grid-template-columns:minmax(0, 1fr) minmax(310px, .78fr); gap:28px; align-items:start; }
+        .page-intro { grid-area:heading; min-width:0; }
+        .page-copy { grid-area:body; min-width:0; }
+        .capture-column { grid-area:capture; display:grid; gap:20px; width:100%; max-width:420px; justify-self:end; }
+        .primary-image { width:100%; height:auto; aspect-ratio:16/9; object-fit:contain; border-radius:8px; }
+        .page-content { display:grid; grid-template-columns:minmax(0, 1fr) minmax(310px, .78fr); grid-template-areas:"heading capture" "body capture"; grid-template-rows:auto 1fr; gap:24px 28px; align-items:start; }
         h1 { font-size:40px; line-height:1.12; margin:0 0 14px; letter-spacing:0; overflow-wrap:anywhere; }
         .subtitle { color:var(--muted); font-size:17px; max-width:640px; line-height:1.48; }
-        .body { margin-top:18px; color:var(--muted); max-width:620px; line-height:1.52; white-space:pre-line; }
+        .body { color:var(--muted); max-width:620px; line-height:1.52; white-space:pre-line; }
         .banners { margin-top:28px; padding-top:20px; border-top:1px solid var(--line); }
         .banners h2 { font-size:16px; margin:0 0 12px; }
-        .banner-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; max-width:580px; }
+        .banner-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
         .banner { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--panel); display:flex; align-items:center; justify-content:center; aspect-ratio:16/9; text-decoration:none; }
         .banner img { width:100%; height:100%; display:block; object-fit:contain; }
         .banner span { padding:16px; overflow-wrap:anywhere; text-align:center; }
@@ -91,35 +92,36 @@ $banners = landingPageBanners($page, true);
         .success { border:1px solid rgba(34,197,94,.5); background:rgba(34,197,94,.12); padding:12px; border-radius:8px; color:var(--text); margin-bottom:12px; }
         @media (max-width: 860px) {
             .hero { padding:24px 18px; }
-            .page-intro { flex-direction:column-reverse; align-items:stretch; gap:18px; }
-            .primary-image { align-self:center; }
+            .capture-column { display:contents; }
+            .primary-image { grid-area:image; max-width:420px; justify-self:center; }
             h1 { font-size:32px; }
-            .page-content { grid-template-columns:1fr; }
-            .lead-card { justify-self:stretch; max-width:none; }
-            .banner-grid { grid-template-columns:1fr; }
+            .page-content { grid-template-columns:1fr; grid-template-areas:"heading" "body" "form"; grid-template-rows:auto; }
+            .page-content.has-primary-image { grid-template-areas:"heading" "image" "body" "form"; }
+            .lead-card { grid-area:form; justify-self:stretch; max-width:none; }
+            .banner-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            .banner span { font-size:13px; padding:10px; }
         }
     </style>
 </head>
 <body class="theme-<?= htmlspecialchars($theme) ?>">
     <main class="hero">
+      <div class="page-content <?= $offerImage !== '' ? 'has-primary-image' : '' ?>">
         <header class="page-intro">
-          <div class="page-heading">
             <h1><?= htmlspecialchars((string)$page['headline']) ?></h1>
             <?php if (!empty($page['subtitle'])): ?>
                 <div class="subtitle"><?= nl2br(htmlspecialchars((string)$page['subtitle'])) ?></div>
             <?php endif; ?>
-          </div>
-          <?php if ($offerImage !== ''): ?>
-            <img class="primary-image" src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim($offerImage, '/')) ?>" alt="<?= htmlspecialchars((string)$page['title']) ?>">
-          <?php endif; ?>
         </header>
-        <div class="page-content">
-        <section>
+        <section class="page-copy">
             <?php if (!empty($page['body'])): ?>
                 <div class="body"><?= htmlspecialchars((string)$page['body']) ?></div>
             <?php endif; ?>
         </section>
 
+        <div class="capture-column">
+          <?php if ($offerImage !== ''): ?>
+            <img class="primary-image" src="<?= PROJECT_URL ?>/<?= htmlspecialchars(ltrim($offerImage, '/')) ?>" alt="<?= htmlspecialchars((string)$page['title']) ?>">
+          <?php endif; ?>
         <aside class="lead-card">
             <h2><?= htmlspecialchars(trim((string)$page['cta_text']) !== '' ? (string)$page['cta_text'] : $formTexts['title']) ?></h2>
             <p><?= htmlspecialchars($formTexts['description']) ?></p>
@@ -137,6 +139,7 @@ $banners = landingPageBanners($page, true);
             </form>
         </aside>
         </div>
+      </div>
         <?php if ($banners !== []): ?>
             <section class="banners" aria-label="Divulgacao complementar">
                 <h2>Confira tambem</h2>

@@ -79,6 +79,9 @@ try {
     file_put_contents($publicDir.'/banners-public-preview.html', $html);
     file_put_contents($publicDir.'/banners-form-preview.html', runRoute($fixture, 'admin/landing_page/edit.php', [], ['id' => $id]));
     file_put_contents($publicDir.'/banners-index-preview.html', runRoute($fixture, 'admin/landing_page/index.php'));
+    $four = array_fill(0, 4, ['url' => 'https://example.com/destino-a', 'title' => 'Outra pagina', 'image' => 'storage/uploads/test.png']);
+    $pdo->prepare('UPDATE landing_page_pages SET banners_json=? WHERE id=?')->execute([json_encode($four), $id]);
+    file_put_contents($publicDir.'/banners-public-four-preview.html', runRoute($fixture, 'landing_page.php', [], ['slug' => 'pagina-teste']));
     $post['banners'] = [];
     runRoute($fixture, 'admin/landing_page/update.php', $post, ['id' => $id]);
     $html = runRoute($fixture, 'landing_page.php', [], ['slug' => 'pagina-teste']);
