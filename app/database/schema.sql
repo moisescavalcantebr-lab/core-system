@@ -365,7 +365,7 @@ INSERT INTO bases (name, slug, description, allows_users, max_admins, status, ba
 VALUES
   ('Base', 'base', 'Base inicial do sistema (nao deletar)', 1, 1, 1, 'published', 1),
   ('Base Cripto', 'cripto', 'Base para gestao cripto DCA Spot', 1, 1, 1, 'laboratory', 0),
-  ('Base Divulgacao', 'divulgacao', 'Base para landing pages, captura de leads e campanhas simples.', 1, 1, 1, 'published', 1),
+  ('Marketing', 'marketing', 'Base para landing pages, captura de leads e campanhas simples.', 1, 1, 1, 'published', 1),
   ('Base Futebol', 'futebol', 'Base para projetos de futebol com jogadores, elenco e modulos esportivos.', 1, 1, 1, 'laboratory', 0),
   ('Base Tips Survivor', 'tips-survivor', 'Base para competicoes de palpites survivor com vidas, pontos e tokens internos.', 1, 1, 1, 'laboratory', 0)
 ON DUPLICATE KEY UPDATE
@@ -393,7 +393,7 @@ INSERT IGNORE INTO plan_bases (plan_id, base_id)
 SELECT p.id, b.id
 FROM plans p
 CROSS JOIN bases b
-WHERE b.slug IN ('base', 'cripto', 'divulgacao', 'futebol', 'tips-survivor');
+WHERE b.slug IN ('base', 'cripto', 'marketing', 'futebol', 'tips-survivor');
 
 INSERT INTO plan_prices (id, plan_id, billing_cycle, price, status)
 VALUES
@@ -410,7 +410,7 @@ INSERT IGNORE INTO base_plan_prices (base_id, plan_price_id, custom_price, statu
 SELECT b.id, pp.id, pp.price, 1
 FROM bases b
 CROSS JOIN plan_prices pp
-WHERE b.slug IN ('base', 'cripto', 'divulgacao', 'futebol', 'tips-survivor');
+WHERE b.slug IN ('base', 'cripto', 'marketing', 'futebol', 'tips-survivor');
 
 SET FOREIGN_KEY_CHECKS=1;
 SET UNIQUE_CHECKS=1;

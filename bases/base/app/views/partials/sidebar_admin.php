@@ -30,7 +30,7 @@ function sidebarIcon(string $key): string
         'dashboard' => '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h5v-5h4v5h5v-9.5"/>',
         'financeiro' => '<path d="M12 3v18"/><path d="M17 7.5c-.8-1-2.2-1.5-4-1.5-2.2 0-4 1-4 2.7 0 1.8 1.8 2.4 4 2.8 2.4.5 4 1.1 4 2.9 0 1.7-1.8 2.6-4 2.6-2 0-3.6-.6-4.6-1.8"/>',
         'cartao_credito' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/>',
-        'divulgacao' => '<path d="M4 5h16v14H4z"/><path d="M8 9h8"/><path d="M8 13h5"/><path d="M16 13l2 2"/><path d="m18 13-2 2"/>',
+        'landing_page' => '<path d="M4 5h16v14H4z"/><path d="M8 9h8"/><path d="M8 13h5"/><path d="M16 13l2 2"/><path d="m18 13-2 2"/>',
         'participantes' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
         'jogadores' => '<circle cx="12" cy="12" r="9"/><path d="m8 9 4-3 4 3-1.5 5h-5L8 9Z"/><path d="m9.5 14-2 4"/><path d="m14.5 14 2 4"/>',
         'meu_time' => '<path d="M4 5h16v10a8 8 0 0 1-8 6 8 8 0 0 1-8-6V5Z"/><path d="M8 9h8"/><path d="M8 13h8"/>',

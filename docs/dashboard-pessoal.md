@@ -8,7 +8,7 @@
 - Financeiro ja possui `finance_entries` e seus proprios paineis, categorias, carteiras e integracoes. Nao foi instalado novamente nesta base nem teve dados copiados para Contas. Se os dois forem instalados em outro projeto, os paineis permanecem separados; qualquer futura integracao precisa declarar uma unica fonte para evitar dupla contagem.
 - Categorias e Cartao de Credito continuam vinculados a Financeiro, nao a Contas. Beneficios nao se torna principal por possuir cadastro proprio.
 - Participantes continua responsavel por perfis, nao por registros financeiros nem por login obrigatorio em projetos pessoais.
-- Os modulos de futebol, Tips Survivor, Cripto e Divulgacao mantem seus paineis de dominio e nao foram adicionados a esta base. Classificacao/Estatisticas e os addons sem `dashboard.php` dependem de consumidores especificos; nao ha indicadores ficticios para recursos ausentes.
+- Os modulos de futebol, Tips Survivor, Cripto e Landing Pages mantem seus paineis de dominio e nao foram adicionados a esta base. Classificacao/Estatisticas e os addons sem `dashboard.php` dependem de consumidores especificos; nao ha indicadores ficticios para recursos ausentes.
 
 ## Composicao da base Meu Holerite
 

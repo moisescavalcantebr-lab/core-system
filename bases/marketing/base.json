@@ -1,0 +1,16 @@
+{
+    "name": "Marketing",
+    "slug": "marketing",
+    "previous_slug": "divulgacao",
+    "description": "Base para landing pages, captura de leads e campanhas simples.",
+    "allows_users": 1,
+    "max_admins": 1,
+    "status": 1,
+    "base_stage": "published",
+    "is_protected": 1,
+    "schema": {
+        "path": "app/database/schema.sql",
+        "hash": "5fef08d1af2bde74b8cf546317b9b0a2",
+        "updated_at": "2026-07-31 17:30:52"
+    }
+}

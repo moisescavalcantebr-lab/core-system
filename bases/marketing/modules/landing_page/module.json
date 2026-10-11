@@ -1,0 +1,41 @@
+{
+  "name": "landing_page",
+  "label": "Landing Pages",
+  "description": "Criacao de landing pages, captura de leads e validacao de ofertas.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "kind": "main",
+  "category": "Marketing",
+  "segments": ["geral", "servicos", "infoprodutos", "eventos", "produtos"],
+  "recommended_bases": ["marketing"],
+  "tags": ["landing", "leads", "captura", "campanhas"],
+  "menu": {
+    "section": "Gestao",
+    "label": "Landing Pages",
+    "url": "/admin/landing_page/index.php",
+    "key": "landing_page",
+    "order": 20
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": [
+      "landing_page_pages",
+      "landing_page_leads"
+    ]
+  },
+  "copy": [
+    {
+      "from": "web/admin/landing_page",
+      "to": "web/admin/landing_page"
+    },
+    {
+      "from": "web/landing_page.php",
+      "to": "web/landing_page.php"
+    },
+    {
+      "from": "web/landing_page-lead.php",
+      "to": "web/landing_page-lead.php"
+    }
+  ]
+}

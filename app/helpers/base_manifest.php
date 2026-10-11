@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__.'/base_identity.php';
+require_once __DIR__.'/marketing_identity.php';
 
 if (!function_exists('base_manifest_payload')) {
     function base_normalize_stage(?string $stage, int $isProtected = 0): string
@@ -197,7 +198,11 @@ if (!function_exists('base_register_manifests')) {
 
             $name = trim((string)($manifest['name'] ?? $slug));
             $previousSlug = array_search($slug,$renames,true);
-            if ($previousSlug !== false) baseRenameIdentity($pdo,$previousSlug,$slug,$name);
+            if ($previousSlug === 'divulgacao' && $slug === 'marketing') {
+                marketingRenameIdentity($pdo);
+            } elseif ($previousSlug !== false) {
+                baseRenameIdentity($pdo,$previousSlug,$slug,$name);
+            }
             $description = (string)($manifest['description'] ?? '');
             $allowsUsers = (int)($manifest['allows_users'] ?? 1);
             $maxAdmins = (int)($manifest['max_admins'] ?? 1);

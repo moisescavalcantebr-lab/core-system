@@ -601,6 +601,8 @@ if ! docker exec app_php test -f /var/www/html/index.php; then
   echo "ERRO: index.php ausente no container apos aplicar release"
   exit 1
 fi
+echo "[identity] alinhando Marketing e Landing Pages"
+docker exec app_php php /var/www/html/app/console/migrate_marketing_identity.php --apply
 echo "[identity] migrando Meu Trabalho e Leituras com preservacao de dados"
 docker exec app_php php /var/www/html/app/console/migrate_work_identity.php --apply
 echo "[bootstrap] migrando/registrando Core"
