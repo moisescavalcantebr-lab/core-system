@@ -26,7 +26,7 @@ ob_start();
         <h1>Landing Pages</h1>
         <p>Landing pages simples para campanhas, produtos e captacao de leads.</p>
     </div>
-    <div class="c-page-actions">
+    <div class="c-page-actions landing_page-actions">
         <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/landing_page/leads.php">Leads</a>
         <a class="c-btn-primary" href="<?= PROJECT_URL ?>/admin/landing_page/create.php">Nova pagina</a>
     </div>
@@ -100,6 +100,9 @@ ob_start();
 </div>
 
 <style>
+.landing_page-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.landing_page-actions a { display:inline-flex; align-items:center; justify-content:center; min-height:30px; box-sizing:border-box; margin-right:0; white-space:nowrap; }
+.landing_page-actions .c-btn-primary { background:var(--primary-color, var(--color-primary, #3b82f6)); border:1px solid var(--primary-color, var(--color-primary, #3b82f6)); }
 .c-grid-3 { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .landing_page-summary { margin-bottom: 18px; }
 .c-metric-card strong { display:block; font-size: 28px; margin: 8px 0 4px; }
