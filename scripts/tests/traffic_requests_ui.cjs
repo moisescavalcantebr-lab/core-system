@@ -9,7 +9,8 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({viewport: {width, height: 900}});
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const name of ['form', 'index', 'detail', 'conversation', 'core', 'core-detail']) {
+      for (const name of ['form', 'index', 'detail', 'conversation', 'core', 'core-detail', 'core-operation-ready', 'core-operation-active', 'client-operation']) {
+        await page.goto('about:blank');
         await page.setContent(fs.readFileSync(path.join(root, `_deploy/traffic-${name}-preview.html`), 'utf8'));
         if (name === 'form') {
           if (!await page.locator('[data-guidance-field]').isVisible()) throw new Error('Campo de duvida oculto em orientacao');
@@ -36,6 +37,15 @@ const root = path.resolve(__dirname, '../..');
           if (await message.inputValue() !== 'Texto personalizado') throw new Error('Modelo sobrescreveu resposta sem confirmacao');
         }
         if (name === 'conversation' && !await page.locator('textarea[name=message]').isVisible()) throw new Error('Cliente sem campo de resposta');
+        if (name === 'core-operation-ready' && !await page.locator('input[name=external_campaign_id]').isVisible()) throw new Error('Planejamento sem identificacao externa');
+        if (name === 'core-operation-active') {
+          if (!await page.locator('input[name=report_date]').isVisible() || await page.locator('input[name=external_campaign_id]').count()) throw new Error('Controles de operacao incorretos');
+          if (await page.locator('input[name=link_clicks]').inputValue() !== '45') throw new Error('Edicao nao carregou resultados existentes');
+        }
+        if (name === 'client-operation' && await page.locator('input[name=report_date]').count()) throw new Error('Cliente recebeu editor de resultados');
+        if (name.endsWith('operation-active') || name === 'client-operation') {
+          if (!await page.locator('.traffic-chart-bar').isVisible()) throw new Error('Grafico de resultados vazio');
+        }
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
         if (overflow) throw new Error(`Overflow em ${name} / ${width}`);
         await page.screenshot({path: path.join(root, `_deploy/traffic-${name}-${width}.png`), fullPage: true});

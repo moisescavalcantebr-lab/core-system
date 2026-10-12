@@ -7,7 +7,10 @@ final class TrafficRequestService
         'draft' => 'Rascunho', 'submitted' => 'Enviada', 'reviewing' => 'Em analise',
         'changes_requested' => 'Aguardando ajustes', 'prepared' => 'Campanha preparada',
         'rejected' => 'Nao atendida', 'cancelled' => 'Cancelada',
+        'platform_review'=>'Em revisao na plataforma','platform_rejected'=>'Recusada pela plataforma',
+        'active'=>'Em veiculacao','paused'=>'Pausada','completed'=>'Concluida',
     ];
+    public const CONVERSATION_STATUSES = ['submitted','reviewing','changes_requested','prepared','platform_review','platform_rejected','active','paused'];
     public const PLATFORMS = ['recommend' => 'Preciso de orientacao', 'meta' => 'Meta', 'google' => 'Google'];
     public const MESSAGE_TEMPLATES = [
         'received' => ['label'=>'Recebimento', 'message'=>'Recebemos sua solicitacao e vamos conferir as informacoes.'],
@@ -19,6 +22,8 @@ final class TrafficRequestService
 
     public static function ensureSchema(PDO $pdo): void
     {
+        require_once __DIR__.'/TrafficOperationsService.php';
+        TrafficOperationsService::ensureSchema($pdo);
         $pdo->exec((string)file_get_contents(dirname(__DIR__).'/database/traffic_requests.sql'));
         $column = $pdo->query("SHOW COLUMNS FROM content_studio_traffic_requests LIKE 'guidance_question'")->fetch();
         if (!$column) {
@@ -209,7 +214,7 @@ final class TrafficRequestService
         try {
             $row = self::find($pdo,$id,null,true); self::revision($row,$revision);
             if (in_array($decision,['reply','close_conversation'],true)) {
-                if (!in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)) {
+                if (!in_array($row['status'],self::CONVERSATION_STATUSES,true)) {
                     throw new RuntimeException('Resposta indisponivel nesta etapa.');
                 }
                 if ($decision === 'reply' && $message === '') throw new InvalidArgumentException('Escreva uma resposta antes de enviar.');
@@ -250,7 +255,7 @@ final class TrafficRequestService
         $pdo->beginTransaction();
         try {
             $row = self::find($pdo,$id,$projectId,true); self::revision($row,$revision);
-            if (!(int)$row['conversation_open'] || !in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)) {
+            if (!(int)$row['conversation_open'] || !in_array($row['status'],self::CONVERSATION_STATUSES,true)) {
                 throw new RuntimeException('A conversa nao esta aberta para respostas.');
             }
             $pdo->prepare('UPDATE content_studio_traffic_requests SET revision = revision + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$id]);

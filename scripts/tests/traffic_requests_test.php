@@ -187,6 +187,25 @@ try {
     expect((int)TrafficRequestService::find($pdo,(int)$routeRow['id'],1)['conversation_open']===1,'Nova pergunta nao reabriu conversa');
     TrafficRequestService::review($pdo,(int)$routeRow['id'],9,6,'close_conversation','');
     TrafficRequestService::review($pdo,(int)$routeRow['id'],9,7,'prepared','Conversa concluida.');
+    $operationPost=['id'=>$routeRow['id'],'revision'=>8,'_csrf'=>'test','decision'=>'operation_save','platform'=>'google',
+        'objective'=>'Visitas ao site','region'=>'Jundiai','audience'=>'Moradores da regiao','placements'=>'Pesquisa',
+        'ad_title'=>'Conheca nossa oferta','ad_text'=>'Conteudo do anuncio de teste','starts_at'=>date('Y-m-d'),'ends_at'=>date('Y-m-d',strtotime('+7 days')),
+        'creative_url'=>'https://example.com/material.png','external_campaign_id'=>'campaign-test','external_campaign_url'=>'https://example.com/campaign',
+        'evidence_url'=>'https://example.com/evidence'];
+    expect(str_contains(route($review,$operationPost),'Solicitacao atualizada'),'Rota de planejamento falhou');
+    file_put_contents($preview.'/traffic-core-operation-ready-preview.html',route($fixture.'/web/admin/content_studio/requests.php',[],['id'=>$routeRow['id']]));
+    $stagePost=['id'=>$routeRow['id'],'revision'=>9,'_csrf'=>'test','decision'=>'operation_transition','operation_status'=>'platform_review','manual_confirmed'=>'1'];
+    expect(str_contains(route($review,$stagePost),'Solicitacao atualizada'),'Rota de revisao da plataforma falhou');
+    $stagePost['revision']=10; $stagePost['operation_status']='active';
+    expect(str_contains(route($review,$stagePost),'Solicitacao atualizada'),'Rota de registro de veiculacao falhou');
+    $reportPost=['id'=>$routeRow['id'],'revision'=>11,'_csrf'=>'test','decision'=>'report_save','report_date'=>date('Y-m-d'),
+        'impressions'=>'1000','link_clicks'=>'45','visits'=>'','source'=>'Google / relatorio manual','report_evidence_url'=>'https://example.com/results','report_notes'=>'Resultado do dia'];
+    expect(str_contains(route($review,$reportPost),'Solicitacao atualizada'),'Rota de resultados falhou');
+    $operationClientHtml=route($projectPath.'/web/admin/trafego/request.php',[],['id'=>$routeRow['id']]);
+    expect(str_contains($operationClientHtml,'Planejamento da divulgacao')&&str_contains($operationClientHtml,'Resultados registrados manualmente'),'Cliente nao recebeu acompanhamento');
+    expect(!str_contains($operationClientHtml,'name="decision"')&&!str_contains($operationClientHtml,'Editar</a>'),'Cliente recebeu controles operacionais');
+    file_put_contents($preview.'/traffic-client-operation-preview.html',$operationClientHtml);
+    file_put_contents($preview.'/traffic-core-operation-active-preview.html',route($fixture.'/web/admin/content_studio/requests.php',[],['id'=>$routeRow['id']]));
     file_put_contents($preview.'/traffic-core-preview.html',route($fixture.'/web/admin/content_studio/requests.php'));
     file_put_contents($preview.'/traffic-core-detail-preview.html',$coreHtml);
     expect((int)$pdo->query('SELECT COUNT(*) FROM landing_page_leads')->fetchColumn()===0,'Leads alterados');

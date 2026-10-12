@@ -65,13 +65,14 @@ platform.addEventListener('change',guidanceField);guidanceField();
 <?php endif; ?>
 <?php if (!$editable && !empty($row['guidance_question'])): ?><section class="traffic-section"><h2>Duvida enviada</h2><p style="white-space:pre-wrap"><?= trafficEscape($row['guidance_question']) ?></p></section><?php endif; ?>
 <?php if ($row['status']==='prepared'): ?><p class="traffic-notice">Campanha #<?= (int)$row['campaign_id'] ?> preparada em rascunho. Nenhum pagamento ou anuncio foi ativado.</p><?php endif; ?>
+<?php if ($id && $row['campaign_id']): $operation=TrafficOperationsService::plan($core,$id,$projectId); $reports=TrafficOperationsService::reports($core,$id,$projectId); require __DIR__.'/operation_view.php'; endif; ?>
 <?php if ($id && in_array($row['status'],['draft','submitted','reviewing','changes_requested'],true)): ?><form class="traffic-section" method="post" action="<?= PROJECT_URL ?>/admin/trafego/save.php" onsubmit="return confirm('Cancelar esta solicitacao?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><button class="c-btn-secondary" name="action" value="cancel">Cancelar solicitacao</button></form><?php endif; ?>
 <?php if ($events): ?><section class="traffic-section"><h2>Historico</h2><ol class="traffic-events"><?php foreach ($events as $event): ?><li><small><?= trafficEscape($event['created_at']) ?> · <?= $event['actor_type']==='core'?'Content Studio':'Projeto' ?></small><p><?= trafficEscape($event['message']) ?></p></li><?php endforeach; ?></ol></section><?php endif; ?>
-<?php if (!empty($row['conversation_open']) && in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)): ?>
+<?php if (!empty($row['conversation_open']) && in_array($row['status'],TrafficRequestService::CONVERSATION_STATUSES,true)): ?>
 <form class="traffic-form traffic-section" method="post" action="<?= PROJECT_URL ?>/admin/trafego/save.php">
 <?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>">
 <label>Sua resposta<textarea class="c-input" name="message" rows="4" maxlength="5000" required><?= trafficEscape($replyText) ?></textarea></label>
 <div class="traffic-actions"><button class="c-btn-secondary" name="action" value="reply">Enviar resposta</button></div>
 </form>
-<?php elseif ($id && in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)): ?><p class="traffic-notice">Conversa fechada. Aguardando retorno do Content Studio.</p><?php endif; ?>
+<?php elseif ($id && in_array($row['status'],TrafficRequestService::CONVERSATION_STATUSES,true)): ?><p class="traffic-notice">Conversa fechada. Aguardando retorno do Content Studio.</p><?php endif; ?>
 <?php endif; require __DIR__.'/style.php'; $content=ob_get_clean(); require APP_PATH.'/views/layout_admin.php'; ?>

@@ -2,6 +2,8 @@
 
 O modulo principal `trafego` envia solicitacoes ao Content Studio. Landing Pages continua independente e os leads ficam no banco do projeto. Nao ha cobranca, reserva de saldo, integracao bancaria, proposta comercial ou veiculacao automatica nesta entrega.
 
+A etapa operacional manual seguinte esta documentada em `marketing-trafego-operacao.md`; inclui planejamento, registro de estados observados nas plataformas e resultados diarios, sem financeiro.
+
 ## Projeto
 
 - Instalar/sincronizar o modulo Trafego na base Marketing.
