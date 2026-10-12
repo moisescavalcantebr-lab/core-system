@@ -9,7 +9,7 @@ function trafficContext(): array
     global $project;
     requireProjectAdmin();
     $user = projectUser();
-    if (!$user || (int)($user['status'] ?? 0) !== 1) {
+    if (!$user || ($user['status'] ?? '') !== 'active') {
         http_response_code(403); exit('Acesso negado.');
     }
     if (!is_file(PROJECT_PATH.'/modules/trafego/module.json')) {

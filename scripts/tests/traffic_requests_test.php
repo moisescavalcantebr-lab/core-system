@@ -34,8 +34,8 @@ try {
     $pdo->exec('USE `'.$database.'`');
     $pdo->exec("CREATE TABLE projects (id INT UNSIGNED PRIMARY KEY,name VARCHAR(160),slug VARCHAR(160),status VARCHAR(20) DEFAULT 'active')");
     $pdo->exec("INSERT INTO projects(id,name,slug) VALUES (1,'Projeto A','project-a'),(2,'Projeto B','project-b')");
-    $pdo->exec('CREATE TABLE project_users (id INT PRIMARY KEY,name VARCHAR(140),email VARCHAR(180),username VARCHAR(120),role VARCHAR(20),status INT,avatar VARCHAR(100),must_change_password INT)');
-    $pdo->exec("INSERT INTO project_users VALUES (1,'Cliente','cliente@example.com','cliente','ADMIN',1,'',0),(2,'Usuario','user@example.com','user','USER',1,'',0),(3,'Inativo','inactive@example.com','inactive','ADMIN',0,'',0)");
+    $pdo->exec("CREATE TABLE project_users (id INT PRIMARY KEY,name VARCHAR(140),email VARCHAR(180),username VARCHAR(120),role VARCHAR(20),status ENUM('active','inactive','blocked') DEFAULT 'active',avatar VARCHAR(100),must_change_password INT)");
+    $pdo->exec("INSERT INTO project_users VALUES (1,'Cliente','cliente@example.com','cliente','ADMIN','active','',0),(2,'Usuario','user@example.com','user','USER','active','',0),(3,'Inativo','inactive@example.com','inactive','ADMIN','inactive','',0),(4,'Bloqueado','blocked@example.com','blocked','ADMIN','blocked','',0)");
     TrafficRequestService::ensureSchema($pdo); TrafficRequestService::ensureSchema($pdo);
     ContentStudioService::ensureSchema($pdo);
     $pdo->exec((string)file_get_contents($root.'/modules/landing_page/database/schema.sql'));
@@ -116,6 +116,7 @@ try {
     expect(str_contains(route($save,[...$routePost,'_csrf'=>'invalid']),'CSRF'),'CSRF invalido aceito');
     expect(str_contains(route($save,$routePost,[],2),'Acesso negado'),'Usuario comum autorizado');
     expect(str_contains(route($save,$routePost,[],3),'Acesso negado'),'Administrador inativo autorizado');
+    expect(str_contains(route($save,$routePost,[],4),'Acesso negado'),'Administrador bloqueado autorizado');
     expect((int)$pdo->query('SELECT COUNT(*) FROM content_studio_traffic_requests')->fetchColumn()===$count,'Guards nao impediram escrita');
     $routePost['destination_type']='page'; $routePost['project_page_id']=1;
     expect(str_contains(route($save,$routePost),'Solicitacao enviada'),'Envio pela rota falhou');
