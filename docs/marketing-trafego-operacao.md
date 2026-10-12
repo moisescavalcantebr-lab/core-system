@@ -1,12 +1,12 @@
 # Trafego: operacao manual sem financeiro
 
-Esta etapa adiciona planejamento e acompanhamento ao pedido preparado. Nao cria propostas, aprovacao do cliente, cobranca, pagamentos, reserva de saldo, APIs ou anuncios reais. Os botoes registram atividades realizadas fora do Core pelo operador; nao comprovam automaticamente os dados da plataforma.
+Esta etapa adiciona planejamento e acompanhamento ao pedido preparado. Nao cria propostas, cobranca, pagamentos, reserva de saldo, APIs ou anuncios reais. A aprovacao do planejamento foi adicionada posteriormente na terceira entrega (`marketing-trafego-aprovacao.md`). Os botoes registram atividades realizadas fora do Core pelo operador; nao comprovam automaticamente os dados da plataforma.
 
 ## Planejamento
 
 O Studio define Meta ou Google, objetivo, regiao, publico, canais/posicionamentos, titulo, texto, material por link e periodo. A preferencia original do cliente e preservada. O planejamento e compartilhado com o projeto e fica bloqueado para edicao depois do registro de envio a plataforma; se houver recusa, pode ser corrigido e reenviado.
 
-ID da campanha e links de referencia sao registrados pelo operador, sem credenciais. O destino permanece o do pedido preparado. A aprovacao versionada do cliente sera uma etapa posterior; este fluxo e para testes manuais, nao uma autorizacao comercial automatica.
+ID da campanha e links de referencia sao registrados pelo operador, sem credenciais. O destino permanece o do pedido preparado. A aprovacao versionada do cliente autoriza somente o planejamento apresentado, sem cobranca ou autorizacao comercial automatica.
 
 ## Estados
 

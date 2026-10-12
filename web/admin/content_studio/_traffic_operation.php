@@ -3,6 +3,18 @@ $operation=TrafficOperationsService::plan($pdo,$id);
 $reports=TrafficOperationsService::reports($pdo,$id);
 $trafficReportsEditable=true;
 require dirname(__DIR__,3).'/modules/trafego/web/admin/trafego/operation_view.php';
+$approval=TrafficApprovalService::latest($pdo,$id);
+$trafficApprovalEditable=false;
+require dirname(__DIR__,3).'/modules/trafego/web/admin/trafego/approval_view.php';
+if ($operation && in_array($row['status'],['prepared','platform_rejected'],true)
+    && (!$approval || !in_array($approval['status'],['pending','approved'],true))):
+?>
+<section class="traffic-section"><h2>Enviar planejamento ao cliente</h2>
+<form method="post" action="/app/actions/content_studio/traffic_review.php">
+<?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><input type="hidden" name="decision" value="approval_offer">
+<button class="c-btn-secondary" <?= !empty($row['conversation_open'])?'disabled':'' ?>>Solicitar aprovacao do planejamento</button>
+</form></section>
+<?php endif;
 if (in_array($row['status'],['prepared','platform_rejected'],true)):
     $plan=$operation ?? ['platform'=>$row['platform']==='recommend'?'':$row['platform'],'objective'=>$row['objective'],
         'region'=>$row['region'],'audience'=>$row['audience'],'starts_at'=>$row['starts_at'],'ends_at'=>$row['ends_at']];
@@ -22,10 +34,10 @@ if (in_array($row['status'],['prepared','platform_rejected'],true)):
 <section class="traffic-section"><h2>Registro manual na plataforma</h2>
 <form class="traffic-form" method="post" action="/app/actions/content_studio/traffic_review.php">
 <?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><input type="hidden" name="decision" value="operation_transition">
-<label>Status observado<select class="c-input" name="operation_status"><?php foreach ($transitions as $state): ?><option value="<?= $state ?>"><?= trafficEscape(TrafficRequestService::STATUSES[$state]) ?></option><?php endforeach; ?></select></label>
+<label>Status observado<select class="c-input" name="operation_status"><?php foreach ($transitions as $state): ?><option value="<?= $state ?>" <?= ($state==='platform_review' || ($state==='active' && $row['status']==='platform_review')) && !TrafficApprovalService::isApproved($pdo,$row)?'disabled':'' ?>><?= trafficEscape(TrafficRequestService::STATUSES[$state]) ?></option><?php endforeach; ?></select></label>
 <label>Motivo / resumo<textarea class="c-input" name="operation_notes" rows="3" maxlength="3000"></textarea></label>
 <label class="traffic-check"><input type="checkbox" name="manual_confirmed" value="1" required>Confirmo que realizei ou verifiquei esta etapa na plataforma de anuncios.</label>
-<button class="c-btn-secondary" <?= !$operation || !empty($row['conversation_open'])?'disabled':'' ?>>Registrar etapa</button>
+<button class="c-btn-secondary" <?= !$operation || !empty($row['conversation_open']) || (in_array($row['status'],['prepared','platform_rejected'],true) && !TrafficApprovalService::isApproved($pdo,$row))?'disabled':'' ?>>Registrar etapa</button>
 </form></section><?php endif; ?>
 <?php if (in_array($row['status'],['active','paused','completed'],true)):
     $reportDay=is_string($_GET['report_day'] ?? null) ? $_GET['report_day'] : date('Y-m-d');

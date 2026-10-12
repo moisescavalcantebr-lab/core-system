@@ -13,6 +13,7 @@ try {
     if ($decision==='operation_save') TrafficOperationsService::savePlan($pdo,$id,$actor,$revision,$_POST);
     elseif ($decision==='operation_transition') TrafficOperationsService::transition($pdo,$id,$actor,$revision,$_POST);
     elseif ($decision==='report_save') TrafficOperationsService::saveReport($pdo,$id,$actor,$revision,$_POST);
+    elseif ($decision==='approval_offer') TrafficApprovalService::offer($pdo,$id,$actor,$revision);
     else TrafficRequestService::review($pdo,$id,$actor,$revision,$decision,TrafficRequestService::text($_POST,'message',5000));
     flash('success',$decision==='reply'?'Resposta enviada.':($decision==='close_conversation'?'Conversa encerrada.':'Solicitacao atualizada.'));
 } catch (Throwable $e) {

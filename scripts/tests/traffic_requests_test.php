@@ -194,11 +194,34 @@ try {
         'evidence_url'=>'https://example.com/evidence'];
     expect(str_contains(route($review,$operationPost),'Solicitacao atualizada'),'Rota de planejamento falhou');
     file_put_contents($preview.'/traffic-core-operation-ready-preview.html',route($fixture.'/web/admin/content_studio/requests.php',[],['id'=>$routeRow['id']]));
-    $stagePost=['id'=>$routeRow['id'],'revision'=>9,'_csrf'=>'test','decision'=>'operation_transition','operation_status'=>'platform_review','manual_confirmed'=>'1'];
+    $offerPost=['id'=>$routeRow['id'],'revision'=>9,'_csrf'=>'test','decision'=>'approval_offer'];
+    expect(str_contains(route($review,[...$offerPost,'_csrf'=>'invalid']),'CSRF'),'Envio de aprovacao ignorou CSRF');
+    expect(str_contains(route($review,$offerPost),'Solicitacao atualizada'),'Envio de aprovacao falhou');
+    $approvalHtml=route($projectPath.'/web/admin/trafego/request.php',[],['id'=>$routeRow['id']]);
+    expect(str_contains($approvalHtml,'Aprovar planejamento')&&str_contains($approvalHtml,'Solicitar ajustes'),'Cliente sem decisoes de aprovacao');
+    file_put_contents($preview.'/traffic-client-approval-preview.html',$approvalHtml);
+    file_put_contents($preview.'/traffic-core-approval-preview.html',route($fixture.'/web/admin/content_studio/requests.php',[],['id'=>$routeRow['id']]));
+    $approvePost=['id'=>$routeRow['id'],'revision'=>10,'_csrf'=>'test','action'=>'approve','approval_version'=>1,'approval_confirmed'=>'1'];
+    expect(str_contains(route($save,[...$approvePost,'_csrf'=>'invalid']),'CSRF'),'Aprovacao ignorou CSRF');
+    expect(str_contains(route($save,$approvePost,[],2),'Acesso negado'),'Usuario comum aprovou');
+    expect(str_contains(route($save,$approvePost,[],3),'Acesso negado'),'Administrador inativo aprovou');
+    expect(str_contains(route($save,[...$approvePost,'approval_confirmed'=>'']),'Confirme a aprovacao'),'Aprovacao sem confirmacao aceita');
+    expect(str_contains(route($save,[...$approvePost,'action'=>'request_changes','message'=>'']),'Descreva os ajustes'),'Ajustes sem motivo aceitos pela rota');
+    expect(str_contains(route($save,[...$approvePost,'action'=>'request_changes','message'=>'Alterar a regiao de divulgacao.']),'Decisao registrada'),'Ajustes pela rota falharam');
+    $adjustmentsHtml=route($projectPath.'/web/admin/trafego/request.php',[],['id'=>$routeRow['id']]);
+    expect(str_contains($adjustmentsHtml,'Alterar a regiao de divulgacao.')&&!str_contains($adjustmentsHtml,'value="approve"'),'Decisao nao exibida ou ainda editavel');
+    file_put_contents($preview.'/traffic-client-adjustments-preview.html',$adjustmentsHtml);
+    expect(str_contains(route($review,[...$offerPost,'revision'=>11]),'Solicitacao atualizada'),'Reenvio de planejamento falhou');
+    $approvePost['revision']=12;
+    expect(str_contains(route($save,$approvePost),'Versao indisponivel'),'Versao antiga aprovada apos reenvio');
+    $approvePost['approval_version']=2;
+    expect(str_contains(route($save,$approvePost),'Decisao registrada'),'Aprovacao pela rota falhou');
+    expect(str_contains(route($save,$approvePost),'A solicitacao mudou'),'Aprovacao duplicada aceita');
+    $stagePost=['id'=>$routeRow['id'],'revision'=>13,'_csrf'=>'test','decision'=>'operation_transition','operation_status'=>'platform_review','manual_confirmed'=>'1'];
     expect(str_contains(route($review,$stagePost),'Solicitacao atualizada'),'Rota de revisao da plataforma falhou');
-    $stagePost['revision']=10; $stagePost['operation_status']='active';
+    $stagePost['revision']=14; $stagePost['operation_status']='active';
     expect(str_contains(route($review,$stagePost),'Solicitacao atualizada'),'Rota de registro de veiculacao falhou');
-    $reportPost=['id'=>$routeRow['id'],'revision'=>11,'_csrf'=>'test','decision'=>'report_save','report_date'=>date('Y-m-d'),
+    $reportPost=['id'=>$routeRow['id'],'revision'=>15,'_csrf'=>'test','decision'=>'report_save','report_date'=>date('Y-m-d'),
         'impressions'=>'1000','link_clicks'=>'45','visits'=>'','source'=>'Google / relatorio manual','report_evidence_url'=>'https://example.com/results','report_notes'=>'Resultado do dia'];
     expect(str_contains(route($review,$reportPost),'Solicitacao atualizada'),'Rota de resultados falhou');
     $operationClientHtml=route($projectPath.'/web/admin/trafego/request.php',[],['id'=>$routeRow['id']]);

@@ -17,6 +17,8 @@ final class TrafficOperationsService
     public static function ensureSchema(PDO $pdo): void
     {
         $pdo->exec((string)file_get_contents(dirname(__DIR__).'/database/traffic_operations.sql'));
+        require_once __DIR__.'/TrafficApprovalService.php';
+        TrafficApprovalService::ensureSchema($pdo);
     }
 
     public static function plan(PDO $pdo, int $id, ?int $projectId = null): ?array
@@ -88,6 +90,7 @@ final class TrafficOperationsService
                 ->execute(array_values($data));
             $pdo->prepare('UPDATE content_studio_campaigns SET objective=?, starts_at=?, ends_at=? WHERE id=? AND project_id=?')
                 ->execute([$data['objective'],$data['starts_at'],$data['ends_at'],$row['campaign_id'],$row['project_id']]);
+            TrafficApprovalService::invalidateChanged($pdo,$row,$actor);
             self::event($pdo,$row,$actor,'Planejamento da divulgacao atualizado pelo Studio.',$row['status']);
             $pdo->commit();
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
@@ -103,6 +106,9 @@ final class TrafficOperationsService
             $row=self::locked($pdo,$id,$revision,$actor);
             if (!in_array($next,self::TRANSITIONS[$row['status']] ?? [],true)) throw new RuntimeException('Transicao operacional indisponivel.');
             if ((int)$row['conversation_open']) throw new RuntimeException('Encerre a conversa antes de atualizar a veiculacao.');
+            if (($next==='platform_review' || ($next==='active' && $row['status']==='platform_review')) && !TrafficApprovalService::isApproved($pdo,$row)) {
+                throw new RuntimeException('O cliente precisa aprovar a versao atual do planejamento antes da veiculacao.');
+            }
             $plan=self::plan($pdo,$id);
             if (!$plan || !$plan['external_campaign_id'] || !$plan['evidence_url']) throw new RuntimeException('Salve o planejamento, o ID da campanha e a referencia da operacao antes de continuar.');
             if (in_array($next,['platform_rejected','paused','completed'],true) && $message==='') throw new InvalidArgumentException('Informe o motivo ou resumo da operacao.');

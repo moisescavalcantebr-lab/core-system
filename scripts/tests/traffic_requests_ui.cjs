@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({viewport: {width, height: 900}});
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const name of ['form', 'index', 'detail', 'conversation', 'core', 'core-detail', 'core-operation-ready', 'core-operation-active', 'client-operation']) {
+      for (const name of ['form', 'index', 'detail', 'conversation', 'core', 'core-detail', 'core-operation-ready', 'core-operation-active', 'client-operation', 'client-approval', 'core-approval', 'client-adjustments']) {
         await page.goto('about:blank');
         await page.setContent(fs.readFileSync(path.join(root, `_deploy/traffic-${name}-preview.html`), 'utf8'));
         if (name === 'form') {
@@ -43,6 +43,13 @@ const root = path.resolve(__dirname, '../..');
           if (await page.locator('input[name=link_clicks]').inputValue() !== '45') throw new Error('Edicao nao carregou resultados existentes');
         }
         if (name === 'client-operation' && await page.locator('input[name=report_date]').count()) throw new Error('Cliente recebeu editor de resultados');
+        if (name === 'client-approval') {
+          if (!await page.locator('button[value=approve]').isVisible() || !await page.locator('button[value=request_changes]').isVisible()) throw new Error('Decisoes do cliente ausentes');
+          if (!await page.locator('input[name=approval_confirmed]').evaluate(el => el.required)) throw new Error('Confirmacao nao obrigatoria');
+          if (!await page.locator('button[value=request_changes]').evaluate(el => el.form.querySelector('textarea[name=message]').required)) throw new Error('Motivo de ajustes nao obrigatorio');
+        }
+        if (name === 'core-approval' && !await page.getByRole('button', {name: 'Registrar etapa', exact: true}).isDisabled()) throw new Error('Studio avancou sem aprovacao');
+        if (name === 'client-adjustments' && await page.locator('button[value=approve]').count()) throw new Error('Decisao encerrada permaneceu editavel');
         if (name.endsWith('operation-active') || name === 'client-operation') {
           if (!await page.locator('.traffic-chart-bar').isVisible()) throw new Error('Grafico de resultados vazio');
         }

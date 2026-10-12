@@ -9,8 +9,11 @@ $id=(int)($_POST['id']??0);
 try {
     [$core,$projectId]=trafficContext(); $user=projectUser();
     $action=TrafficRequestService::text($_POST,'action',20);
-    if (!in_array($action,['save','submit','cancel','reply'],true)) throw new InvalidArgumentException('Acao invalida.');
-    if ($action==='reply') {
+    if (!in_array($action,['save','submit','cancel','reply','approve','request_changes'],true)) throw new InvalidArgumentException('Acao invalida.');
+    if (in_array($action,['approve','request_changes'],true)) {
+        TrafficApprovalService::decide($core,$id,$projectId,(int)$user['id'],(int)($_POST['revision']??0),
+            (int)($_POST['approval_version']??0),$action,TrafficRequestService::text($_POST,'message',3000),($_POST['approval_confirmed']??'')==='1');
+    } elseif ($action==='reply') {
         TrafficRequestService::clientReply($core,$id,$projectId,(int)$user['id'],(int)($_POST['revision']??0),TrafficRequestService::text($_POST,'message',5000));
     } elseif ($action==='cancel') {
         TrafficRequestService::cancel($core,$id,$projectId,(int)$user['id'],(int)($_POST['revision']??0));
@@ -23,7 +26,7 @@ try {
         $id=TrafficRequestService::save($core,$projectId,(int)$user['id'],$id,(int)($_POST['revision']??0),$data,$action==='submit',($_POST['authorized']??'')==='1');
     }
     unset($_SESSION['traffic_form_input']);
-    flash('success',$action==='reply'?'Resposta enviada.':($action==='submit'?'Solicitacao enviada.':($action==='cancel'?'Solicitacao cancelada.':'Briefing salvo.')));
+    flash('success',in_array($action,['approve','request_changes'],true)?'Decisao registrada.':($action==='reply'?'Resposta enviada.':($action==='submit'?'Solicitacao enviada.':($action==='cancel'?'Solicitacao cancelada.':'Briefing salvo.'))));
 } catch (Throwable $e) {
     error_log('Traffic request save failed: '.$e->getMessage());
     flash('error', $e instanceof RuntimeException && !$e instanceof PDOException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Nao foi possivel salvar. Tente novamente.');

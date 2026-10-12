@@ -66,6 +66,14 @@ platform.addEventListener('change',guidanceField);guidanceField();
 <?php if (!$editable && !empty($row['guidance_question'])): ?><section class="traffic-section"><h2>Duvida enviada</h2><p style="white-space:pre-wrap"><?= trafficEscape($row['guidance_question']) ?></p></section><?php endif; ?>
 <?php if ($row['status']==='prepared'): ?><p class="traffic-notice">Campanha #<?= (int)$row['campaign_id'] ?> preparada em rascunho. Nenhum pagamento ou anuncio foi ativado.</p><?php endif; ?>
 <?php if ($id && $row['campaign_id']): $operation=TrafficOperationsService::plan($core,$id,$projectId); $reports=TrafficOperationsService::reports($core,$id,$projectId); require __DIR__.'/operation_view.php'; endif; ?>
+<?php if ($id && $row['campaign_id']):
+    $approval=TrafficApprovalService::latest($core,$id,$projectId); $trafficApprovalEditable=true; $approvalMessage='';
+    if (($_SESSION['traffic_form_input']['action'] ?? '')==='request_changes' && (int)($_SESSION['traffic_form_input']['id'] ?? 0)===$id) {
+        $approvalMessage=is_string($_SESSION['traffic_form_input']['message'] ?? null)?$_SESSION['traffic_form_input']['message']:'';
+        unset($_SESSION['traffic_form_input']);
+    }
+    require __DIR__.'/approval_view.php';
+endif; ?>
 <?php if ($id && in_array($row['status'],['draft','submitted','reviewing','changes_requested'],true)): ?><form class="traffic-section" method="post" action="<?= PROJECT_URL ?>/admin/trafego/save.php" onsubmit="return confirm('Cancelar esta solicitacao?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><button class="c-btn-secondary" name="action" value="cancel">Cancelar solicitacao</button></form><?php endif; ?>
 <?php if ($events): ?><section class="traffic-section"><h2>Historico</h2><ol class="traffic-events"><?php foreach ($events as $event): ?><li><small><?= trafficEscape($event['created_at']) ?> · <?= $event['actor_type']==='core'?'Content Studio':'Projeto' ?></small><p><?= trafficEscape($event['message']) ?></p></li><?php endforeach; ?></ol></section><?php endif; ?>
 <?php if (!empty($row['conversation_open']) && in_array($row['status'],TrafficRequestService::CONVERSATION_STATUSES,true)): ?>
