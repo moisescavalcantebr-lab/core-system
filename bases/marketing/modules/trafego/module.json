@@ -1,0 +1,15 @@
+{
+  "name": "trafego",
+  "label": "Trafego",
+  "description": "Solicitacoes de divulgacao e acompanhamento pelo Content Studio do Core.",
+  "version": "0.1.0",
+  "type": "project",
+  "status": "draft",
+  "kind": "main",
+  "category": "Marketing",
+  "segments": ["geral", "servicos", "produtos"],
+  "recommended_bases": ["marketing"],
+  "tags": ["trafego", "campanhas", "briefing"],
+  "menu": {"section": "Gestao", "label": "Trafego", "url": "/admin/trafego/index.php", "key": "trafego", "order": 30},
+  "copy": [{"from": "web/admin/trafego", "to": "web/admin/trafego"}]
+}

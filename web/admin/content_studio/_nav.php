@@ -2,6 +2,7 @@
 $contentStudioNav = [
     '/web/admin/content_studio/index.php' => 'Dashboard',
     '/web/admin/content_studio/campaigns.php' => 'Campanhas',
+    '/web/admin/content_studio/requests.php' => 'Solicitacoes',
     '/web/admin/content_studio/ideas.php' => 'Ideias',
     '/web/admin/content_studio/production.php' => 'Produção',
     '/web/admin/content_studio/calendar.php' => 'Calendário',
