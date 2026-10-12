@@ -79,6 +79,8 @@ try {
     $next('platform_review'); $next('active');
     check($pdo->query('SELECT status FROM content_studio_campaigns WHERE id='.$campaign)->fetchColumn()==='active','Campanha e pedido divergentes');
     $started=TrafficOperationsService::plan($pdo,$id)['actual_started_at'];
+    $finalPost=['delivery_summary'=>'Resultados conferidos; visitas nao medidas.','delivery_evidence_url'=>'https://example.com/final-report','delivery_confirmed'=>'1'];
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),$finalPost),'Entrega encerrada antes do termino');
     reject(fn()=>TrafficOperationsService::savePlan($pdo,$id,9,$revision(),$plan),'Planejamento em veiculacao editavel');
     $report=['report_date'=>date('Y-m-d'),'impressions'=>'1000','link_clicks'=>'50','visits'=>'','source'=>'Relatorio de teste Google',
         'report_evidence_url'=>'https://example.com/report','report_notes'=>'Dados do dia'];
@@ -101,6 +103,36 @@ try {
     $next('completed');
     check($pdo->query('SELECT status FROM content_studio_campaigns WHERE id='.$campaign)->fetchColumn()==='finished','Conclusao nao sincronizou campanha');
     reject(fn()=>$next('active'),'Campanha concluida reativada');
+    reject(fn()=>TrafficDeliveryService::report($pdo,$id,2),'Relatorio cruzado exposto');
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),[...$finalPost,'delivery_confirmed'=>'']),'Entrega sem confirmacao encerrada');
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),[...$finalPost,'delivery_summary'=>'']),'Entrega sem resumo encerrada');
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),[...$finalPost,'delivery_evidence_url'=>'javascript:alert(1)']),'Referencia final insegura aceita');
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision()-1,$finalPost),'Encerramento antigo aceito');
+    $pdo->exec('UPDATE content_studio_traffic_requests SET conversation_open=1 WHERE id='.$id);
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),$finalPost),'Entrega com conversa aberta encerrada');
+    $pdo->exec('UPDATE content_studio_traffic_requests SET conversation_open=0 WHERE id='.$id);
+    $pdo->exec('DELETE FROM content_studio_traffic_reports WHERE request_id='.$id);
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),$finalPost),'Entrega sem resultados encerrada');
+    TrafficOperationsService::saveReport($pdo,$id,9,$revision(),[...$report,'link_clicks'=>'60']);
+    $partial=TrafficDeliveryService::report($pdo,$id,1);
+    check($partial['delivery']===null && $partial['data']['coverage']['known']['visits']===0,'Cobertura inventou visitas');
+    check(!isset($partial['data']['request']['contact_email']),'Relatorio expôs contato da conta');
+    TrafficDeliveryService::finalize($pdo,$id,9,$revision(),$finalPost);
+    $final=TrafficDeliveryService::report($pdo,$id,1);
+    check($final['delivery'] && $final['data']['totals']['link_clicks']===60,'Relatorio final nao preservou totais');
+    check(hash('sha256',$final['delivery']['snapshot'])===$final['delivery']['fingerprint'],'Hash final incorreto');
+    reject(fn()=>TrafficDeliveryService::finalize($pdo,$id,9,$revision(),$finalPost),'Entrega encerrada novamente');
+    reject(fn()=>TrafficOperationsService::saveReport($pdo,$id,9,$revision(),$report),'Relatorio final sobrescrito');
+    $pdo->exec('UPDATE content_studio_traffic_reports SET link_clicks=999 WHERE request_id='.$id);
+    check(TrafficDeliveryService::report($pdo,$id,1)['data']['totals']['link_clicks']===60,'Consulta final recalculou snapshot');
+    $pdo->exec("UPDATE content_studio_traffic_deliveries SET fingerprint=REPEAT('0',64) WHERE request_id=$id");
+    reject(fn()=>TrafficDeliveryService::report($pdo,$id,1),'Snapshot inconsistente foi apresentado');
+    $pdo->prepare('UPDATE content_studio_traffic_deliveries SET fingerprint=? WHERE request_id=?')->execute([$final['delivery']['fingerprint'],$id]);
+    $csv=TrafficDeliveryService::csv([[...$report,'source'=>'=1+1','evidence_url'=>'https://example.com/report','notes'=>"\t=HYPERLINK(1)"]]);
+    check(str_contains($csv,"'=1+1")&&str_contains($csv,"'\t=HYPERLINK(1)"),'CSV permite formulas');
+    check(TrafficDeliveryService::coverage($final['data']['reports'])['known']['link_clicks']===1,'Cobertura nao conta dias medidos');
+    $mixed=[...$final['data']['reports'],['report_date'=>date('Y-m-d',strtotime('+1 day')),'impressions'=>null,'link_clicks'=>null,'visits'=>0]];
+    check(TrafficDeliveryService::coverage($mixed)===['days'=>2,'first_day'=>date('Y-m-d'),'last_day'=>date('Y-m-d',strtotime('+1 day')),'known'=>['impressions'=>1,'link_clicks'=>1,'visits'=>1]],'Cobertura parcial incorreta');
     check($pdo->query("SHOW TABLES LIKE 'project_wallet_movements'")->fetchColumn()===false,'Operacao criou estruturas financeiras');
-    echo "PASS: planejamento, aprovacao versionada, ajustes, isolamento, snapshots, estados manuais e resultados diarios sem financeiro.\n";
+    echo "PASS: planejamento, aprovacao, operacao, relatorios, cobertura, encerramento imutavel e CSV seguro sem financeiro.\n";
 } finally { $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`'); }

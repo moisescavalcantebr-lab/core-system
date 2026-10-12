@@ -65,7 +65,13 @@ platform.addEventListener('change',guidanceField);guidanceField();
 <?php endif; ?>
 <?php if (!$editable && !empty($row['guidance_question'])): ?><section class="traffic-section"><h2>Duvida enviada</h2><p style="white-space:pre-wrap"><?= trafficEscape($row['guidance_question']) ?></p></section><?php endif; ?>
 <?php if ($row['status']==='prepared'): ?><p class="traffic-notice">Campanha #<?= (int)$row['campaign_id'] ?> preparada em rascunho. Nenhum pagamento ou anuncio foi ativado.</p><?php endif; ?>
-<?php if ($id && $row['campaign_id']): $operation=TrafficOperationsService::plan($core,$id,$projectId); $reports=TrafficOperationsService::reports($core,$id,$projectId); require __DIR__.'/operation_view.php'; endif; ?>
+<?php if ($id && $row['campaign_id']):
+    $delivery=TrafficDeliveryService::find($core,$id,$projectId); $trafficReportUrl=PROJECT_URL.'/admin/trafego/report.php?id='.$id;
+    require __DIR__.'/delivery_view.php';
+    $operation=TrafficOperationsService::plan($core,$id,$projectId); $reports=TrafficOperationsService::reports($core,$id,$projectId);
+    if ($delivery) { $finalReport=TrafficDeliveryService::report($core,$id,$projectId); $operation=$finalReport['data']['plan']; $reports=$finalReport['data']['reports']; }
+    require __DIR__.'/operation_view.php';
+endif; ?>
 <?php if ($id && $row['campaign_id']):
     $approval=TrafficApprovalService::latest($core,$id,$projectId); $trafficApprovalEditable=true; $approvalMessage='';
     if (($_SESSION['traffic_form_input']['action'] ?? '')==='request_changes' && (int)($_SESSION['traffic_form_input']['id'] ?? 0)===$id) {

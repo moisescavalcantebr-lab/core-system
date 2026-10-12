@@ -2,7 +2,7 @@
   "name": "trafego",
   "label": "Trafego",
   "description": "Solicitacoes de divulgacao e acompanhamento pelo Content Studio do Core.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "project",
   "status": "draft",
   "kind": "main",

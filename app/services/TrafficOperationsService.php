@@ -19,6 +19,8 @@ final class TrafficOperationsService
         $pdo->exec((string)file_get_contents(dirname(__DIR__).'/database/traffic_operations.sql'));
         require_once __DIR__.'/TrafficApprovalService.php';
         TrafficApprovalService::ensureSchema($pdo);
+        require_once __DIR__.'/TrafficDeliveryService.php';
+        TrafficDeliveryService::ensureSchema($pdo);
     }
 
     public static function plan(PDO $pdo, int $id, ?int $projectId = null): ?array
@@ -142,6 +144,7 @@ final class TrafficOperationsService
         try {
             $row=self::locked($pdo,$id,$revision,$actor);
             if (!in_array($row['status'],['active','paused','completed'],true)) throw new RuntimeException('Resultados disponiveis somente apos registrar a veiculacao.');
+            if (TrafficDeliveryService::find($pdo,$id)) throw new RuntimeException('Entrega encerrada. O relatorio final nao pode ser alterado.');
             $plan=self::plan($pdo,$id);
             if (!$plan['actual_started_at'] || $date<substr($plan['actual_started_at'],0,10)
                 || ($plan['actual_ended_at'] && $date>substr($plan['actual_ended_at'],0,10))) throw new InvalidArgumentException('Data fora do periodo registrado de veiculacao.');

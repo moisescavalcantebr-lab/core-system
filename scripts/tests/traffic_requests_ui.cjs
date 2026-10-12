@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({viewport: {width, height: 900}});
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const name of ['form', 'index', 'detail', 'conversation', 'core', 'core-detail', 'core-operation-ready', 'core-operation-active', 'client-operation', 'client-approval', 'core-approval', 'client-adjustments']) {
+      for (const name of ['form', 'index', 'detail', 'conversation', 'core', 'core-detail', 'core-operation-ready', 'core-operation-active', 'client-operation', 'client-approval', 'core-approval', 'client-adjustments', 'report-partial', 'report-final', 'client-delivery', 'core-delivery']) {
         await page.goto('about:blank');
         await page.setContent(fs.readFileSync(path.join(root, `_deploy/traffic-${name}-preview.html`), 'utf8'));
         if (name === 'form') {
@@ -50,6 +50,16 @@ const root = path.resolve(__dirname, '../..');
         }
         if (name === 'core-approval' && !await page.getByRole('button', {name: 'Registrar etapa', exact: true}).isDisabled()) throw new Error('Studio avancou sem aprovacao');
         if (name === 'client-adjustments' && await page.locator('button[value=approve]').count()) throw new Error('Decisao encerrada permaneceu editavel');
+        if (name.startsWith('report-')) {
+          if (!await page.getByRole('link', {name:'Exportar resultados CSV',exact:true}).isVisible() || !await page.getByRole('button', {name:'Imprimir relatorio',exact:true}).isVisible()) throw new Error('Relatorio sem exportacao');
+          if (!await page.getByRole('heading', {name:'Cobertura dos dados',exact:true}).isVisible()) throw new Error('Cobertura ausente');
+          await page.emulateMedia({media:'print'});
+          if (await page.locator('.toolbar').isVisible()) throw new Error('Controles aparecem na impressao');
+          if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error('Relatorio corta colunas na impressao');
+          if (name === 'report-final') await page.screenshot({path:path.join(root, `_deploy/traffic-report-final-print-${width}.png`),fullPage:true});
+          await page.emulateMedia({media:'screen'});
+        }
+        if (name === 'core-delivery' && await page.locator('input[name=report_date]').count()) throw new Error('Entrega final recebeu editor');
         if (name.endsWith('operation-active') || name === 'client-operation') {
           if (!await page.locator('.traffic-chart-bar').isVisible()) throw new Error('Grafico de resultados vazio');
         }

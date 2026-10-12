@@ -1,6 +1,6 @@
 # Trafego: operacao manual sem financeiro
 
-Esta etapa adiciona planejamento e acompanhamento ao pedido preparado. Nao cria propostas, cobranca, pagamentos, reserva de saldo, APIs ou anuncios reais. A aprovacao do planejamento foi adicionada posteriormente na terceira entrega (`marketing-trafego-aprovacao.md`). Os botoes registram atividades realizadas fora do Core pelo operador; nao comprovam automaticamente os dados da plataforma.
+Esta etapa adiciona planejamento e acompanhamento ao pedido preparado. Nao cria propostas, cobranca, pagamentos, reserva de saldo, APIs ou anuncios reais. A aprovacao do planejamento foi adicionada como ajuste complementar (`marketing-trafego-aprovacao.md`). A terceira entrega cobre os passos 9 e 10: relatorios, encerramento e preparacao comercial (`marketing-trafego-entrega.md`). Os botoes registram atividades realizadas fora do Core pelo operador; nao comprovam automaticamente os dados da plataforma.
 
 ## Planejamento
 
@@ -19,7 +19,7 @@ Pedidos, campanhas do Studio e historico sao atualizados juntos em transacao. A 
 
 Registros por dia, com impressoes, cliques no link e visitas medidas, fonte e link de referencia. Nao informar valores acumulados de varios dias em um unico dia. Visitas nao medidas ficam nulas, e nao sao inferidas dos cliques. Atualizar um dia substitui aquele registro sem somar resultados duplicados. Totais e grafico de cliques sao compartilhados com o cliente.
 
-A data precisa estar no intervalo entre o inicio e a conclusao registrados no Core, sem dias futuros. Inicio/conclusao registram o momento da confirmacao do operador; nao sao sincronizados pela plataforma. Nenhum lead e importado.
+A data precisa estar no intervalo entre o inicio e a conclusao registrados no Core, sem dias futuros. Inicio/conclusao registram o momento da confirmacao do operador; nao sao sincronizados pela plataforma. Resultados podem ser conferidos depois da conclusao da veiculacao, mas ficam bloqueados quando a entrega e encerrada com o relatorio final. Nenhum lead e importado.
 
 ## Publicacao e testes
 

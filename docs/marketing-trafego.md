@@ -28,7 +28,7 @@ A etapa operacional manual seguinte esta documentada em `marketing-trafego-opera
 - Cada resposta do Studio abre a conversa para o cliente responder no painel. Solicitar ajustes tambem abre essa troca. As respostas de ambos os lados permanecem no historico, sem alterar o status ou criar campanhas.
 - Apenas o Studio pode encerrar a conversa. Enquanto estiver aberta, iniciar analise ou preparar campanha fica bloqueado. Uma nova resposta do Studio reabre a conversa; cancelamento ou recusa encerra a troca.
 - Pedidos antigos recebem o controle de conversa fechado por padrao; enviar uma nova resposta abre a conversa sem apagar mensagens anteriores.
-- Campanha preparada nao significa campanha aprovada, paga ou em veiculacao. A aprovacao do planejamento esta na terceira entrega (`marketing-trafego-aprovacao.md`). Fluxo financeiro e proposta comercial continuam adiados.
+- Campanha preparada nao significa campanha aprovada, paga ou em veiculacao. A aprovacao do planejamento e um ajuste complementar (`marketing-trafego-aprovacao.md`). A terceira entrega cobre relatorios, encerramento e preparacao comercial (`marketing-trafego-entrega.md`). Fluxo financeiro e proposta comercial continuam adiados.
 
 ## Dados e seguranca
 

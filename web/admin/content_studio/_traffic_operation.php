@@ -1,7 +1,14 @@
 <?php
 $operation=TrafficOperationsService::plan($pdo,$id);
 $reports=TrafficOperationsService::reports($pdo,$id);
-$trafficReportsEditable=true;
+$delivery=TrafficDeliveryService::find($pdo,$id);
+if ($delivery) {
+    $finalReport=TrafficDeliveryService::report($pdo,$id);
+    $operation=$finalReport['data']['plan']; $reports=$finalReport['data']['reports'];
+}
+$trafficReportUrl='traffic_report.php?id='.$id;
+$trafficReportsEditable=!$delivery;
+require dirname(__DIR__,3).'/modules/trafego/web/admin/trafego/delivery_view.php';
 require dirname(__DIR__,3).'/modules/trafego/web/admin/trafego/operation_view.php';
 $approval=TrafficApprovalService::latest($pdo,$id);
 $trafficApprovalEditable=false;
@@ -39,7 +46,7 @@ if (in_array($row['status'],['prepared','platform_rejected'],true)):
 <label class="traffic-check"><input type="checkbox" name="manual_confirmed" value="1" required>Confirmo que realizei ou verifiquei esta etapa na plataforma de anuncios.</label>
 <button class="c-btn-secondary" <?= !$operation || !empty($row['conversation_open']) || (in_array($row['status'],['prepared','platform_rejected'],true) && !TrafficApprovalService::isApproved($pdo,$row))?'disabled':'' ?>>Registrar etapa</button>
 </form></section><?php endif; ?>
-<?php if (in_array($row['status'],['active','paused','completed'],true)):
+<?php if (!$delivery && in_array($row['status'],['active','paused','completed'],true)):
     $reportDay=is_string($_GET['report_day'] ?? null) ? $_GET['report_day'] : date('Y-m-d');
     $reportData=[];
     foreach ($reports as $record) if ($record['report_date']===$reportDay) { $reportData=$record; break; }
@@ -53,3 +60,23 @@ if (in_array($row['status'],['prepared','platform_rejected'],true)):
 <label>Observacoes<textarea class="c-input" name="report_notes" rows="3" maxlength="3000"><?= trafficEscape($reportData['notes'] ?? '') ?></textarea></label>
 <button class="c-btn-secondary">Salvar resultados do dia</button>
 </form></section><?php endif; ?>
+<?php if ($row['status']==='completed' && !$delivery): ?>
+<section class="traffic-section"><h2>Encerramento da entrega</h2>
+<form class="traffic-form" method="post" action="/app/actions/content_studio/traffic_review.php">
+<?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><input type="hidden" name="decision" value="delivery_finalize">
+<label>Resumo final e limitacoes<textarea class="c-input" name="delivery_summary" rows="4" maxlength="5000" required></textarea></label>
+<label>Referencia final na plataforma<input class="c-input" name="delivery_evidence_url" type="url" maxlength="500" required></label>
+<label class="traffic-check"><input type="checkbox" name="delivery_confirmed" value="1" required>Conferi os resultados e o termino da veiculacao na plataforma. Confirmo o encerramento definitivo desta entrega.</label>
+<button class="c-btn-secondary" <?= !$reports || !empty($row['conversation_open'])?'disabled':'' ?>>Encerrar entrega e disponibilizar relatorio final</button>
+</form></section><?php endif; ?>
+<section class="traffic-section"><h2>Preparacao para uso comercial</h2><span class="c-badge">Operacao em testes</span>
+<dl class="traffic-details"><?php foreach ([
+    'Autorizacao do negocio'=>!empty($row['authorized_at'])?'Registrada':'Ausente',
+    'Aprovacao do planejamento'=>TrafficApprovalService::isApproved($pdo,$row)?'Registrada':'Nao registrada para a versao atual',
+    'Identificacao na plataforma'=>!empty($operation['external_campaign_id']) && !empty($operation['evidence_url'])?'Registrada':'Pendente',
+    'Resultados com fontes'=>count($reports)?'Registrados':'Pendentes',
+    'Encerramento da entrega'=>$delivery?'Registrado':'Pendente',
+    'Cobranca e pagamentos'=>'Fora desta entrega',
+    'Termos, atendimento e condicoes comerciais'=>'Pendentes de definicao',
+    'Liberacao para venda'=>'Pendente de validacao comercial',
+] as $label=>$value): ?><div><dt><?= trafficEscape($label) ?></dt><dd><?= trafficEscape($value) ?></dd></div><?php endforeach; ?></dl></section>

@@ -1,6 +1,6 @@
 # Trafego: aprovacao do planejamento
 
-Terceira entrega, sem financeiro, carteira, proposta comercial ou APIs. Aprovacao do planejamento nao publica anuncios, nao confirma pagamento nem garante aprovacao pela plataforma.
+Ajuste complementar de aprovacao, sem financeiro, carteira, proposta comercial ou APIs. A terceira entrega (passos 9 e 10) corresponde a relatorios, encerramento e preparacao para uso comercial, documentada em `marketing-trafego-entrega.md`. Aprovacao do planejamento nao publica anuncios, nao confirma pagamento nem garante aprovacao pela plataforma.
 
 ## Fluxo
 
