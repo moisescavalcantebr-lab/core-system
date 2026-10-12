@@ -12,6 +12,11 @@ const root = path.resolve(__dirname, '../..');
       for (const name of ['form', 'index', 'detail', 'core', 'core-detail']) {
         await page.setContent(fs.readFileSync(path.join(root, `_deploy/traffic-${name}-preview.html`), 'utf8'));
         if (name === 'form') {
+          if (!await page.locator('[data-guidance-field]').isVisible()) throw new Error('Campo de duvida oculto em orientacao');
+          await page.locator('select[name=platform]').selectOption('meta');
+          if (await page.locator('[data-guidance-field]').isVisible()) throw new Error('Campo de duvida visivel sem orientacao');
+          await page.locator('select[name=platform]').selectOption('recommend');
+          if (!await page.locator('[data-guidance-field]').isVisible()) throw new Error('Campo de duvida nao reapareceu');
           if (await page.locator('[data-page-field]').isVisible()) throw new Error('Seletor de pagina visivel para destino externo');
           await page.locator('#traffic-type').selectOption('page');
           if (!await page.locator('[data-page-field]').isVisible() || await page.locator('[data-url-field]').isVisible()) throw new Error('Alternancia de destino falhou');
@@ -19,6 +24,15 @@ const root = path.resolve(__dirname, '../..');
           if (!await page.locator('[data-url-field]').isVisible()) throw new Error('Link do WhatsApp oculto');
           const style = await page.locator('input[name=title]').evaluate(el => ({height: el.getBoundingClientRect().height, bg: getComputedStyle(el).backgroundColor}));
           if (style.height < 35 || style.bg === 'rgb(255, 255, 255)') throw new Error('Campo sem estilo');
+        }
+        if (name === 'core-detail') {
+          await page.locator('#traffic-message-template').selectOption('reviewing');
+          const message = page.locator('textarea[name=message]');
+          if (!await message.inputValue() || !await page.locator('button[value=reply]').isVisible()) throw new Error('Modelo ou resposta indisponivel');
+          await message.fill('Texto personalizado');
+          page.once('dialog', dialog => dialog.dismiss());
+          await page.locator('#traffic-message-template').selectOption('received');
+          if (await message.inputValue() !== 'Texto personalizado') throw new Error('Modelo sobrescreveu resposta sem confirmacao');
         }
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
         if (overflow) throw new Error(`Overflow em ${name} / ${width}`);

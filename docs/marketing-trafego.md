@@ -10,6 +10,7 @@ O modulo principal `trafego` envia solicitacoes ao Content Studio. Landing Pages
 - Contato usa nome/e-mail da conta administrativa ativa; telefone e negocio sao informados no briefing.
 - Confirmar autorizacao para representar o negocio antes de enviar. Este registro nao e verificacao documental ou fiscal.
 - Materiais sao referencias/textos/links nesta etapa, sem upload de anexos.
+- Ao escolher "Preciso de orientacao", aparece o campo de duvida. A pergunta e obrigatoria para enviar, mas pode ficar vazia em um rascunho. A duvida enviada aparece no briefing e no historico compartilhado.
 - O cliente pode editar rascunhos e pedidos devolvidos para ajustes. Solicitacoes em analise ficam bloqueadas para edicao.
 
 ## Core
@@ -19,6 +20,9 @@ O modulo principal `trafego` envia solicitacoes ao Content Studio. Landing Pages
 - Apos iniciar analise, preparar campanha cria uma unica campanha em rascunho, vinculada ao projeto e ao destino recebido.
 - Datas sao preferencias do cliente e nao confirmam agendamento na plataforma.
 - O retorno do operador e o historico sao compartilhados com o projeto.
+- "Enviar resposta" registra uma mensagem sem mudar o status ou criar campanha. Funciona em pedidos enviados, em analise, aguardando ajustes e preparados. O cliente consulta a resposta no painel; nao ha notificacao por e-mail nesta etapa.
+- Mensagens predefinidas sao selecionadas e editadas antes do envio. Selecionar um modelo nao envia mensagem nem altera o andamento; texto ja digitado so e substituido apos confirmacao.
+- "Iniciar analise" continua separado, podendo registrar uma resposta junto da mudanca de status.
 - Campanha preparada nao significa campanha aprovada, paga ou em veiculacao. O fluxo financeiro e a aprovacao de proposta pertencem a segunda entrega.
 
 ## Dados e seguranca

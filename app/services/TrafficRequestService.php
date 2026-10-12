@@ -9,10 +9,22 @@ final class TrafficRequestService
         'rejected' => 'Nao atendida', 'cancelled' => 'Cancelada',
     ];
     public const PLATFORMS = ['recommend' => 'Preciso de orientacao', 'meta' => 'Meta', 'google' => 'Google'];
+    public const MESSAGE_TEMPLATES = [
+        'received' => ['label'=>'Recebimento', 'message'=>'Recebemos sua solicitacao e vamos conferir as informacoes.'],
+        'guidance' => ['label'=>'Esclarecimento', 'message'=>'Para orientar a divulgacao, precisamos entender melhor seu publico e sua regiao.'],
+        'reviewing' => ['label'=>'Analise iniciada', 'message'=>'Estamos avaliando o destino e as opcoes de divulgacao.'],
+        'changes' => ['label'=>'Ajustes necessarios', 'message'=>'Precisamos dos ajustes abaixo para continuar:'],
+        'prepared' => ['label'=>'Preparacao concluida', 'message'=>'A campanha foi preparada em rascunho. Ainda nao esta em veiculacao.'],
+    ];
 
     public static function ensureSchema(PDO $pdo): void
     {
         $pdo->exec((string)file_get_contents(dirname(__DIR__).'/database/traffic_requests.sql'));
+        $column = $pdo->query("SHOW COLUMNS FROM content_studio_traffic_requests LIKE 'guidance_question'")->fetch();
+        if (!$column) {
+            try { $pdo->exec('ALTER TABLE content_studio_traffic_requests ADD COLUMN guidance_question TEXT NULL AFTER platform'); }
+            catch (PDOException $e) { if ((int)($e->errorInfo[1] ?? 0) !== 1060) throw $e; }
+        }
     }
 
     public static function projectId(PDO $pdo, array $config, string $slug): int
@@ -82,7 +94,7 @@ final class TrafficRequestService
     {
         $data = [];
         foreach (['title'=>160,'business_name'=>160,'contact_phone'=>40,'objective'=>120,'region'=>180,
-            'audience'=>3000,'language'=>60,'materials'=>3000,'notes'=>5000] as $key=>$limit) {
+            'audience'=>3000,'language'=>60,'materials'=>3000,'notes'=>5000,'guidance_question'=>3000] as $key=>$limit) {
             $data[$key] = self::text($post, $key, $limit);
         }
         if ($data['title'] === '') throw new InvalidArgumentException('Informe o titulo da solicitacao.');
@@ -134,6 +146,9 @@ final class TrafficRequestService
     {
         if ($projectId <= 0 || $actorId <= 0) throw new RuntimeException('Identificacao invalida.');
         if ($submit) {
+            if (($data['platform'] ?? '') === 'recommend' && trim((string)($data['guidance_question'] ?? '')) === '') {
+                throw new InvalidArgumentException('Informe sua duvida ou o que pretende alcancar para receber orientacao.');
+            }
             foreach (['business_name','objective','region','destination_url','contact_email'] as $key) {
                 if (($data[$key] ?? '') === '') throw new InvalidArgumentException('Preencha negocio, objetivo, regiao, destino e contato antes de enviar.');
             }
@@ -162,7 +177,9 @@ final class TrafficRequestService
                     ->execute(array_values($data));
                 $id = (int)$pdo->lastInsertId();
             }
-            self::event($pdo,$id,'project',$actorId,$status,$submit ? 'Solicitacao enviada para analise.' : 'Briefing salvo.');
+            $eventMessage = $submit ? 'Solicitacao enviada para analise.' : 'Briefing salvo.';
+            if ($submit && ($data['guidance_question'] ?? '') !== '') $eventMessage .= "\nDuvida do cliente: ".$data['guidance_question'];
+            self::event($pdo,$id,'project',$actorId,$status,$eventMessage);
             $pdo->commit(); return $id;
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     }
@@ -187,6 +204,15 @@ final class TrafficRequestService
         $pdo->beginTransaction();
         try {
             $row = self::find($pdo,$id,null,true); self::revision($row,$revision);
+            if ($decision === 'reply') {
+                if (!in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)) {
+                    throw new RuntimeException('Resposta indisponivel nesta etapa.');
+                }
+                if ($message === '') throw new InvalidArgumentException('Escreva uma resposta antes de enviar.');
+                $pdo->prepare('UPDATE content_studio_traffic_requests SET revision = revision + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$id]);
+                self::event($pdo,$id,'core',$actorId,$row['status'],$message);
+                $pdo->commit(); return;
+            }
             $allowed = ['submitted'=>['reviewing','changes_requested','rejected'], 'reviewing'=>['changes_requested','rejected','prepared']];
             if (!in_array($decision,$allowed[$row['status']] ?? [],true)) throw new RuntimeException('Transicao indisponivel.');
             if (in_array($decision,['changes_requested','rejected'],true) && $message === '') throw new InvalidArgumentException('Informe o motivo para o cliente.');

@@ -16,7 +16,7 @@ if (!$error && $editable && isset($_SESSION['traffic_form_input'])) {
     unset($_SESSION['traffic_form_input']);
     if ((int)($input['id'] ?? 0) === $id) {
         foreach (['title','business_name','contact_phone','objective','region','audience','language','materials','notes',
-            'destination_url','starts_at','ends_at','project_page_id'] as $key) {
+            'destination_url','starts_at','ends_at','project_page_id','guidance_question'] as $key) {
             if (isset($input[$key]) && is_string($input[$key])) $row[$key] = $input[$key];
         }
         if (is_string($input['platform'] ?? null) && isset(TrafficRequestService::PLATFORMS[$input['platform']])) $row['platform'] = $input['platform'];
@@ -36,6 +36,7 @@ ob_start();
 <div class="traffic-grid"><label>Titulo<input class="c-input" name="title" maxlength="160" required value="<?= trafficEscape($row['title'] ?? '') ?>"></label><label>Negocio / empresa<input class="c-input" name="business_name" maxlength="160" value="<?= trafficEscape($row['business_name'] ?? '') ?>"></label></div>
 <p>Responsavel: <?= trafficEscape($user['name']) ?> · <?= trafficEscape($user['email']) ?></p>
 <div class="traffic-grid"><label>Telefone de contato<input class="c-input" name="contact_phone" maxlength="40" value="<?= trafficEscape($row['contact_phone'] ?? '') ?>"></label><label>Plataforma<select class="c-input" name="platform"><?php foreach (TrafficRequestService::PLATFORMS as $value=>$label): ?><option value="<?= $value ?>" <?= $row['platform']===$value?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select></label></div>
+<label data-guidance-field>Qual e sua duvida ou o que pretende alcancar?<textarea class="c-input" name="guidance_question" rows="3" maxlength="3000"><?= trafficEscape($row['guidance_question'] ?? '') ?></textarea></label>
 <div class="traffic-grid"><label>Destino<select class="c-input" name="destination_type" id="traffic-type"><?php foreach (['external'=>'Link externo','page'=>'Landing Page do projeto','whatsapp'=>'WhatsApp'] as $value=>$label): ?><option value="<?= $value ?>" <?= $row['destination_type']===$value?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select></label><label data-page-field>Pagina publicada<select class="c-input" name="project_page_id"><option value="">Selecione</option><?php foreach ($pages as $page): ?><option value="<?= (int)$page['id'] ?>" <?= (int)($row['project_page_id']??0)===(int)$page['id']?'selected':'' ?>><?= trafficEscape($page['title']) ?></option><?php endforeach; ?></select></label></div>
 <label data-url-field>Link de destino<input class="c-input" name="destination_url" type="url" maxlength="500" value="<?= trafficEscape($row['destination_url'] ?? '') ?>"></label>
 <div class="traffic-grid"><label>Objetivo<input class="c-input" name="objective" maxlength="120" value="<?= trafficEscape($row['objective'] ?? '') ?>"></label><label>Regiao de divulgacao<input class="c-input" name="region" maxlength="180" value="<?= trafficEscape($row['region'] ?? '') ?>"></label></div>
@@ -46,10 +47,18 @@ ob_start();
 <label class="traffic-check"><input type="checkbox" name="authorized" value="1">Confirmo que posso representar este negocio e autorizar a divulgacao do destino e dos materiais informados.</label>
 <div class="traffic-actions"><button class="c-btn-secondary" name="action" value="save">Salvar rascunho</button><button class="c-btn-secondary" name="action" value="submit"><?= $row['status']==='changes_requested'?'Reenviar para analise':'Enviar para analise' ?></button></div>
 </form>
-<script>const type=document.getElementById('traffic-type');function destinationFields(){document.querySelector('[data-page-field]').hidden=type.value!=='page';document.querySelector('[data-url-field]').hidden=type.value==='page';}type.addEventListener('change',destinationFields);destinationFields();</script>
+<script>
+const type=document.getElementById('traffic-type');
+function destinationFields(){document.querySelector('[data-page-field]').hidden=type.value!=='page';document.querySelector('[data-url-field]').hidden=type.value==='page';}
+type.addEventListener('change',destinationFields);destinationFields();
+const platform=document.querySelector('select[name=platform]');
+function guidanceField(){document.querySelector('[data-guidance-field]').hidden=platform.value!=='recommend';}
+platform.addEventListener('change',guidanceField);guidanceField();
+</script>
 <?php else: ?>
 <dl class="traffic-details"><?php foreach (['title'=>'Titulo','business_name'=>'Negocio','destination_url'=>'Destino','objective'=>'Objetivo','region'=>'Regiao','audience'=>'Publico','language'=>'Idioma','starts_at'=>'Inicio desejado','ends_at'=>'Fim desejado','materials'=>'Materiais','notes'=>'Observacoes'] as $key=>$label): ?><div><dt><?= $label ?></dt><dd><?= trafficEscape($row[$key] ?: '-') ?></dd></div><?php endforeach; ?></dl>
 <?php endif; ?>
+<?php if (!$editable && !empty($row['guidance_question'])): ?><section class="traffic-section"><h2>Duvida enviada</h2><p style="white-space:pre-wrap"><?= trafficEscape($row['guidance_question']) ?></p></section><?php endif; ?>
 <?php if ($row['status']==='prepared'): ?><p class="traffic-notice">Campanha #<?= (int)$row['campaign_id'] ?> preparada em rascunho. Nenhum pagamento ou anuncio foi ativado.</p><?php endif; ?>
 <?php if ($id && in_array($row['status'],['draft','submitted','reviewing','changes_requested'],true)): ?><form class="traffic-section" method="post" action="<?= PROJECT_URL ?>/admin/trafego/save.php" onsubmit="return confirm('Cancelar esta solicitacao?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><button class="c-btn-secondary" name="action" value="cancel">Cancelar solicitacao</button></form><?php endif; ?>
 <?php if ($events): ?><section class="traffic-section"><h2>Historico</h2><ol class="traffic-events"><?php foreach ($events as $event): ?><li><small><?= trafficEscape($event['created_at']) ?> · <?= $event['actor_type']==='core'?'Content Studio':'Projeto' ?></small><p><?= trafficEscape($event['message']) ?></p></li><?php endforeach; ?></ol></section><?php endif; ?>

@@ -8,9 +8,10 @@ csrf_verify();
 $id=(int)($_POST['id']??0);
 try {
     ContentStudioService::ensureSchema($pdo); TrafficRequestService::ensureSchema($pdo);
+    $decision=TrafficRequestService::text($_POST,'decision',30);
     TrafficRequestService::review($pdo,$id,(int)($_SESSION['core_user']['id']??0),(int)($_POST['revision']??0),
-        TrafficRequestService::text($_POST,'decision',30),TrafficRequestService::text($_POST,'message',5000));
-    flash('success','Solicitacao atualizada.');
+        $decision,TrafficRequestService::text($_POST,'message',5000));
+    flash('success',$decision==='reply'?'Resposta enviada.':'Solicitacao atualizada.');
 } catch (Throwable $e) {
     error_log('Traffic review failed: '.$e->getMessage());
     flash('error', $e instanceof RuntimeException && !$e instanceof PDOException || $e instanceof InvalidArgumentException ? $e->getMessage() : 'Nao foi possivel atualizar a solicitacao.');

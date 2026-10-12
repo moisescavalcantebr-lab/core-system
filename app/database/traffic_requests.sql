@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS content_studio_traffic_requests (
     project_page_id INT UNSIGNED NULL,
     page_title VARCHAR(160) NULL,
     platform VARCHAR(20) NOT NULL DEFAULT 'recommend',
+    guidance_question TEXT NULL,
     objective VARCHAR(120) NOT NULL DEFAULT '',
     region VARCHAR(180) NOT NULL DEFAULT '',
     audience TEXT NULL,
