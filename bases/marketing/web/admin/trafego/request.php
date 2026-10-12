@@ -11,6 +11,11 @@ try {
     $pages = trafficPages($pdo);
 } catch (Throwable $e) { $error = $e instanceof RuntimeException && !$e instanceof PDOException ? $e->getMessage() : 'Nao foi possivel abrir a solicitacao.'; http_response_code(503); }
 $editable = in_array($row['status'],['draft','changes_requested'],true);
+$replyText = '';
+if (!$error && ($_SESSION['traffic_form_input']['action'] ?? '') === 'reply' && (int)($_SESSION['traffic_form_input']['id'] ?? 0) === $id) {
+    $replyText = is_string($_SESSION['traffic_form_input']['message'] ?? null) ? $_SESSION['traffic_form_input']['message'] : '';
+    unset($_SESSION['traffic_form_input']);
+}
 if (!$error && $editable && isset($_SESSION['traffic_form_input'])) {
     $input = $_SESSION['traffic_form_input'];
     unset($_SESSION['traffic_form_input']);
@@ -62,4 +67,11 @@ platform.addEventListener('change',guidanceField);guidanceField();
 <?php if ($row['status']==='prepared'): ?><p class="traffic-notice">Campanha #<?= (int)$row['campaign_id'] ?> preparada em rascunho. Nenhum pagamento ou anuncio foi ativado.</p><?php endif; ?>
 <?php if ($id && in_array($row['status'],['draft','submitted','reviewing','changes_requested'],true)): ?><form class="traffic-section" method="post" action="<?= PROJECT_URL ?>/admin/trafego/save.php" onsubmit="return confirm('Cancelar esta solicitacao?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>"><button class="c-btn-secondary" name="action" value="cancel">Cancelar solicitacao</button></form><?php endif; ?>
 <?php if ($events): ?><section class="traffic-section"><h2>Historico</h2><ol class="traffic-events"><?php foreach ($events as $event): ?><li><small><?= trafficEscape($event['created_at']) ?> · <?= $event['actor_type']==='core'?'Content Studio':'Projeto' ?></small><p><?= trafficEscape($event['message']) ?></p></li><?php endforeach; ?></ol></section><?php endif; ?>
+<?php if (!empty($row['conversation_open']) && in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)): ?>
+<form class="traffic-form traffic-section" method="post" action="<?= PROJECT_URL ?>/admin/trafego/save.php">
+<?= csrf_field() ?><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="revision" value="<?= (int)$row['revision'] ?>">
+<label>Sua resposta<textarea class="c-input" name="message" rows="4" maxlength="5000" required><?= trafficEscape($replyText) ?></textarea></label>
+<div class="traffic-actions"><button class="c-btn-secondary" name="action" value="reply">Enviar resposta</button></div>
+</form>
+<?php elseif ($id && in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)): ?><p class="traffic-notice">Conversa fechada. Aguardando retorno do Content Studio.</p><?php endif; ?>
 <?php endif; require __DIR__.'/style.php'; $content=ob_get_clean(); require APP_PATH.'/views/layout_admin.php'; ?>

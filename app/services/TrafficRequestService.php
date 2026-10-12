@@ -25,6 +25,10 @@ final class TrafficRequestService
             try { $pdo->exec('ALTER TABLE content_studio_traffic_requests ADD COLUMN guidance_question TEXT NULL AFTER platform'); }
             catch (PDOException $e) { if ((int)($e->errorInfo[1] ?? 0) !== 1060) throw $e; }
         }
+        if (!$pdo->query("SHOW COLUMNS FROM content_studio_traffic_requests LIKE 'conversation_open'")->fetch()) {
+            try { $pdo->exec('ALTER TABLE content_studio_traffic_requests ADD COLUMN conversation_open TINYINT(1) NOT NULL DEFAULT 0 AFTER status'); }
+            catch (PDOException $e) { if ((int)($e->errorInfo[1] ?? 0) !== 1060) throw $e; }
+        }
     }
 
     public static function projectId(PDO $pdo, array $config, string $slug): int
@@ -191,7 +195,7 @@ final class TrafficRequestService
         try {
             $row = self::find($pdo,$id,$projectId,true); self::revision($row,$revision);
             if (!in_array($row['status'],['draft','submitted','reviewing','changes_requested'],true)) throw new RuntimeException('Cancelamento indisponivel nesta etapa.');
-            $pdo->prepare("UPDATE content_studio_traffic_requests SET status = 'cancelled', revision = revision + 1 WHERE id = ?")->execute([$id]);
+            $pdo->prepare("UPDATE content_studio_traffic_requests SET status = 'cancelled', conversation_open = 0, revision = revision + 1 WHERE id = ?")->execute([$id]);
             self::event($pdo,$id,'project',$actorId,'cancelled','Solicitacao cancelada pelo projeto.');
             $pdo->commit();
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
@@ -204,17 +208,23 @@ final class TrafficRequestService
         $pdo->beginTransaction();
         try {
             $row = self::find($pdo,$id,null,true); self::revision($row,$revision);
-            if ($decision === 'reply') {
+            if (in_array($decision,['reply','close_conversation'],true)) {
                 if (!in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)) {
                     throw new RuntimeException('Resposta indisponivel nesta etapa.');
                 }
-                if ($message === '') throw new InvalidArgumentException('Escreva uma resposta antes de enviar.');
-                $pdo->prepare('UPDATE content_studio_traffic_requests SET revision = revision + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$id]);
+                if ($decision === 'reply' && $message === '') throw new InvalidArgumentException('Escreva uma resposta antes de enviar.');
+                if ($decision === 'close_conversation' && !(int)$row['conversation_open']) throw new RuntimeException('A conversa ja esta encerrada.');
+                $open = $decision === 'reply' ? 1 : 0;
+                $pdo->prepare('UPDATE content_studio_traffic_requests SET conversation_open = ?, revision = revision + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$open,$id]);
+                if ($decision === 'close_conversation') $message = ($message !== '' ? $message."\n" : '').'Conversa encerrada pelo Content Studio.';
                 self::event($pdo,$id,'core',$actorId,$row['status'],$message);
                 $pdo->commit(); return;
             }
             $allowed = ['submitted'=>['reviewing','changes_requested','rejected'], 'reviewing'=>['changes_requested','rejected','prepared']];
             if (!in_array($decision,$allowed[$row['status']] ?? [],true)) throw new RuntimeException('Transicao indisponivel.');
+            if (in_array($decision,['reviewing','prepared'],true) && (int)$row['conversation_open']) {
+                throw new RuntimeException('Encerre a conversa com o cliente antes de continuar a analise.');
+            }
             if (in_array($decision,['changes_requested','rejected'],true) && $message === '') throw new InvalidArgumentException('Informe o motivo para o cliente.');
             $campaignId = $row['campaign_id'];
             if ($decision === 'prepared') {
@@ -225,9 +235,26 @@ final class TrafficRequestService
                         'Solicitacao #'.$id.' | Plataforma: '.$row['platform'].' | Regiao: '.$row['region']."\n".$row['notes']]);
                 $campaignId = (int)$pdo->lastInsertId();
             }
-            $pdo->prepare('UPDATE content_studio_traffic_requests SET status = ?, campaign_id = ?, revision = revision + 1 WHERE id = ?')
-                ->execute([$decision,$campaignId,$id]);
+            $pdo->prepare('UPDATE content_studio_traffic_requests SET status = ?, campaign_id = ?, conversation_open = ?, revision = revision + 1 WHERE id = ?')
+                ->execute([$decision,$campaignId,$decision === 'rejected' ? 0 : ($decision === 'changes_requested' ? 1 : (int)$row['conversation_open']),$id]);
             self::event($pdo,$id,'core',$actorId,$decision,$message !== '' ? $message : ($decision === 'prepared' ? 'Campanha preparada em rascunho. Sem cobranca ou veiculacao.' : 'Analise iniciada.'));
+            $pdo->commit();
+        } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
+    }
+
+    public static function clientReply(PDO $pdo, int $id, int $projectId, int $actorId, int $revision, string $message): void
+    {
+        if ($projectId <= 0 || $actorId <= 0) throw new RuntimeException('Identificacao invalida.');
+        $message = self::text(['message'=>$message],'message',5000);
+        if ($message === '') throw new InvalidArgumentException('Escreva sua resposta antes de enviar.');
+        $pdo->beginTransaction();
+        try {
+            $row = self::find($pdo,$id,$projectId,true); self::revision($row,$revision);
+            if (!(int)$row['conversation_open'] || !in_array($row['status'],['submitted','reviewing','changes_requested','prepared'],true)) {
+                throw new RuntimeException('A conversa nao esta aberta para respostas.');
+            }
+            $pdo->prepare('UPDATE content_studio_traffic_requests SET revision = revision + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$id]);
+            self::event($pdo,$id,'project',$actorId,$row['status'],$message);
             $pdo->commit();
         } catch (Throwable $e) { $pdo->rollBack(); throw $e; }
     }

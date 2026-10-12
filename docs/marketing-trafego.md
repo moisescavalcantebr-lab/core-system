@@ -23,6 +23,9 @@ O modulo principal `trafego` envia solicitacoes ao Content Studio. Landing Pages
 - "Enviar resposta" registra uma mensagem sem mudar o status ou criar campanha. Funciona em pedidos enviados, em analise, aguardando ajustes e preparados. O cliente consulta a resposta no painel; nao ha notificacao por e-mail nesta etapa.
 - Mensagens predefinidas sao selecionadas e editadas antes do envio. Selecionar um modelo nao envia mensagem nem altera o andamento; texto ja digitado so e substituido apos confirmacao.
 - "Iniciar analise" continua separado, podendo registrar uma resposta junto da mudanca de status.
+- Cada resposta do Studio abre a conversa para o cliente responder no painel. Solicitar ajustes tambem abre essa troca. As respostas de ambos os lados permanecem no historico, sem alterar o status ou criar campanhas.
+- Apenas o Studio pode encerrar a conversa. Enquanto estiver aberta, iniciar analise ou preparar campanha fica bloqueado. Uma nova resposta do Studio reabre a conversa; cancelamento ou recusa encerra a troca.
+- Pedidos antigos recebem o controle de conversa fechado por padrao; enviar uma nova resposta abre a conversa sem apagar mensagens anteriores.
 - Campanha preparada nao significa campanha aprovada, paga ou em veiculacao. O fluxo financeiro e a aprovacao de proposta pertencem a segunda entrega.
 
 ## Dados e seguranca

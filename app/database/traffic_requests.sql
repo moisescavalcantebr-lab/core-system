@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS content_studio_traffic_requests (
     notes TEXT NULL,
     authorized_at DATETIME NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'draft',
+    conversation_open TINYINT(1) NOT NULL DEFAULT 0,
     revision INT UNSIGNED NOT NULL DEFAULT 1,
     campaign_id INT UNSIGNED NULL,
     submitted_at DATETIME NULL,
