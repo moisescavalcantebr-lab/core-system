@@ -190,7 +190,7 @@ function eqSetPeriod(PDO $pdo, int $owner, string $month, string $operation, int
 function eqNormalizeReading(array $input): array
 {
     $data = ['reason_id' => eqId($input['reason_id'] ?? ''), 'work_date' => eqDate($input['work_date'] ?? ''), 'notes' => eqText($input['notes'] ?? '', 1000, 'Observacoes')];
-    foreach (['total', 'executed', 'sent', 'lis', 'leit'] as $key) $data[$key] = eqInteger($input[$key] ?? '', $key, $key !== 'total');
+    foreach (['total', 'executed', 'sent', 'lis', 'leit'] as $key) $data[$key] = eqInteger($input[$key] ?? '', match ($key) { 'lis'=>'LIS-S', 'leit'=>'LIS-N', default=>$key }, $key !== 'total');
     if ($data['executed'] !== null && $data['executed'] > $data['total']) throw new InvalidArgumentException('Executadas nao podem superar o total.');
     if ($data['sent'] !== null && ($data['executed'] === null || $data['sent'] > $data['executed'])) throw new InvalidArgumentException('Informe executadas antes de enviadas; enviadas nao podem superar executadas.');
     return $data;

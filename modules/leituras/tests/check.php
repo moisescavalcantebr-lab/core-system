@@ -40,6 +40,17 @@ eqCheck(eqAnalytics([$record,array_replace($previous,['lis'=>0])],'2026-10')['de
 eqCheck(array_keys(eqAnalytics([],'2026-03')['months'])[10]==='2026-02','Calendario sem salto.');
 ob_start(); eqReport($stats); $html=ob_get_clean();
 eqCheck(str_contains($html,'0/1 dias informados') && str_contains($html,'Producao mensal'),'Renderizacao e cobertura.');
+eqCheck(str_contains($html,'LIS-S - com impressao') && str_contains($html,'LIS-N - sem impressao'),'Novos nomes no resumo.');
+eqCheck(str_contains($html,' / LIS-S:') && str_contains($html,' / LIS-N:'),'Novos nomes nos graficos.');
+eqCheck(!preg_match('/>LIS<|>LEIT<|LEIT - sem impressao/',$html),'Rotulos antigos no relatorio.');
+ob_start(); eqReadingTable(eqAnalytics([],'2026-10'),'?',true); $table=ob_get_clean();
+eqCheck(str_contains($table,'<th>LIS-S</th>') && str_contains($table,'<th>LIS-N</th>'),'Novos nomes na tabela diaria.');
+ob_start(); eqReadingTable(eqAnalytics([array_replace($record,['id'=>1,'reason_number'=>'22','location'=>'Jaiara'])],'2026-10'),'?',true); $table=ob_get_clean();
+eqCheck(str_contains($table,'data-label="LIS-S">400') && str_contains($table,'data-label="LIS-N">100'),'Rotulos e valores preservados no celular.');
+foreach (['lis'=>'LIS-S','leit'=>'LIS-N'] as $key=>$label) {
+    try { eqNormalizeReading(array_replace($input,[$key=>'-1'])); throw new LogicException('Referencia negativa aceita.'); }
+    catch (InvalidArgumentException $error) { eqCheck(str_contains($error->getMessage(),$label),'Novo nome na mensagem de validacao.'); }
+}
 echo "Leituras: validacao, estados, referencias independentes, cobertura e comparacao OK.\n";
 if (getenv('LEITURAS_MYSQL_TEST')==='1') {
     $db='leituras_verify_'.bin2hex(random_bytes(5));

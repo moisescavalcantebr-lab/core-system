@@ -2,7 +2,7 @@
   "name": "leituras",
   "label": "Leituras",
   "description": "Producao diaria de leituras, razoes reutilizaveis e comparacao mensal.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "project",
   "kind": "main",
   "access_scope": "free",
