@@ -82,8 +82,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 csrf_verify();
+require_once __DIR__ . '/formations_helpers.php';
+teamEnsureFormationsSchema($pdo);
 
 $playerId = (int)($_POST['player_id'] ?? 0);
+$teamKey = (string)($_POST['team_key'] ?? 'time_1');
+if (!in_array($teamKey, ['time_1', 'time_2'], true)) {
+    http_response_code(422);
+    exit('Time invalido.');
+}
 $role = in_array($_POST['roster_role'] ?? '', ['player', 'captain'], true) ? $_POST['roster_role'] : 'player';
 
 if ($playerId <= 0) {
@@ -363,7 +370,20 @@ function teamCandidateSlotsWithSecondary(array $player, array $fieldLimits, stri
     return array_values($unique);
 }
 
-$team = $pdo->query("SELECT team_type, custom_slots_json FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+$pdo->beginTransaction();
+$team = $pdo->query("SELECT team_type, custom_slots_json, formations_count FROM team_profile WHERE id = 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC) ?: [];
+if ($teamKey === 'time_2' && (int)($team['formations_count'] ?? 1) !== 2) {
+    $pdo->rollBack();
+    flash('error', 'Ative o segundo time antes de adicionar jogadores.');
+    redirect(PROJECT_URL . '/admin/meu_time/index.php');
+}
+$assigned = $pdo->prepare("SELECT id FROM team_roster WHERE player_id = ? AND status = 'active' AND slot_group IS NOT NULL");
+$assigned->execute([$playerId]);
+if ($assigned->fetchColumn()) {
+    $pdo->rollBack();
+    flash('error', 'Jogador ja esta em campo. Retire-o antes de mudar de time.');
+    redirect(PROJECT_URL . '/admin/meu_time/index.php');
+}
 $teamType = (string)($team['team_type'] ?? 'field');
 $customSlotsJson = (string)($team['custom_slots_json'] ?? '');
 $fieldLimits = teamFieldLimits($teamType, $customSlotsJson);
@@ -389,11 +409,13 @@ $stmt->execute([$playerId]);
 $player = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$player) {
+    $pdo->rollBack();
     flash('error', 'Jogador nao encontrado.');
     redirect(PROJECT_URL . '/admin/meu_time/index.php');
 }
 
 if (($player['status'] ?? '') !== 'active') {
+    $pdo->rollBack();
     flash('error', 'Apenas jogadores ativos podem entrar no elenco.');
     redirect(PROJECT_URL . '/admin/meu_time/index.php');
 }
@@ -402,19 +424,23 @@ $positionKey = teamPositionKey($player['position_name'] ?? '', $player['group_ke
 $candidateSlots = teamCandidateSlotsWithSecondary($player, $fieldLimits, $teamType, $customSlotsJson);
 
 if (!teamIsReservePosition($player) && !isset($fieldLimits[$positionKey]) && empty($candidateSlots)) {
+    $pdo->rollBack();
     flash('error', 'A posicao principal e a secundaria nao fazem parte do campo atual. Ajuste a posicao do jogador para adicionar.');
     redirect(PROJECT_URL . '/admin/meu_time/index.php');
 }
 
-$activeRoster = $pdo->query("
+$activeRosterQuery = $pdo->prepare("
     SELECT tr.player_id, tr.slot_group, tr.slot_index, pp.name AS position_name, pp.code AS position_code, pp.group_key
     FROM team_roster tr
     INNER JOIN players p ON p.id = tr.player_id
     LEFT JOIN player_positions pp ON pp.id = p.position_id
     WHERE tr.status = 'active'
+      AND tr.team_key = ?
       AND p.status = 'active'
     ORDER BY COALESCE(tr.updated_at, tr.created_at) ASC, tr.id ASC
-")->fetchAll(PDO::FETCH_ASSOC);
+");
+$activeRosterQuery->execute([$teamKey]);
+$activeRoster = $activeRosterQuery->fetchAll(PDO::FETCH_ASSOC);
 
 $occupiedSlots = [];
 
@@ -453,15 +479,17 @@ if ($newSlotGroup === null || $newSlotIndex === null) {
 }
 
 $stmt = $pdo->prepare("
-    INSERT INTO team_roster (player_id, roster_role, status, slot_group, slot_index)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO team_roster (player_id, roster_role, status, slot_group, slot_index, team_key)
+    VALUES (?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
         roster_role = VALUES(roster_role),
         status = VALUES(status),
         slot_group = VALUES(slot_group),
-        slot_index = VALUES(slot_index)
+        slot_index = VALUES(slot_index),
+        team_key = VALUES(team_key)
 ");
-$stmt->execute([$playerId, $role, $status, $newSlotGroup, $newSlotIndex]);
+$stmt->execute([$playerId, $role, $status, $newSlotGroup, $newSlotIndex, $teamKey]);
+$pdo->commit();
 
-flash('success', $status === 'active' ? 'Jogador adicionado ao campo.' : 'Vaga ocupada. Jogador mantido na reserva.');
+flash('success', $status === 'active' ? 'Jogador adicionado ao campo.' : 'Vaga ocupada. Jogador continua disponivel.');
 redirect(PROJECT_URL . '/admin/meu_time/index.php');

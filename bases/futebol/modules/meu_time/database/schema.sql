@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS team_profile (
     team_type ENUM('futsal','society','beach','field','other') DEFAULT 'field',
     starters_count INT DEFAULT 11,
     reserves_count INT DEFAULT 7,
+    formations_count TINYINT UNSIGNED NOT NULL DEFAULT 1,
     city VARCHAR(100) NULL,
     venue VARCHAR(150) NULL,
     primary_color VARCHAR(20) NULL,
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS team_profile (
 CREATE TABLE IF NOT EXISTS team_roster (
     id INT AUTO_INCREMENT PRIMARY KEY,
     player_id INT NOT NULL,
+    team_key ENUM('time_1','time_2') NOT NULL DEFAULT 'time_1',
     status ENUM('active','inactive') DEFAULT 'active',
     slot_group VARCHAR(40) NULL,
     slot_index INT NULL,

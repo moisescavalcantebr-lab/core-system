@@ -118,6 +118,8 @@ function teamEnsurePlayerSchema(PDO $pdo): void
 
 teamEnsurePlayerSchema($pdo);
 teamEnsureRosterSlotSchema($pdo);
+require_once __DIR__ . '/formations_helpers.php';
+teamEnsureFormationsSchema($pdo);
 
 $positionsHelperPath = __DIR__ . '/../jogadores/positions_helper.php';
 if (file_exists($positionsHelperPath)) {
@@ -130,6 +132,7 @@ if (file_exists($positionsHelperPath)) {
 $pdo->exec("INSERT INTO team_profile (id, name) VALUES (1, 'Meu Time') ON DUPLICATE KEY UPDATE id = id");
 
 $team = $pdo->query("SELECT * FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+$formationKeys = (int)($team['formations_count'] ?? 1) === 2 ? ['time_1', 'time_2'] : ['time_1'];
 
 $allPositions = [];
 try {
@@ -557,7 +560,16 @@ $groupedReserveRoster = [
     'reserva' => [],
 ];
 
+$formationFields = [];
+foreach ($formationKeys as $formationKey) {
+$rosterByPosition = [];
+$occupiedSlotKeys = [];
+$fallbackSlotCounts = [];
+$fieldPlayers = [];
 foreach ($roster as $member) {
+    if (($member['team_key'] ?? 'time_1') !== $formationKey) {
+        continue;
+    }
     if (($member['status'] ?? '') !== 'active') {
         $reserveRoster[] = $member;
         continue;
@@ -627,6 +639,14 @@ foreach ($slotMap as $key => $slots) {
     }
 }
 
+$formationFields[$formationKey] = ['players' => $fieldPlayers, 'occupied' => $occupiedSlotKeys];
+}
+$fieldPlayers = array_merge(...array_column($formationFields, 'players'));
+foreach ($roster as $member) {
+    if (!in_array($member['team_key'] ?? 'time_1', $formationKeys, true)) {
+        $reserveRoster[] = $member;
+    }
+}
 foreach ($reserveRoster as $member) {
     if ($teamType !== 'custom' && !teamPlayerHasCompatiblePosition($member, $allowedPositionPrefixes)) {
         continue;
@@ -741,6 +761,11 @@ ob_start();
         </div>
 
         <div class="c-team-header-actions">
+            <form action="<?= PROJECT_URL ?>/admin/meu_time/formations_save.php" method="POST" class="c-team-formations-toggle" data-second-team-active="<?= count($formationKeys) === 2 ? '1' : '0' ?>">
+                <?= csrf_field(); ?>
+                <label title="Ao desativar, os jogadores do Time 2 voltam aos disponiveis"><input type="checkbox" name="second_team" value="1" <?= count($formationKeys) === 2 ? 'checked' : '' ?>> Segundo time</label>
+                <button class="c-btn-secondary" type="submit" title="Aplicar quantidade de times">Aplicar</button>
+            </form>
             <a href="<?= PROJECT_URL ?>/admin/meu_time/config.php" class="c-btn-secondary">
                 Configurar Time
             </a>
@@ -751,8 +776,10 @@ ob_start();
         <?php flash_show(); ?>
 
         <div class="c-team-layout">
+            <div class="c-team-fields">
+            <?php foreach ($formationFields as $formationKey => $formationField): ?>
             <div class="c-card c-team-field-card">
-                <h3>Elenco titular</h3>
+                <h3><?= $formationKey === 'time_1' ? 'Time 1' : 'Time 2' ?> <small><?= count($formationField['players']) ?>/<?= $startersCount ?></small></h3>
 
                 <div class="c-team-field c-team-field--<?= htmlspecialchars($teamType) ?>">
                     <label class="c-team-toggle-x">
@@ -771,7 +798,7 @@ ob_start();
 
                     <?php foreach ($slotMap as $positionKey => $slots): ?>
                         <?php foreach ($slots as $slotIndex => $slot): ?>
-                            <?php $isSlotOccupied = isset($occupiedSlotKeys[$positionKey . ':' . $slotIndex]); ?>
+                            <?php $isSlotOccupied = isset($formationField['occupied'][$positionKey . ':' . $slotIndex]); ?>
                             <?php if ($isSlotOccupied): ?>
                                 <?php continue; ?>
                             <?php endif; ?>
@@ -792,7 +819,7 @@ ob_start();
                         <?php endforeach; ?>
                     <?php endforeach; ?>
 
-                    <?php foreach ($fieldPlayers as $fieldPlayer): ?>
+                    <?php foreach ($formationField['players'] as $fieldPlayer): ?>
                         <div class="c-team-token" style="left:<?= (int)$fieldPlayer['x'] ?>%;top:<?= (int)$fieldPlayer['y'] ?>%;">
                                 <?= teamAvatarHtml($fieldPlayer['avatar'] ?? null, $fieldPlayer['name'], 'c-team-token-avatar') ?>
                                 <strong title="<?= htmlspecialchars($fieldPlayer['name']) ?>"><?= htmlspecialchars($fieldPlayer['name']) ?></strong>
@@ -807,9 +834,11 @@ ob_start();
 
                 </div>
 
+            <?php endforeach; ?>
+            </div>
             <div class="c-team-left-column">
                 <div class="c-card c-team-reserve-card">
-                    <h3>Elenco reserva</h3>
+                    <h3>Jogadores disponíveis</h3>
 
                     <div class="c-team-position-groups">
                         <?php foreach ($cardPlayersByPosition as $positionKey => $positionPlayers): ?>
@@ -824,11 +853,16 @@ ob_start();
                                             <?= csrf_field(); ?>
                                             <input type="hidden" name="player_id" value="<?= (int)$player['id'] ?>">
                                             <input type="hidden" name="roster_role" value="player">
-                                            <button class="c-team-avatar-card" title="Adicionar <?= htmlspecialchars($player['name']) ?>">
+                                            <div class="c-team-avatar-card">
                                                 <?= teamAvatarHtml($player['avatar'] ?? null, $player['name'], 'c-team-avatar-initial') ?>
                                                 <span><?= htmlspecialchars($player['name']) ?></span>
                                                 <small><?= htmlspecialchars(teamPositionDisplay($player['position_code'] ?? null)) ?></small>
-                                            </button>
+                                                <div class="c-team-assign-actions">
+                                                <?php foreach ($formationKeys as $targetKey): ?>
+                                                    <button type="submit" name="team_key" value="<?= $targetKey ?>" class="c-btn-secondary" title="Adicionar ao <?= $targetKey === 'time_1' ? 'Time 1' : 'Time 2' ?>"><?= $targetKey === 'time_1' ? '1' : '2' ?> +</button>
+                                                <?php endforeach; ?>
+                                                </div>
+                                            </div>
                                         </form>
                                     <?php endforeach; ?>
 
@@ -860,15 +894,15 @@ ob_start();
                         </div>
                         <div>
                             <span>Planejado</span>
-                            <strong><?= $startersCount ?> titulares + <?= $reservesCount ?> reservas</strong>
+                            <strong><?= count($formationKeys) ?> time(s), <?= $startersCount ?> por campo</strong>
                         </div>
                         <div>
                             <span>Em campo</span>
                             <strong><?= count($fieldPlayers) ?></strong>
                         </div>
                         <div>
-                            <span>Reservas</span>
-                            <strong><?= count($reserveRoster) ?></strong>
+                            <span>Disponíveis</span>
+                            <strong><?= array_sum(array_map('count', $cardPlayersByPosition)) ?></strong>
                         </div>
                     </div>
                 </div>
@@ -884,11 +918,20 @@ body:has(.c-team-page) .c-layout {
 
 .c-team-layout {
     display: grid;
-    grid-template-columns: minmax(270px, .62fr) minmax(500px, 1.38fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     align-items: start;
     --team-field-height: clamp(230px, 23vw, 286px);
 }
+
+.c-team-fields { display: grid; grid-template-columns: repeat(<?= count($formationKeys) ?>, minmax(0, 1fr)); gap: 20px; }
+.c-team-fields > .c-card { background: transparent; border: 0; padding: 0; min-width: 0; }
+.c-team-fields .c-team-field { width: 100%; max-width: 360px; margin: 0 auto; }
+.c-team-formations-toggle, .c-team-assign-actions { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.c-team-formations-toggle label { display: flex; align-items: center; gap: 6px; }
+.c-team-assign-actions { grid-column: 1 / -1; }
+.c-team-assign-actions button { min-width: 28px; min-height: 28px; }
+@media (max-width: 680px) { .c-team-fields { grid-template-columns: minmax(0, 1fr); } }
 
 .c-team-header-actions {
     display: flex;
@@ -1436,7 +1479,7 @@ img.c-team-token-avatar {
 
 @media (max-width: 1220px) {
     .c-team-layout {
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .c-team-info-card {
@@ -1512,10 +1555,25 @@ img.c-team-token-avatar {
         min-height: 62px;
     }
 }
+.c-team-reserve-card .c-team-position-groups {
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+.c-team-reserve-card .c-team-avatar-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+}
+.c-team-assign-actions { gap: 4px; }
+.c-team-assign-actions button { white-space: nowrap; padding: 3px 6px; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const formationsForm = document.querySelector('.c-team-formations-toggle');
+    formationsForm?.addEventListener('submit', function (event) {
+        if (formationsForm.dataset.secondTeamActive === '1' && !formationsForm.elements.second_team.checked
+            && !window.confirm('Desativar o Time 2 e devolver seus jogadores aos disponiveis?')) {
+            event.preventDefault();
+        }
+    });
     const page = document.querySelector('.c-team-page');
     const toggles = Array.from(document.querySelectorAll('[data-team-hide-x]'));
     const storageKey = 'meuTime.hideFieldActions:' + window.location.pathname.split('/web/admin/')[0];

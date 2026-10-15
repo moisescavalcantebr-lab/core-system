@@ -60,11 +60,11 @@ if ($id > 0) {
     if ($mode === 'elenco') {
         $stmt = $pdo->prepare("DELETE FROM team_roster WHERE id = ?");
         $stmt->execute([$id]);
-        flash('success', 'Jogador retirado das reservas e voltou para o elenco.');
+        flash('success', 'Jogador voltou aos disponiveis.');
     } else {
         $stmt = $pdo->prepare("UPDATE team_roster SET status = 'inactive', slot_group = NULL, slot_index = NULL WHERE id = ?");
         $stmt->execute([$id]);
-        flash('success', 'Jogador retirado do campo e voltou para reservas.');
+        flash('success', 'Jogador retirado do campo e voltou aos disponiveis.');
     }
 } else {
     flash('error', 'Jogador nao encontrado no elenco.');
