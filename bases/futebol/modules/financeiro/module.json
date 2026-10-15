@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "type": "project",
   "kind": "main",
+  "access_scope": "free",
   "status": "draft",
   "category": "Financeiro",
   "segments": ["geral", "esporte", "igreja", "loja"],

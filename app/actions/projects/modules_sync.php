@@ -5,8 +5,10 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/bootstrap.php';
 require APP_PATH . '/helpers/auth.php';
+require_once APP_PATH . '/helpers/module_sync.php';
 
 requireAdmin();
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }
 csrf_verify();
 
 $projectId = (int)($_POST['id'] ?? 0);
@@ -43,150 +45,6 @@ function redirectProjectModulesSync(int $projectId, string $status): void
 {
     header("Location: /web/admin/projects/view.php?id={$projectId}&{$status}=1");
     exit;
-}
-
-function ensureSyncDirectory(string $directory): void
-{
-    if (is_dir($directory)) {
-        return;
-    }
-
-    if (!@mkdir($directory, 0755, true) && !is_dir($directory)) {
-        throw new RuntimeException('Nao foi possivel criar a pasta: ' . $directory);
-    }
-}
-
-function copyModuleFile(string $sourceFile, string $destinationFile): bool
-{
-    if (is_file($destinationFile) && md5_file($sourceFile) === md5_file($destinationFile)) {
-        return false;
-    }
-
-    $destinationDir = dirname($destinationFile);
-    ensureSyncDirectory($destinationDir);
-
-    if (is_file($destinationFile) && !is_writable($destinationFile)) {
-        if (!@unlink($destinationFile)) {
-            throw new RuntimeException('Sem permissao para substituir o arquivo: ' . $destinationFile);
-        }
-    }
-
-    if (!@copy($sourceFile, $destinationFile)) {
-        throw new RuntimeException('Falha ao copiar arquivo: ' . $destinationFile);
-    }
-
-    @chmod($destinationFile, 0644);
-
-    return true;
-}
-
-function syncModuleFolder(string $source, string $destination): void
-{
-    if (!is_dir($source)) {
-        return;
-    }
-
-    ensureSyncDirectory($destination);
-
-    foreach (scandir($source) as $file) {
-        if ($file === '.' || $file === '..') {
-            continue;
-        }
-
-        $sourceFile = $source . '/' . $file;
-        $destinationFile = $destination . '/' . $file;
-
-        if (is_dir($sourceFile)) {
-            syncModuleFolder($sourceFile, $destinationFile);
-            continue;
-        }
-
-        copyModuleFile($sourceFile, $destinationFile);
-    }
-}
-
-function syncRefreshInstalledBaseModules(string $basePath): void
-{
-    $baseModulesPath = $basePath . '/modules';
-    $rootModulesPath = ROOT_PATH . '/modules';
-
-    if (!is_dir($baseModulesPath) || !is_dir($rootModulesPath)) {
-        return;
-    }
-
-    foreach (scandir($baseModulesPath) ?: [] as $moduleSlug) {
-        if ($moduleSlug === '.' || $moduleSlug === '..') {
-            continue;
-        }
-
-        $baseModulePath = $baseModulesPath . '/' . $moduleSlug;
-        $rootModulePath = $rootModulesPath . '/' . $moduleSlug;
-        $manifestPath = $baseModulePath . '/module.json';
-        $rootManifestPath = $rootModulePath . '/module.json';
-
-        if (!is_file($manifestPath) || !is_file($rootManifestPath)) {
-            continue;
-        }
-
-        syncRefreshModuleFiles($rootModulePath, $baseModulePath);
-
-        $manifest = json_decode((string)file_get_contents($rootManifestPath), true);
-        if (!is_array($manifest)) {
-            continue;
-        }
-
-        foreach (($manifest['copy'] ?? []) as $copy) {
-            if (!is_array($copy)) {
-                continue;
-            }
-
-            $from = trim((string)($copy['from'] ?? ''), '/');
-            $to = trim((string)($copy['to'] ?? ''), '/');
-
-            if ($from === '' || $to === '' || str_contains($from, '..') || str_contains($to, '..')) {
-                continue;
-            }
-
-            $sourcePath = $rootModulePath . '/' . $from;
-            $destinationPath = $basePath . '/' . $to;
-
-            if (is_dir($sourcePath)) {
-                syncRefreshModuleFiles($sourcePath, $destinationPath);
-            } elseif (is_file($sourcePath)) {
-                copyModuleFile($sourcePath, $destinationPath);
-            }
-        }
-    }
-}
-
-function syncRefreshModuleFiles(string $source, string $destination): void
-{
-    if (!is_dir($source)) {
-        return;
-    }
-
-    ensureSyncDirectory($destination);
-
-    foreach (scandir($source) ?: [] as $file) {
-        if ($file === '.' || $file === '..') {
-            continue;
-        }
-
-        $sourceFile = $source . '/' . $file;
-        $destinationFile = $destination . '/' . $file;
-        $normalizedSourceFile = str_replace('\\', '/', $sourceFile);
-
-        if (str_ends_with($normalizedSourceFile, '/database/schema.sql')) {
-            continue;
-        }
-
-        if (is_dir($sourceFile)) {
-            syncRefreshModuleFiles($sourceFile, $destinationFile);
-            continue;
-        }
-
-        copyModuleFile($sourceFile, $destinationFile);
-    }
 }
 
 function safeModuleSlug(string $slug): string
@@ -234,29 +92,29 @@ function executeModuleSchema(?PDO $projectPdo, string $schemaPath): void
     $projectPdo->exec($sql);
 }
 
-syncRefreshInstalledBaseModules($basePath);
-
-$availableModules = [];
-
-foreach (scandir($baseModulesPath) as $moduleSlug) {
-    if ($moduleSlug === '.' || $moduleSlug === '..') {
-        continue;
-    }
-
-    if (is_file($baseModulesPath . '/' . $moduleSlug . '/module.json')) {
-        $availableModules[] = $moduleSlug;
-    }
-}
-
-if ($mode === 'all') {
-    $selectedModules = $availableModules;
-}
-
-$selectedModules = array_values(array_unique(array_map('safeModuleSlug', $selectedModules)));
-$projectPdo = projectDatabaseConnection($project);
 $syncedModules = [];
 
 try {
+    syncRefreshInstalledBaseModules($basePath);
+
+    $availableModules = [];
+
+    foreach (scandir($baseModulesPath) as $moduleSlug) {
+        if ($moduleSlug === '.' || $moduleSlug === '..') {
+            continue;
+        }
+
+        if (is_file($baseModulesPath . '/' . $moduleSlug . '/module.json')) {
+            $availableModules[] = $moduleSlug;
+        }
+    }
+
+    if ($mode === 'all') {
+        $selectedModules = $availableModules;
+    }
+
+    $selectedModules = array_values(array_unique(array_map('safeModuleSlug', $selectedModules)));
+    $projectPdo = projectDatabaseConnection($project);
     foreach ($selectedModules as $moduleSlug) {
         if (!in_array($moduleSlug, $availableModules, true)) {
             continue;
@@ -303,14 +161,17 @@ try {
         $syncedModules[] = $manifest['label'] ?? $moduleSlug;
     }
 } catch (Throwable $e) {
-    $pdo->prepare("
-        INSERT INTO project_logs (project_id, action, message, level)
-        VALUES (:project_id, 'modules_sync', :message, 'error')
-    ")->execute([
-        'project_id' => $projectId,
-        'message' => $e->getMessage(),
-    ]);
-
+    error_log('Module synchronization failed: ' . $e->getMessage());
+    try {
+        $pdo->prepare("
+            INSERT INTO project_logs (project_id, action, message, level)
+            VALUES (:project_id, 'modules_sync', :message, 'error')
+        ")->execute([
+            'project_id' => $projectId,
+            'message' => $e->getMessage(),
+        ]);
+    } catch (Throwable $logError) { error_log('Module synchronization log failed: ' . $logError->getMessage()); }
+    flash('error', 'Nao foi possivel sincronizar os modulos. Confira as permissoes das pastas da base e do projeto e consulte os logs.');
     redirectProjectModulesSync($projectId, 'modules_sync_error');
 }
 
@@ -326,4 +187,5 @@ $pdo->prepare("
     'message' => $message,
 ]);
 
+flash('success', $message);
 redirectProjectModulesSync($projectId, 'modules_synced');

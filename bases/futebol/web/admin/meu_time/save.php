@@ -58,11 +58,11 @@ $currentTeam = $pdo->query("SELECT custom_slots_json FROM team_profile WHERE id 
 $currentCustomSlotsJson = $currentTeam['custom_slots_json'] ?? null;
 $teamType = 'custom';
 $setupByType = [
-    'field' => ['starters' => 11, 'reserves' => 9],
+    'field' => ['starters' => 11, 'reserves' => 8],
     'society' => ['starters' => 7, 'reserves' => 7],
     'futsal' => ['starters' => 5, 'reserves' => 7],
     'beach' => ['starters' => 5, 'reserves' => 7],
-    'custom' => ['starters' => 11, 'reserves' => 9],
+    'custom' => ['starters' => 11, 'reserves' => 8],
 ];
 $teamSetup = $setupByType[$teamType] ?? $setupByType['field'];
 $startersCount = (int)($_POST['starters_count'] ?? $teamSetup['starters']);
@@ -85,7 +85,7 @@ foreach (['GO', 'ZC1', 'ZC2', 'LE', 'LD', 'VOL1', 'VOL2', 'MAT1', 'MAT2', 'PTE',
 $currentCustomSlotsJson = $customSlots ? json_encode($customSlots, JSON_UNESCAPED_UNICODE) : $currentCustomSlotsJson;
 
 $startersCount = max(1, min(11, $startersCount));
-$reservesCount = max(0, min(9, $reservesCount));
+$reservesCount = max(0, min(8, $reservesCount));
 
 $stmt = $pdo->prepare("
     UPDATE team_profile

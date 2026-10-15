@@ -53,13 +53,15 @@ if ($categoryId) {
     $stmt->execute([$categoryId]);
     $category = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$category || (!$advancedCategories && !empty($category['parent_id']))) {
+    if (!$category) {
         $categoryId = null;
         $categoryFormModel = 'simple';
     }
 
     $categoryType = (string)($category['type'] ?? '');
-    $categoryFormModel = financeNormalizeFormModel((string)($category['form_model'] ?? 'simple'));
+    $categoryFormModel = $advancedCategories
+        ? financeNormalizeFormModel((string)($category['form_model'] ?? 'simple'))
+        : 'simple';
 
     if ($categoryType === 'income' || $categoryType === 'expense') {
         $type = $categoryType;

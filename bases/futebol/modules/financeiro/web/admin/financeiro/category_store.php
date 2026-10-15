@@ -17,15 +17,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 csrf_verify();
 
+if (!$advancedCategories) {
+    flash('error', 'Criar categorias e subcategorias fica disponivel no plano Start.');
+    header('Location: ' . PROJECT_URL . '/admin/financeiro/categories.php');
+    exit;
+}
+
 $name = trim((string)($_POST['name'] ?? ''));
 $type = in_array($_POST['type'] ?? '', ['income', 'expense', 'both'], true) ? $_POST['type'] : 'both';
 $formModel = financeNormalizeFormModel((string)($_POST['form_model'] ?? 'simple'));
 $parentId = !empty($_POST['parent_id']) ? (int)$_POST['parent_id'] : null;
-
-if (!$advancedCategories) {
-    $parentId = null;
-    $formModel = 'simple';
-}
 
 if ($name === '') {
     exit('Nome obrigatorio.');

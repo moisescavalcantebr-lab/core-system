@@ -8,6 +8,7 @@ require __DIR__ . '/helpers.php';
 
 requireProjectRole(['ADMIN', 'FINANCE']);
 financeEnsureCategoryAddonSchema($pdo);
+$advancedCategories = financeAdvancedCategoriesEnabled();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -15,6 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 csrf_verify();
+
+if (!$advancedCategories) {
+    flash('error', 'Excluir categorias fica disponivel no plano Start.');
+    header('Location: ' . PROJECT_URL . '/admin/financeiro/categories.php');
+    exit;
+}
 
 $id = (int)($_GET['id'] ?? 0);
 

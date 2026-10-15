@@ -50,11 +50,11 @@ teamEnsureCustomSchema($pdo);
 $pdo->exec("INSERT INTO team_profile (id, name) VALUES (1, 'Meu Time') ON DUPLICATE KEY UPDATE id = id");
 $team = $pdo->query("SELECT * FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $currentType = 'custom';
-$currentSetup = ['label' => 'Personalizado', 'starters' => 11, 'reserves' => 9];
+$currentSetup = ['label' => 'Personalizado', 'starters' => 11, 'reserves' => 8];
 $currentStarters = (int)($team['starters_count'] ?? $currentSetup['starters']);
 $currentReserves = (int)($team['reserves_count'] ?? $currentSetup['reserves']);
 $currentStarters = max(1, min(11, $currentStarters));
-$currentReserves = max(0, min(9, $currentReserves));
+$currentReserves = max(0, min(8, $currentReserves));
 $friendlyCardsEnabled = function_exists('getSetting')
     ? getSetting('friendly_cards_enabled', '1') !== '0'
     : true;
@@ -184,7 +184,7 @@ ob_start();
                         id="teamReservesInput"
                         required
                     >
-                        <?php for ($i = 0; $i <= 9; $i++): ?>
+                        <?php for ($i = 0; $i <= 8; $i++): ?>
                             <option value="<?= $i ?>" <?= $currentReserves === $i ? 'selected' : '' ?>>
                                 <?= $i ?> reserva<?= $i !== 1 ? 's' : '' ?>
                             </option>

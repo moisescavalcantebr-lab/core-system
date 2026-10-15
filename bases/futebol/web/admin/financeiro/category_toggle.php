@@ -4,8 +4,11 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
+require __DIR__ . '/helpers.php';
 
 requireProjectRole(['ADMIN', 'FINANCE']);
+financeEnsureCategoryAddonSchema($pdo);
+$advancedCategories = financeAdvancedCategoriesEnabled();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -13,6 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 csrf_verify();
+
+if (!$advancedCategories) {
+    flash('error', 'Ativar ou desativar categorias fica disponivel no plano Start.');
+    header('Location: ' . PROJECT_URL . '/admin/financeiro/categories.php');
+    exit;
+}
 
 $id = (int)($_GET['id'] ?? 0);
 

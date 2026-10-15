@@ -10,6 +10,12 @@ requireProjectRole(['ADMIN', 'FINANCE']);
 financeEnsureCategoryAddonSchema($pdo);
 $advancedCategories = financeAdvancedCategoriesEnabled();
 
+if (!$advancedCategories) {
+    flash('error', 'Editar categorias fica disponivel no plano Start.');
+    header('Location: ' . PROJECT_URL . '/admin/financeiro/categories.php');
+    exit;
+}
+
 $id = (int)($_GET['id'] ?? 0);
 
 $stmt = $pdo->prepare("SELECT * FROM finance_categories WHERE id = ? LIMIT 1");

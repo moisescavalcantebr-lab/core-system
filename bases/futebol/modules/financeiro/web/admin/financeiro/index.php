@@ -263,9 +263,6 @@ ob_start();
                     Configurações
                 </a>
             <?php endif; ?>
-            <a href="<?= PROJECT_URL ?>/admin/financeiro/categories.php" class="c-btn-secondary">
-                Categorias
-            </a>
             <?php if ($showParticipantFinance): ?>
                 <a href="<?= PROJECT_URL ?>/admin/financeiro/wallet_requests.php" class="c-btn-secondary">
                     Solicitações de saldo
