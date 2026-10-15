@@ -1,6 +1,7 @@
 # Meu Time: duas formacoes opcionais
 
 - Um unico elenco de jogadores, com Time 1 ativo por padrao.
+- Configurar Time permite renomear as duas formacoes (ate 80 caracteres). Campos vazios recuperam Time 1/Time 2. Os nomes aparecem nos campos e nas identificacoes dos botoes de destino e permanecem salvos ao desativar o segundo campo.
 - A opcao Segundo time habilita o campo Time 2. Ambos usam a modalidade e a configuracao de posicoes de Meu Time.
 - Jogadores disponiveis reune os jogadores fora dos campos, incluindo os antigos reservas. Os botoes 1 + e 2 + escolhem o destino.
 - O mesmo jogador nao pode ocupar os dois campos. Retirar do campo libera o jogador sem excluir cadastro.

@@ -1,8 +1,24 @@
 <?php
 declare(strict_types=1);
 
+function teamEnsureFormationNamesSchema(PDO $pdo): void
+{
+    $columns = $pdo->query('SHOW COLUMNS FROM team_profile')->fetchAll(PDO::FETCH_COLUMN);
+    foreach (['time_1_name' => 'Time 1', 'time_2_name' => 'Time 2'] as $column => $default) {
+        if (!in_array($column, $columns, true)) {
+            $pdo->exec("ALTER TABLE team_profile ADD COLUMN $column VARCHAR(80) NOT NULL DEFAULT '$default'");
+        }
+    }
+}
+
+function teamFormationName(array $team, string $key): string
+{
+    return trim((string)($team[$key.'_name'] ?? '')) ?: ($key === 'time_2' ? 'Time 2' : 'Time 1');
+}
+
 function teamEnsureFormationsSchema(PDO $pdo): void
 {
+    teamEnsureFormationNamesSchema($pdo);
     $columns = $pdo->query('SHOW COLUMNS FROM team_profile')->fetchAll(PDO::FETCH_COLUMN);
     if (!in_array('formations_count', $columns, true)) {
         $pdo->exec('ALTER TABLE team_profile ADD COLUMN formations_count TINYINT UNSIGNED NOT NULL DEFAULT 1');

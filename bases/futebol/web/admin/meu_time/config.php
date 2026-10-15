@@ -46,6 +46,8 @@ function teamEnsureCustomSchema(PDO $pdo): void
 }
 
 teamEnsureCustomSchema($pdo);
+require_once __DIR__ . '/formations_helpers.php';
+teamEnsureFormationNamesSchema($pdo);
 
 $pdo->exec("INSERT INTO team_profile (id, name) VALUES (1, 'Meu Time') ON DUPLICATE KEY UPDATE id = id");
 $team = $pdo->query("SELECT * FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
@@ -190,6 +192,17 @@ ob_start();
                             </option>
                         <?php endfor; ?>
                     </select>
+                </div>
+            </div>
+
+            <div class="c-form-grid c-team-config-details-grid">
+                <div class="c-form-group">
+                    <label for="time-1-name">Nome do Time 1</label>
+                    <input id="time-1-name" type="text" name="time_1_name" class="c-input" maxlength="80" value="<?= htmlspecialchars(teamFormationName($team, 'time_1')) ?>">
+                </div>
+                <div class="c-form-group">
+                    <label for="time-2-name">Nome do Time 2</label>
+                    <input id="time-2-name" type="text" name="time_2_name" class="c-input" maxlength="80" value="<?= htmlspecialchars(teamFormationName($team, 'time_2')) ?>">
                 </div>
             </div>
 

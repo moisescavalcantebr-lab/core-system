@@ -779,7 +779,7 @@ ob_start();
             <div class="c-team-fields">
             <?php foreach ($formationFields as $formationKey => $formationField): ?>
             <div class="c-card c-team-field-card">
-                <h3><?= $formationKey === 'time_1' ? 'Time 1' : 'Time 2' ?> <small><?= count($formationField['players']) ?>/<?= $startersCount ?></small></h3>
+                <h3><?= htmlspecialchars(teamFormationName($team, $formationKey)) ?> <small><?= count($formationField['players']) ?>/<?= $startersCount ?></small></h3>
 
                 <div class="c-team-field c-team-field--<?= htmlspecialchars($teamType) ?>">
                     <label class="c-team-toggle-x">
@@ -859,7 +859,7 @@ ob_start();
                                                 <small><?= htmlspecialchars(teamPositionDisplay($player['position_code'] ?? null)) ?></small>
                                                 <div class="c-team-assign-actions">
                                                 <?php foreach ($formationKeys as $targetKey): ?>
-                                                    <button type="submit" name="team_key" value="<?= $targetKey ?>" class="c-btn-secondary" title="Adicionar ao <?= $targetKey === 'time_1' ? 'Time 1' : 'Time 2' ?>"><?= $targetKey === 'time_1' ? '1' : '2' ?> +</button>
+                                                    <button type="submit" name="team_key" value="<?= $targetKey ?>" class="c-btn-secondary" title="Adicionar ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>" aria-label="Adicionar <?= htmlspecialchars($player['name']) ?> ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>"><?= $targetKey === 'time_1' ? '1' : '2' ?> +</button>
                                                 <?php endforeach; ?>
                                                 </div>
                                             </div>
@@ -926,6 +926,7 @@ body:has(.c-team-page) .c-layout {
 
 .c-team-fields { display: grid; grid-template-columns: repeat(<?= count($formationKeys) ?>, minmax(0, 1fr)); gap: 20px; }
 .c-team-fields > .c-card { background: transparent; border: 0; padding: 0; min-width: 0; }
+.c-team-field-card h3 { overflow-wrap: anywhere; }
 .c-team-fields .c-team-field { width: 100%; max-width: 360px; margin: 0 auto; }
 .c-team-formations-toggle, .c-team-assign-actions { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .c-team-formations-toggle label { display: flex; align-items: center; gap: 6px; }

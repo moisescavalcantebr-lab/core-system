@@ -53,8 +53,19 @@ function teamEnsureCustomSchema(PDO $pdo): void
 }
 
 teamEnsureCustomSchema($pdo);
+require_once __DIR__ . '/formations_helpers.php';
+teamEnsureFormationNamesSchema($pdo);
 
-$currentTeam = $pdo->query("SELECT custom_slots_json FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+$currentTeam = $pdo->query("SELECT custom_slots_json, time_1_name, time_2_name FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
+$formationNames = [];
+foreach (['time_1', 'time_2'] as $key) {
+    $value = $_POST[$key.'_name'] ?? teamFormationName($currentTeam, $key);
+    if (!is_string($value) || !preg_match('/^.{0,80}$/us', trim($value))) {
+        flash('error', 'O nome de cada time deve ter no maximo 80 caracteres.');
+        redirect(PROJECT_URL . '/admin/meu_time/config.php');
+    }
+    $formationNames[$key] = trim($value) ?: ($key === 'time_1' ? 'Time 1' : 'Time 2');
+}
 $currentCustomSlotsJson = $currentTeam['custom_slots_json'] ?? null;
 $teamType = 'custom';
 $setupByType = [
@@ -89,7 +100,7 @@ $reservesCount = max(0, min(8, $reservesCount));
 
 $stmt = $pdo->prepare("
     UPDATE team_profile
-    SET name = ?, short_name = ?, team_type = ?, starters_count = ?, reserves_count = ?, custom_slots_json = ?, city = ?, venue = ?, responsible_name = ?
+    SET name = ?, short_name = ?, team_type = ?, starters_count = ?, reserves_count = ?, custom_slots_json = ?, city = ?, venue = ?, responsible_name = ?, time_1_name = ?, time_2_name = ?
     WHERE id = 1
 ");
 $stmt->execute([
@@ -102,6 +113,8 @@ $stmt->execute([
     trim((string)($_POST['city'] ?? '')) ?: null,
     trim((string)($_POST['venue'] ?? '')) ?: null,
     trim((string)($_POST['responsible_name'] ?? '')) ?: null,
+    $formationNames['time_1'],
+    $formationNames['time_2'],
 ]);
 
 if (function_exists('setSetting')) {

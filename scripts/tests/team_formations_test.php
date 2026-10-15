@@ -24,6 +24,7 @@ try {
     $pdo->exec((string)file_get_contents($root.'/modules/jogadores/database/schema.sql'));
     $schema = (string)file_get_contents($root.'/modules/meu_time/database/schema.sql');
     $legacy = str_replace(["    formations_count TINYINT UNSIGNED NOT NULL DEFAULT 1,\n", "    team_key ENUM('time_1','time_2') NOT NULL DEFAULT 'time_1',\n"], '', str_replace("\r\n", "\n", $schema));
+    $legacy = str_replace(["    time_1_name VARCHAR(80) NOT NULL DEFAULT 'Time 1',\n", "    time_2_name VARCHAR(80) NOT NULL DEFAULT 'Time 2',\n"], '', $legacy);
     $pdo->exec($legacy);
     $pdo->exec("INSERT INTO project_users (id,name,email,username,password,role,status) VALUES (991,'Admin','team-admin@example.com','team-admin','test','ADMIN','active'),(992,'Cliente','team-client@example.com','team-client','test','CLIENT','active')");
     $position = (int)$pdo->query("SELECT id FROM player_positions WHERE code = 'GO1' LIMIT 1")->fetchColumn();
@@ -80,6 +81,32 @@ try {
     if (!is_dir($root.'/_deploy')) mkdir($root.'/_deploy',0700,true);
     file_put_contents($root.'/_deploy/team-one-preview.html', $one);
     file_put_contents($root.'/_deploy/team-two-preview.html', teamRoute($routes.'index.php'));
+    $beforeRename = $pdo->query('SELECT * FROM team_roster ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+    $names = ['_csrf'=>'test', 'time_1_name'=>'Azul & Branco', 'time_2_name'=>'Equipe <Verde>', 'name'=>'Meu Time'];
+    teamRoute($routes.'save.php', $names);
+    teamCheck($beforeRename === $pdo->query('SELECT * FROM team_roster ORDER BY id')->fetchAll(PDO::FETCH_ASSOC), 'Renomear alterou formacoes');
+    teamCheck($pdo->query('SELECT time_1_name FROM team_profile WHERE id=1')->fetchColumn() === 'Azul & Branco', 'Nome do Time 1 nao foi salvo');
+    $renamed = teamRoute($routes.'index.php');
+    teamCheck(str_contains($renamed,'Azul &amp; Branco') && str_contains($renamed,'Equipe &lt;Verde&gt;'), 'Nomes nao aparecem escapados');
+    teamCheck(str_contains($renamed,'title="Adicionar ao Equipe &lt;Verde&gt;"'), 'Destino nao usa nome personalizado');
+    $form = teamRoute($routes.'config.php');
+    teamCheck(str_contains($form,'name="time_1_name"') && str_contains($form,'value="Equipe &lt;Verde&gt;"'), 'Formulario nao recuperou nomes');
+    teamRoute($routes.'save.php', ['_csrf'=>'test','name'=>'Meu Time']);
+    teamCheck($pdo->query('SELECT time_1_name FROM team_profile WHERE id=1')->fetchColumn() === 'Azul & Branco', 'Formulario antigo apagou nomes');
+    teamRoute($routes.'save.php', [...$names,'time_1_name'=>str_repeat('x',81)]);
+    teamCheck($pdo->query('SELECT time_1_name FROM team_profile WHERE id=1')->fetchColumn() === 'Azul & Branco', 'Nome longo aceito');
+    teamRoute($routes.'save.php', [...$names,'time_1_name'=>['invalido']]);
+    teamCheck($pdo->query('SELECT time_1_name FROM team_profile WHERE id=1')->fetchColumn() === 'Azul & Branco', 'Entrada invalida alterou nome');
+    teamRoute($routes.'formations_save.php', ['_csrf'=>'test']);
+    teamRoute($routes.'formations_save.php', ['_csrf'=>'test','second_team'=>1]);
+    teamCheck($pdo->query('SELECT time_2_name FROM team_profile WHERE id=1')->fetchColumn() === 'Equipe <Verde>', 'Desativacao apagou nome');
+    // Restore the roster after testing the independent activation control.
+    teamRoute($routes.'roster_store.php', $post);
+    teamCheck($pdo->query('SELECT COUNT(*) FROM team_roster')->fetchColumn() == count($beforeRename), 'Renomeacao alterou quantidade de jogadores');
+    file_put_contents($root.'/_deploy/team-renamed-preview.html', $renamed);
+    file_put_contents($root.'/_deploy/team-config-preview.html', $form);
+    teamRoute($routes.'save.php', [...$names,'time_1_name'=>'  ','time_2_name'=>'']);
+    teamCheck($pdo->query('SELECT time_1_name FROM team_profile WHERE id=1')->fetchColumn() === 'Time 1' && $pdo->query('SELECT time_2_name FROM team_profile WHERE id=1')->fetchColumn() === 'Time 2', 'Campos vazios nao recuperaram padroes');
     echo "PASS: migracao preservada, dois campos independentes, jogador unico, vagas, disponiveis, desativacao, reativacao, CSRF e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');

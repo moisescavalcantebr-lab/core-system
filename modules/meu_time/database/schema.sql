@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS team_profile (
     starters_count INT DEFAULT 11,
     reserves_count INT DEFAULT 7,
     formations_count TINYINT UNSIGNED NOT NULL DEFAULT 1,
+    time_1_name VARCHAR(80) NOT NULL DEFAULT 'Time 1',
+    time_2_name VARCHAR(80) NOT NULL DEFAULT 'Time 2',
     city VARCHAR(100) NULL,
     venue VARCHAR(150) NULL,
     primary_color VARCHAR(20) NULL,
