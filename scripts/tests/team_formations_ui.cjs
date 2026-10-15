@@ -22,6 +22,21 @@ const root = path.resolve(__dirname, '../..');
         if (await page.locator('.c-team-field').count() !== expected) throw new Error('Quantidade de campos incorreta');
         if (count === 'renamed' && !await page.locator('.c-team-field-card h3').last().innerText().then(text => text.includes('Equipe <Verde>'))) throw new Error('Nome personalizado ausente');
         if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Overflow ${width}/${count}`);
+        const first = await page.locator('[data-team-key=time_1]').boundingBox();
+        const available = await page.locator('.c-team-left-column').boundingBox();
+        if (width > 900) {
+          if (first.x + first.width > available.x + 1 || Math.abs(first.y - available.y) > 1) throw new Error('Disponiveis nao estao a direita do Time 1');
+          if (expected === 2) {
+            const second = await page.locator('[data-team-key=time_2]').boundingBox();
+            if (available.x + available.width > second.x + 1 || Math.abs(second.y - available.y) > 1) throw new Error('Disponiveis nao estao entre os times');
+          }
+        } else {
+          if (first.y + first.height > available.y + 1) throw new Error('Blocos nao empilhados no celular');
+          if (expected === 2) {
+            const second = await page.locator('[data-team-key=time_2]').boundingBox();
+            if (available.y + available.height > second.y + 1) throw new Error('Ordem dos blocos incorreta no celular');
+          }
+        }
         for (const field of await page.locator('.c-team-field').all()) {
           const box = await field.boundingBox();
           if (!box || box.width < 200 || box.height < 250) throw new Error('Campo mal dimensionado');

@@ -775,10 +775,9 @@ ob_start();
     <div class="c-page-content">
         <?php flash_show(); ?>
 
-        <div class="c-team-layout">
-            <div class="c-team-fields">
+        <div class="c-team-layout" data-team-count="<?= count($formationKeys) ?>">
             <?php foreach ($formationFields as $formationKey => $formationField): ?>
-            <div class="c-card c-team-field-card">
+            <div class="c-card c-team-field-card" data-team-key="<?= $formationKey ?>">
                 <h3><?= htmlspecialchars(teamFormationName($team, $formationKey)) ?> <small><?= count($formationField['players']) ?>/<?= $startersCount ?></small></h3>
 
                 <div class="c-team-field c-team-field--<?= htmlspecialchars($teamType) ?>">
@@ -835,7 +834,6 @@ ob_start();
                 </div>
 
             <?php endforeach; ?>
-            </div>
             <div class="c-team-left-column">
                 <div class="c-card c-team-reserve-card">
                     <h3>Jogadores disponíveis</h3>
@@ -918,21 +916,26 @@ body:has(.c-team-page) .c-layout {
 
 .c-team-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "time1 available" "info info";
     gap: 12px;
     align-items: start;
     --team-field-height: clamp(230px, 23vw, 286px);
 }
 
-.c-team-fields { display: grid; grid-template-columns: repeat(<?= count($formationKeys) ?>, minmax(0, 1fr)); gap: 20px; }
-.c-team-fields > .c-card { background: transparent; border: 0; padding: 0; min-width: 0; }
+.c-team-layout[data-team-count="2"] {
+    grid-template-columns: minmax(0, 1fr) minmax(200px, .9fr) minmax(0, 1fr);
+    grid-template-areas: "time1 available time2" "info info info";
+}
+.c-team-field-card[data-team-key="time_1"] { grid-area: time1; }
+.c-team-field-card[data-team-key="time_2"] { grid-area: time2; }
+.c-team-layout > .c-team-field-card { background: transparent; border: 0; padding: 0; min-width: 0; }
 .c-team-field-card h3 { overflow-wrap: anywhere; }
-.c-team-fields .c-team-field { width: 100%; max-width: 360px; margin: 0 auto; }
+.c-team-field-card .c-team-field { width: 100%; max-width: 360px; margin: 0 auto; }
 .c-team-formations-toggle, .c-team-assign-actions { display: flex; align-items: center; justify-content: center; gap: 8px; }
 .c-team-formations-toggle label { display: flex; align-items: center; gap: 6px; }
 .c-team-assign-actions { grid-column: 1 / -1; }
 .c-team-assign-actions button { min-width: 28px; min-height: 28px; }
-@media (max-width: 680px) { .c-team-fields { grid-template-columns: minmax(0, 1fr); } }
 
 .c-team-header-actions {
     display: flex;
@@ -942,6 +945,8 @@ body:has(.c-team-page) .c-layout {
 }
 
 .c-team-left-column {
+    grid-area: available;
+    min-width: 0;
     display: grid;
     gap: 12px;
 }
@@ -1221,6 +1226,7 @@ img.c-team-avatar-initial {
 }
 
 .c-team-info-card {
+    grid-area: info;
     grid-column: 1 / -1;
     align-self: start;
     margin-top: 0;
@@ -1478,19 +1484,14 @@ img.c-team-token-avatar {
     display: block !important;
 }
 
-@media (max-width: 1220px) {
-    .c-team-layout {
-        grid-template-columns: minmax(0, 1fr);
-    }
-
-    .c-team-info-card {
-        grid-column: 1 / -1;
-    }
-}
-
 @media (max-width: 900px) {
-    .c-team-layout {
-        grid-template-columns: 1fr;
+    .c-team-layout,
+    .c-team-layout[data-team-count="2"] {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "time1" "available" "info";
+    }
+    .c-team-layout[data-team-count="2"] {
+        grid-template-areas: "time1" "available" "time2" "info";
     }
 
     .c-team-header-actions {
