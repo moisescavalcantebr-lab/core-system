@@ -174,65 +174,9 @@ try {
     $players = [];
 }
 
-$roster = $pdo->query("
-    SELECT
-        tr.*,
-        COALESCE(NULLIF(p.nickname, ''), LEFT(SUBSTRING_INDEX(p.name, ' ', 1), 14)) AS player_name,
-        pp.name AS position_name,
-        pp.code AS position_code,
-        pp.group_key,
-        pp.group_label,
-        pp2.name AS secondary_position_name,
-        pp2.code AS secondary_position_code,
-        pp2.group_key AS secondary_group_key,
-        pp2.group_label AS secondary_group_label,
-        COALESCE(p.avatar, u.avatar) AS avatar
-    FROM team_roster tr
-    LEFT JOIN players p ON p.id = tr.player_id
-    LEFT JOIN player_positions pp ON pp.id = p.position_id
-    LEFT JOIN player_positions pp2 ON pp2.id = p.secondary_position_id
-    LEFT JOIN project_users u ON u.id = p.user_id
-    WHERE p.status = 'active'
-    ORDER BY
-        CASE tr.status WHEN 'active' THEN 0 ELSE 1 END,
-        COALESCE(tr.updated_at, tr.created_at) ASC,
-        tr.id ASC
-")->fetchAll(PDO::FETCH_ASSOC);
+require_once __DIR__ . '/lineup_helpers.php';
+$roster = teamLoadFormationRoster($pdo);
 
-function teamPositionKey(?string $position, ?string $groupKey = null): string
-{
-    if ($groupKey !== null && $groupKey !== '') {
-        return $groupKey;
-    }
-
-    $position = strtolower((string)$position);
-
-    if (str_contains($position, 'goleiro')) {
-        return 'goleiro';
-    }
-
-    if (str_contains($position, 'zagueiro')) {
-        return 'zagueiro';
-    }
-
-    if (str_contains($position, 'lateral')) {
-        return 'lateral';
-    }
-
-    if (str_contains($position, 'ponta')) {
-        return 'ponta';
-    }
-
-    if (str_contains($position, 'volante') || str_contains($position, 'meia')) {
-        return 'meia';
-    }
-
-    if (str_contains($position, 'atacante')) {
-        return 'atacante';
-    }
-
-    return '';
-}
 
 function teamPositionLabel(string $key): string
 {
@@ -524,218 +468,40 @@ if ($teamType !== 'custom') {
     };
 }
 
-$groupedPlayers = [
-    'goleiro' => [],
-    'zagueiro' => [],
-    'lateral' => [],
-    'meia' => [],
-    'ponta' => [],
-    'atacante' => [],
-    'reserva' => [],
-];
-
-foreach ($players as $player) {
-    if ($teamType !== 'custom' && !teamPlayerHasCompatiblePosition($player, $allowedPositionPrefixes)) {
-        continue;
-    }
-
-    $positionKey = teamPositionKey($player['position_name'] ?? '', $player['group_key'] ?? null);
-    if ($positionKey !== '' && isset($groupedPlayers[$positionKey])) {
-        $groupedPlayers[$positionKey][] = $player;
-    }
-}
-
-$rosterByPosition = [];
-$reserveRoster = [];
-$fieldPlayers = [];
-$occupiedSlotKeys = [];
-$fallbackSlotCounts = [];
-$groupedReserveRoster = [
-    'atacante' => [],
-    'ponta' => [],
-    'meia' => [],
-    'lateral' => [],
-    'zagueiro' => [],
-    'goleiro' => [],
-    'reserva' => [],
-];
-
+$resolved = teamResolveFormationRoster($roster, $team);
 $formationFields = [];
-foreach ($formationKeys as $formationKey) {
-$rosterByPosition = [];
-$occupiedSlotKeys = [];
-$fallbackSlotCounts = [];
 $fieldPlayers = [];
-foreach ($roster as $member) {
-    if (($member['team_key'] ?? 'time_1') !== $formationKey) {
-        continue;
-    }
-    if (($member['status'] ?? '') !== 'active') {
-        $reserveRoster[] = $member;
-        continue;
-    }
-
-    $key = (string)($member['slot_group'] ?? '');
-    $slotIndex = $member['slot_index'] !== null ? (int)$member['slot_index'] : null;
-
-    if ($key === '' || $slotIndex === null) {
-        $groupKey = teamPositionKey($member['position_name'] ?? '', $member['group_key'] ?? null);
-        $code = (string)($member['position_code'] ?? '');
-        $slotKey = match (true) {
-            str_starts_with($code, 'PTE') => 'ponta:0',
-            str_starts_with($code, 'PTD') => 'ponta:1',
-            str_starts_with($code, 'LE') => 'lateral:0',
-            str_starts_with($code, 'LD') => 'lateral:1',
-            str_starts_with($code, 'GO') => 'goleiro:0',
-            str_starts_with($code, 'ZC') => 'zagueiro:' . ($fallbackSlotCounts['zagueiro'] ?? 0),
-            str_starts_with($code, 'VOL') || str_starts_with($code, 'MAT') => 'meia:' . ($fallbackSlotCounts['meia'] ?? 0),
-            str_starts_with($code, 'CA') => 'atacante:0',
-            default => $groupKey . ':' . ($fallbackSlotCounts[$groupKey] ?? 0),
-        };
-
-        [$key, $slotIndex] = array_pad(explode(':', $slotKey, 2), 2, '0');
-        $slotIndex = (int)$slotIndex;
-    }
-
-    $slotKey = $key . ':' . $slotIndex;
-
-    if ($key === '' || !isset($fieldLimits[$key])) {
-        $reserveRoster[] = $member;
-        continue;
-    }
-
-    $rosterByPosition[$key] ??= [];
-
-    if ($slotIndex >= $fieldLimits[$key] || isset($occupiedSlotKeys[$slotKey])) {
-        $reserveRoster[] = $member;
-        continue;
-    }
-
-    $occupiedSlotKeys[$slotKey] = true;
-    $member['_slot_index'] = $slotIndex;
-    $rosterByPosition[$key][] = $member;
-    $fallbackSlotCounts[$key] = ($fallbackSlotCounts[$key] ?? 0) + 1;
-}
-
-foreach ($slotMap as $key => $slots) {
-    foreach (($rosterByPosition[$key] ?? []) as $member) {
-        $index = (int)($member['_slot_index'] ?? 0);
-        $slot = $slots[$index] ?? null;
-
-        if ($slot === null) {
-            $reserveRoster[] = $member;
-            continue;
-        }
-
-        $fieldPlayers[] = [
+foreach ($resolved['teams'] as $key => $formation) {
+    $formationFields[$key] = ['players' => [], 'occupied' => $formation['occupied']];
+    foreach ($formation['players'] as $member) {
+        $slot = $slotMap[$member['slot_group']][$member['slot_index']];
+        $player = [
             'roster_id' => (int)$member['id'],
             'name' => $member['player_name'] ?? '-',
-            'position' => $member['position_name'] ?? '-',
             'position_code' => $member['position_code'] ?? null,
             'avatar' => $member['avatar'] ?? null,
             'x' => $slot['x'],
             'y' => $slot['y'],
         ];
+        $formationFields[$key]['players'][] = $player;
+        $fieldPlayers[] = $player;
     }
 }
-
-$formationFields[$formationKey] = ['players' => $fieldPlayers, 'occupied' => $occupiedSlotKeys];
-}
-$fieldPlayers = array_merge(...array_column($formationFields, 'players'));
-foreach ($roster as $member) {
-    if (!in_array($member['team_key'] ?? 'time_1', $formationKeys, true)) {
-        $reserveRoster[] = $member;
-    }
-}
-foreach ($reserveRoster as $member) {
-    if ($teamType !== 'custom' && !teamPlayerHasCompatiblePosition($member, $allowedPositionPrefixes)) {
-        continue;
-    }
-
-    $positionKey = teamPositionKey($member['position_name'] ?? '', $member['group_key'] ?? null);
-    if ($positionKey !== '' && isset($groupedReserveRoster[$positionKey])) {
-        $groupedReserveRoster[$positionKey][] = $member;
-    }
-}
-
-$cardPlayersByPosition = [
-    'goleiro' => [],
-    'zagueiro' => [],
-    'lateral' => [],
-    'meia' => [],
-    'ponta' => [],
-    'atacante' => [],
-    'reserva' => [],
-];
-
-foreach ($groupedPlayers as $positionKey => $positionPlayers) {
-    foreach ($positionPlayers as $player) {
-        $cardPlayersByPosition[$positionKey][] = [
-            'id' => (int)$player['id'],
-            'name' => $player['name'] ?? '-',
-            'avatar' => $player['avatar'] ?? null,
-            'position_code' => $player['position_code'] ?? null,
-        ];
-    }
-}
-
-foreach ($groupedReserveRoster as $positionKey => $positionPlayers) {
-    foreach ($positionPlayers as $member) {
-        $cardPlayersByPosition[$positionKey][] = [
-            'id' => (int)$member['player_id'],
-            'name' => $member['player_name'] ?? '-',
-            'avatar' => $member['avatar'] ?? null,
-            'position_code' => $member['position_code'] ?? null,
-        ];
-    }
-}
-
-$filledPositionCodes = [];
+$availablePlayers = [];
 foreach ($players as $player) {
-    $code = (string)($player['position_code'] ?? '');
-    if ($code !== '') {
-        $filledPositionCodes[$code] = true;
-    }
+    $availablePlayers[(int)$player['id']] = $player;
 }
-foreach ($roster as $member) {
-    $code = (string)($member['position_code'] ?? '');
-    if ($code !== '') {
-        $filledPositionCodes[$code] = true;
-    }
+foreach ($resolved['available'] as $member) {
+    $availablePlayers[(int)$member['player_id']] = [
+        'id' => (int)$member['player_id'],
+        'name' => $member['player_name'] ?? '-',
+        'position_code' => $member['position_code'] ?? null,
+        'avatar' => $member['avatar'] ?? null,
+    ];
 }
-
-$emptyPositionMarksByPosition = [
-    'goleiro' => [],
-    'zagueiro' => [],
-    'lateral' => [],
-    'meia' => [],
-    'ponta' => [],
-    'atacante' => [],
-    'reserva' => [],
-];
-
-foreach ($allPositions as $position) {
-    $code = (string)($position['code'] ?? '');
-    if ($code === '' || isset($filledPositionCodes[$code])) {
-        continue;
-    }
-    if ($teamType !== 'custom' && !teamPlayerIsCompatible($code, $allowedPositionPrefixes)) {
-        continue;
-    }
-
-    $positionKey = teamPositionKey($position['name'] ?? '', $position['group_key'] ?? null);
-    if ($positionKey !== '' && isset($emptyPositionMarksByPosition[$positionKey])) {
-        $emptyPositionMarksByPosition[$positionKey][] = teamPositionDisplay($code);
-    }
-}
-
-$hasCardPlayers = false;
-foreach ($cardPlayersByPosition as $positionPlayers) {
-    if (!empty($positionPlayers)) {
-        $hasCardPlayers = true;
-        break;
-    }
-}
+uasort($availablePlayers, static fn(array $a, array $b): int => strnatcasecmp($a['name'], $b['name']));
+$availablePages = array_chunk(array_values($availablePlayers), 30) ?: [[]];
+$hasCardPlayers = count($availablePlayers) > 0;
 
 $teamTypeLabel = match ($teamType) {
     'futsal' => 'Salão',
@@ -836,35 +602,41 @@ ob_start();
             <?php endforeach; ?>
             <div class="c-team-left-column">
                 <div class="c-card c-team-reserve-card">
-                    <h3>Jogadores disponíveis</h3>
-
-                    <div class="c-team-position-groups">
-                        <?php foreach ($cardPlayersByPosition as $positionKey => $positionPlayers): ?>
-                            <?php if (empty($positionPlayers)): ?>
-                                <?php continue; ?>
-                            <?php endif; ?>
-                            <div class="c-team-position-group">
-                                <strong><?= htmlspecialchars(teamPositionLabel($positionKey)) ?></strong>
-                                <div class="c-team-avatar-grid">
-                                    <?php foreach ($positionPlayers as $player): ?>
-                                        <form action="<?= PROJECT_URL ?>/admin/meu_time/roster_store.php" method="POST">
-                                            <?= csrf_field(); ?>
-                                            <input type="hidden" name="player_id" value="<?= (int)$player['id'] ?>">
-                                            <input type="hidden" name="roster_role" value="player">
-                                            <div class="c-team-avatar-card">
-                                                <?= teamAvatarHtml($player['avatar'] ?? null, $player['name'], 'c-team-avatar-initial') ?>
-                                                <span><?= htmlspecialchars($player['name']) ?></span>
-                                                <small><?= htmlspecialchars(teamPositionDisplay($player['position_code'] ?? null)) ?></small>
-                                                <div class="c-team-assign-actions">
-                                                <?php foreach ($formationKeys as $targetKey): ?>
-                                                    <button type="submit" name="team_key" value="<?= $targetKey ?>" class="c-btn-secondary" title="Adicionar ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>" aria-label="Adicionar <?= htmlspecialchars($player['name']) ?> ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>"><?= $targetKey === 'time_1' ? '1' : '2' ?> +</button>
-                                                <?php endforeach; ?>
+                    <div class="c-team-available-header">
+                        <h3>Jogadores disponíveis</h3>
+                        <?php if (count($availablePages) > 1): ?>
+                            <nav class="c-team-available-pagination" aria-label="Paginas de jogadores">
+                                <button type="button" class="c-btn-secondary" data-available-prev title="Pagina anterior" disabled>&larr;</button>
+                                <span data-available-counter aria-live="polite">1/<?= count($availablePages) ?></span>
+                                <button type="button" class="c-btn-secondary" data-available-next title="Proxima pagina">&rarr;</button>
+                            </nav>
+                        <?php endif; ?>
+                    </div>
+                    <div class="c-team-available-stage">
+                        <?php foreach ($availablePages as $pageIndex => $pagePlayers): ?>
+                            <div class="c-team-available-page" data-available-page="<?= $pageIndex ?>" <?= $pageIndex > 0 ? 'hidden' : '' ?>>
+                                <?php foreach ([array_slice($pagePlayers, 0, 15), array_slice($pagePlayers, 15, 15)] as $sidePlayers): ?>
+                                    <div class="c-team-available-side">
+                                        <?php foreach ($sidePlayers as $player): ?>
+                                            <details class="c-team-available-player">
+                                                <summary title="<?= htmlspecialchars($player['name'].' - '.teamPositionDisplay($player['position_code'] ?? null)) ?>" aria-label="Escalar <?= htmlspecialchars($player['name']) ?>">
+                                                    <?= teamAvatarHtml($player['avatar'] ?? null, $player['name'], 'c-team-avatar-initial') ?>
+                                                </summary>
+                                                <div class="c-team-available-menu">
+                                                    <strong><?= htmlspecialchars($player['name']) ?></strong>
+                                                    <form action="<?= PROJECT_URL ?>/admin/meu_time/roster_store.php" method="POST">
+                                                        <?= csrf_field(); ?>
+                                                        <input type="hidden" name="player_id" value="<?= (int)$player['id'] ?>">
+                                                        <input type="hidden" name="roster_role" value="player">
+                                                        <?php foreach ($formationKeys as $targetKey): ?>
+                                                            <button type="submit" name="team_key" value="<?= $targetKey ?>" class="c-btn-secondary" title="Adicionar ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>"><?= htmlspecialchars(teamFormationName($team, $targetKey)) ?></button>
+                                                        <?php endforeach; ?>
+                                                    </form>
                                                 </div>
-                                            </div>
-                                        </form>
-                                    <?php endforeach; ?>
-
-                                </div>
+                                            </details>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -900,7 +672,7 @@ ob_start();
                         </div>
                         <div>
                             <span>Disponíveis</span>
-                            <strong><?= array_sum(array_map('count', $cardPlayersByPosition)) ?></strong>
+                            <strong><?= count($availablePlayers) ?></strong>
                         </div>
                     </div>
                 </div>
@@ -924,7 +696,7 @@ body:has(.c-team-page) .c-layout {
 }
 
 .c-team-layout[data-team-count="2"] {
-    grid-template-columns: minmax(0, 1fr) minmax(200px, .9fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(240px, .9fr) minmax(0, 1fr);
     grid-template-areas: "time1 available time2" "info info info";
 }
 .c-team-field-card[data-team-key="time_1"] { grid-area: time1; }
@@ -1557,18 +1329,58 @@ img.c-team-token-avatar {
         min-height: 62px;
     }
 }
-.c-team-reserve-card .c-team-position-groups {
-    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
-}
-.c-team-reserve-card .c-team-avatar-grid {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-}
+.c-team-left-column { align-self: stretch; min-height: 0; }
+.c-team-reserve-card { display: flex; flex-direction: column; position: relative; min-height: 0; }
+.c-team-available-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.c-team-available-header h3 { min-width: 0; overflow-wrap: anywhere; }
+.c-team-available-pagination { display: flex; align-items: center; gap: 4px; font-size: 11px; }
+.c-team-available-pagination button { padding: 2px 5px; min-width: 24px; }
+.c-team-available-stage { position: relative; flex: 1; min-height: 240px; }
+.c-team-available-page { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.c-team-available-page[hidden] { display: none; }
+.c-team-available-side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.c-team-available-player { display: grid; place-items: center; min-width: 0; }
+.c-team-available-player summary { display: grid; place-items: center; cursor: pointer; list-style: none; border-radius: 50%; }
+.c-team-available-player summary::-webkit-details-marker { display: none; }
+.c-team-available-player summary:focus-visible { outline: 2px solid var(--primary-color, #3b82f6); outline-offset: 3px; }
+.c-team-available-player .c-team-avatar-initial { width: 32px; height: 32px; }
+.c-team-available-menu { position: absolute; z-index: 20; top: 20%; left: 4px; right: 4px; padding: 12px; border: 1px solid var(--border-color, #64748b); border-radius: 4px; background: var(--bg-secondary, #111827); box-shadow: 0 4px 12px #0006; }
+.c-team-available-menu strong { display: block; margin-bottom: 8px; overflow-wrap: anywhere; }
+.c-team-available-menu form { display: flex; flex-wrap: wrap; gap: 6px; }
+.c-team-available-menu button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
+@media (max-width: 900px) { .c-team-available-stage { flex: none; height: 380px; } }
 .c-team-assign-actions { gap: 4px; }
 .c-team-assign-actions button { white-space: nowrap; padding: 3px 6px; }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const playerMenus = Array.from(document.querySelectorAll('.c-team-available-player'));
+    playerMenus.forEach(function (menu) {
+        menu.addEventListener('toggle', function () {
+            if (menu.open) playerMenus.forEach(function (other) { if (other !== menu) other.open = false; });
+        });
+    });
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.c-team-available-player')) playerMenus.forEach(function (menu) { menu.open = false; });
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') playerMenus.forEach(function (menu) { menu.open = false; });
+    });
+    const availablePages = Array.from(document.querySelectorAll('[data-available-page]'));
+    const previousPage = document.querySelector('[data-available-prev]');
+    const nextPage = document.querySelector('[data-available-next]');
+    let availablePageIndex = 0;
+    function changeAvailablePage(offset) {
+        availablePageIndex = Math.max(0, Math.min(availablePages.length - 1, availablePageIndex + offset));
+        playerMenus.forEach(function (menu) { menu.open = false; });
+        availablePages.forEach(function (page, index) { page.hidden = index !== availablePageIndex; });
+        previousPage.disabled = availablePageIndex === 0;
+        nextPage.disabled = availablePageIndex === availablePages.length - 1;
+        document.querySelector('[data-available-counter]').textContent = (availablePageIndex + 1) + '/' + availablePages.length;
+    }
+    previousPage?.addEventListener('click', function () { changeAvailablePage(-1); });
+    nextPage?.addEventListener('click', function () { changeAvailablePage(1); });
     const formationsForm = document.querySelector('.c-team-formations-toggle');
     formationsForm?.addEventListener('submit', function (event) {
         if (formationsForm.dataset.secondTeamActive === '1' && !formationsForm.elements.second_team.checked

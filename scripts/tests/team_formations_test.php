@@ -107,7 +107,36 @@ try {
     file_put_contents($root.'/_deploy/team-config-preview.html', $form);
     teamRoute($routes.'save.php', [...$names,'time_1_name'=>'  ','time_2_name'=>'']);
     teamCheck($pdo->query('SELECT time_1_name FROM team_profile WHERE id=1')->fetchColumn() === 'Time 1' && $pdo->query('SELECT time_2_name FROM team_profile WHERE id=1')->fetchColumn() === 'Time 2', 'Campos vazios nao recuperaram padroes');
-    echo "PASS: migracao preservada, dois campos independentes, jogador unico, vagas, disponiveis, desativacao, reativacao, CSRF e permissoes.\n";
+    $attacker = (int)$pdo->query("SELECT id FROM player_positions WHERE code='CA1' LIMIT 1")->fetchColumn();
+    $pdo->prepare('UPDATE players SET position_id=? WHERE id=2')->execute([$attacker]);
+    $changedPosition = teamRoute($routes.'index.php');
+    teamCheck(str_contains($changedPosition,'name="player_id" value="2"'), 'Mudanca de posicao nao liberou jogador');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', $post),'adicionado ao campo'), 'Registro ativo antigo bloqueou jogador com nova posicao');
+    teamCheck($read(2)['slot_group'] === 'atacante', 'Reinclusao manteve posicao antiga');
+    $pdo->exec("UPDATE team_roster SET slot_index=99 WHERE player_id=2");
+    teamCheck(str_contains(teamRoute($routes.'index.php'),'name="player_id" value="2"'), 'Vaga invalida nao ficou disponivel');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', $post),'adicionado ao campo'), 'Vaga invalida bloqueou reinclusao');
+    $pdo->exec("UPDATE team_roster SET slot_index=-1 WHERE player_id=2");
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', $post),'adicionado ao campo'), 'Indice negativo bloqueou reinclusao');
+    $pdo->prepare('UPDATE players SET position_id=? WHERE id=2')->execute([$position]);
+    $pdo->exec("UPDATE team_profile SET custom_slots_json='{\"CA1\":1}',team_type='custom' WHERE id=1");
+    teamCheck(str_contains(teamRoute($routes.'index.php'),'name="player_id" value="2"'), 'Mudanca de campo escondeu jogador');
+    teamCheck(!str_contains(teamRoute($routes.'roster_store.php', $post),'ja esta em campo'), 'Campo alterado manteve bloqueio antigo');
+    $pdo->exec("UPDATE team_profile SET custom_slots_json=NULL,team_type='field' WHERE id=1");
+    teamRoute($routes.'roster_store.php', $post);
+    $pdo->exec("INSERT INTO team_roster (player_id,status,team_key,slot_group,slot_index) VALUES (4,'active','time_2','goleiro',0)");
+    teamCheck(str_contains(teamRoute($routes.'index.php'),'name="player_id" value="4"'), 'Vaga duplicada nao mostrou jogador disponivel');
+    teamCheck(!str_contains(teamRoute($routes.'roster_store.php', [...$post,'player_id'=>4]),'ja esta em campo'), 'Vaga duplicada bloqueou jogador disponivel');
+    teamRoute($routes.'roster_remove.php', ['_csrf'=>'test'], ['id'=>$read(2)['id']]);
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', $post),'adicionado ao campo'), 'Retirar e recolocar continuou bloqueado');
+    for ($i = 20; $i < 55; $i++) {
+        $pdo->prepare('INSERT INTO players (id,name,nickname,position_id,status) VALUES (?,?,?,?,?)')->execute([$i,'Atleta disponivel '.$i,'Atleta '.$i,$position,'active']);
+    }
+    $crowded = teamRoute($routes.'index.php');
+    teamCheck(substr_count($crowded, 'data-available-page=') === 2, 'Mais de trinta jogadores nao gerou segunda pagina');
+    teamCheck(!str_contains($crowded,'<strong>Goleiros</strong>'), 'Cabecalhos de posicao permanecem na lista');
+    file_put_contents($root.'/_deploy/team-crowded-preview.html', $crowded);
+    echo "PASS: formacoes, migracao, posicao alterada, vagas invalidas/duplicadas, retirada e reinclusao, trinta avatares por pagina, CSRF e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');
     if (is_dir($fixture)) {

@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const count of ['one', 'two', 'renamed', 'config']) {
+      for (const count of ['one', 'two', 'renamed', 'crowded', 'config']) {
         await page.route('http://team-test.local/**', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(root, `_deploy/team-${count}-preview.html`), 'utf8') }));
         await page.goto(`http://team-test.local/${count}`);
         if (count === 'config') {
@@ -45,6 +45,30 @@ const root = path.resolve(__dirname, '../..');
         await page.locator('[data-team-hide-x]').first().check();
         if (!await page.locator('.c-team-page').evaluate(el => el.classList.contains('is-hiding-field-actions'))) throw new Error('Controle de acoes nao funcionou');
         if (!await page.getByText('Jogadores disponíveis', { exact: true }).isVisible()) throw new Error('Disponiveis ausentes');
+        const avatar = page.locator('[data-available-page]:not([hidden]) summary').first();
+        await avatar.click();
+        if (!await page.locator('details[open] .c-team-available-menu').isVisible()) throw new Error('Avatar nao abriu escolha de time');
+        await page.keyboard.press('Escape');
+        if (await page.locator('details[open]').count()) throw new Error('Escape nao fechou menu');
+        if (width > 900) {
+          const field = await page.locator('.c-team-field').first().boundingBox();
+          const stage = await page.locator('.c-team-available-stage').boundingBox();
+          if (Math.abs(field.y - stage.y) > 4 || Math.abs(field.y + field.height - stage.y - stage.height) > 4) throw new Error('Avatares nao alinham com altura do campo');
+        }
+        if (count === 'crowded') {
+          const sides = page.locator('[data-available-page="0"] .c-team-available-side');
+          for (const side of await sides.all()) {
+            if (await side.locator('summary').count() !== 15) throw new Error('Grupo nao tem quinze avatares');
+            const cells = await side.locator('summary').all();
+            const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
+            if (Math.abs(boxes[0].y - boxes[2].y) > 1 || boxes[3].y <= boxes[0].y) throw new Error('Grade nao tem tres por linha');
+          }
+          await page.locator('[data-available-next]').click();
+          if (!await page.locator('[data-available-page="1"]').isVisible()) throw new Error('Nao mostrou atletas excedentes');
+          if (!await page.locator('[data-available-next]').isDisabled()) throw new Error('Paginacao ultrapassa ultima pagina');
+          await page.locator('[data-available-prev]').click();
+          if (!await page.locator('[data-available-page="0"]').isVisible()) throw new Error('Nao retornou primeira pagina');
+        }
         await page.screenshot({ path: path.join(root, `_deploy/team-${count}-${width}.png`), fullPage: true });
       }
       if (errors.length) throw new Error(errors.join('\n'));
