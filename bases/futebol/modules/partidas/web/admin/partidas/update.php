@@ -8,8 +8,7 @@ require __DIR__ . '/lineup_helpers.php';
 require __DIR__ . '/plan_fallback.php';
 
 $classificationFieldsPath = __DIR__ . '/../classificacao/fields.php';
-$classificationEnabled = function_exists('projectModuleProvides')
-    && projectModuleProvides('individual_classification')
+$classificationEnabled = is_file(PROJECT_PATH . '/modules/classificacao/module.json')
     && is_file($classificationFieldsPath);
 
 if ($classificationEnabled) {
@@ -60,7 +59,7 @@ if ($scoreA !== null && $scoreB !== null) {
 }
 
 $stmt = $pdo->prepare("
-    SELECT m.competition_id, c.context
+    SELECT m.competition_id, m.participant_a, m.participant_b, c.context
     FROM matches m
     LEFT JOIN competitions c ON c.id = m.competition_id
     WHERE m.id = ?
@@ -69,6 +68,12 @@ $stmt = $pdo->prepare("
 $stmt->execute([$id]);
 $matchContext = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 $competitionContext = (string)($matchContext['context'] ?? 'external');
+if (!$matchContext) {
+    flash('error', 'Partida nao encontrada.');
+    redirect(PROJECT_URL . '/admin/partidas/index.php');
+}
+$participantA = (string)$matchContext['participant_a'];
+if ($competitionContext === 'internal') $participantB = (string)$matchContext['participant_b'];
 
 if ($competitionContext === 'internal') {
     $lineupMode = 'automatic';

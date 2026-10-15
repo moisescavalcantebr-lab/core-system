@@ -8,8 +8,7 @@ require __DIR__ . '/plan_fallback.php';
 require __DIR__ . '/competition_helpers.php';
 
 $classificationFieldsPath = __DIR__ . '/../classificacao/fields.php';
-$classificationEnabled = function_exists('projectModuleProvides')
-    && projectModuleProvides('individual_classification')
+$classificationEnabled = is_file(PROJECT_PATH . '/modules/classificacao/module.json')
     && is_file($classificationFieldsPath);
 
 if ($classificationEnabled) {
@@ -17,6 +16,7 @@ if ($classificationEnabled) {
 }
 
 requireProjectAdmin();
+competitionEnsureTrackingSchema($pdo);
 
 $friendlyCardsEnabled = function_exists('getSetting')
     ? getSetting('friendly_cards_enabled', '1') !== '0'
@@ -159,6 +159,9 @@ $nextScheduledMatch = $scheduledMatches[0] ?? null;
 $upcomingMatches = array_slice($scheduledMatches, 1);
 $scheduledMatchLimit = projectPlanLimit('matches_scheduled', 4);
 $canCreateMatch = !$isClosed && $scheduledMatchesCount < $scheduledMatchLimit;
+if (($competition['context'] ?? '') === 'internal' && !competitionTrainingAvailable($pdo)) {
+    $canCreateMatch = false;
+}
 
 $contextLabels = ['external' => 'Externa', 'internal' => 'Interna'];
 $typeLabels = [
@@ -288,7 +291,7 @@ ob_start();
                     </div>
                     <?php if ($classificationEnabled): ?>
                         <div class="c-dashboard-card c-card--info">
-                            <h4>No ranking</h4>
+                            <h4>Na classificação</h4>
                             <div class="c-metric"><?= count($classificationRows) ?></div>
                         </div>
                         <div class="c-dashboard-card c-card--neutral">
@@ -297,6 +300,16 @@ ob_start();
                         </div>
                     <?php endif; ?>
                 <?php elseif (($competition['context'] ?? '') === 'external'): ?>
+                    <div class="c-dashboard-card c-card--info">
+                        <h4>Pontos do meu time</h4>
+                        <div class="c-metric"><?= $points ?></div>
+                    </div>
+                    <?php if (($competition['type'] ?? '') === 'championship'): ?>
+                    <div class="c-dashboard-card c-card--neutral">
+                        <h4>Posição oficial</h4>
+                        <div class="c-metric"><?= !empty($competition['official_position']) ? (int)$competition['official_position'] . 'º' : '-' ?></div>
+                    </div>
+                    <?php endif; ?>
                     <div class="c-dashboard-card c-card--info">
                         <h4>Partidas</h4>
                         <div class="c-metric"><?= count($matches) ?></div>

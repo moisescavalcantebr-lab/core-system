@@ -4,6 +4,9 @@ declare(strict_types=1);
 function matchLineupEnsureSchema(PDO $pdo): void
 {
     $columns = $pdo->query("SHOW COLUMNS FROM matches")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('lineup_snapshot_at', $columns, true)) {
+        $pdo->exec('ALTER TABLE matches ADD COLUMN lineup_snapshot_at DATETIME NULL');
+    }
 
     if (!in_array('lineup_mode', $columns, true)) {
         $pdo->exec("ALTER TABLE matches ADD COLUMN lineup_mode ENUM('team_roster','arrival_order','automatic') NOT NULL DEFAULT 'team_roster' AFTER status");
@@ -355,76 +358,17 @@ function matchLineupSaveFieldSnapshot(PDO $pdo, int $matchId, bool $force = fals
     ]);
 }
 
-function matchLineupEnsureTrainingSchema(PDO $pdo): void
+function matchLineupOwnTeam(PDO $pdo): array
 {
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS training_roster (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            player_id INT NOT NULL,
-            team_key ENUM('time_1','time_2') NOT NULL DEFAULT 'time_1',
-            status ENUM('field','reserve','inactive') NOT NULL DEFAULT 'reserve',
-            slot_group VARCHAR(40) NULL,
-            slot_index INT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_training_player (player_id),
-            INDEX(team_key),
-            INDEX(status),
-            INDEX(slot_group, slot_index)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
-
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS training_settings (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            custom_slots_json JSON NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    ");
-}
-
-function matchLineupTrainingDefaultSlots(): array
-{
-    return [
-        'GO' => 1,
-        'ZC1' => 1,
-        'ZC2' => 1,
-        'LE' => 1,
-        'LD' => 1,
-        'VOL1' => 1,
-        'MAT1' => 1,
-        'PTE' => 1,
-        'PTD' => 1,
-        'CA1' => 1,
-        'CA2' => 1,
-    ];
+    require_once __DIR__ . '/../meu_time/formations_helpers.php';
+    require_once __DIR__ . '/../meu_time/lineup_helpers.php';
+    teamEnsureFormationsSchema($pdo);
+    return $pdo->query("SELECT * FROM team_profile WHERE id=1")->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
 function matchLineupTrainingFieldSnapshot(PDO $pdo): array
 {
-    matchLineupEnsureTrainingSchema($pdo);
-
-    $settings = $pdo->query("SELECT custom_slots_json FROM training_settings WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-    if (!$settings || empty($settings['custom_slots_json'])) {
-        $team = $pdo->query("SELECT custom_slots_json FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-        $slots = json_decode((string)($team['custom_slots_json'] ?? ''), true);
-        $slots = is_array($slots) && $slots ? $slots : matchLineupTrainingDefaultSlots();
-        $json = json_encode($slots, JSON_UNESCAPED_UNICODE);
-        $stmt = $pdo->prepare("
-            INSERT INTO training_settings (id, custom_slots_json)
-            VALUES (1, ?)
-            ON DUPLICATE KEY UPDATE custom_slots_json = VALUES(custom_slots_json)
-        ");
-        $stmt->execute([$json]);
-    } else {
-        $json = (string)$settings['custom_slots_json'];
-    }
-
-    return [
-        'team_type' => 'custom',
-        'custom_slots_json' => $json,
-    ];
+    return matchLineupCurrentFieldSnapshot($pdo);
 }
 
 function matchLineupSaveTrainingFieldSnapshot(PDO $pdo, int $matchId, bool $force = false): void
@@ -652,60 +596,7 @@ function matchLineupSavePlayer(PDO $pdo, int $matchId, int $playerId, string $st
 
 function matchLineupSeedTeamRosterMatch(PDO $pdo, int $matchId): void
 {
-    $stmt = $pdo->prepare("
-        SELECT m.id, m.lineup_mode, c.context
-        FROM matches m
-        LEFT JOIN competitions c ON c.id = m.competition_id
-        WHERE m.id = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$matchId]);
-    $match = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$match || (string)($match['context'] ?? 'external') === 'internal') {
-        return;
-    }
-
-    if ((string)($match['lineup_mode'] ?? 'team_roster') !== 'team_roster') {
-        return;
-    }
-
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM match_lineup WHERE match_id = ?");
-    $stmt->execute([$matchId]);
-    if ((int)$stmt->fetchColumn() > 0) {
-        return;
-    }
-
-    $pdo->prepare("
-        INSERT INTO match_confirmations (match_id, player_id, status, payment_status, confirmed_at)
-        SELECT ?, p.id, 'confirmed', 'not_required', NOW()
-        FROM players p
-        WHERE p.status = 'active'
-        ON DUPLICATE KEY UPDATE
-            status = VALUES(status),
-            payment_status = VALUES(payment_status),
-            confirmed_at = COALESCE(match_confirmations.confirmed_at, VALUES(confirmed_at))
-    ")->execute([$matchId]);
-
-    $stmt = $pdo->prepare("
-        SELECT p.id
-        FROM players p
-        LEFT JOIN team_roster tr ON tr.player_id = p.id
-        LEFT JOIN player_positions pp ON pp.id = p.position_id
-        WHERE p.status = 'active'
-        ORDER BY
-            CASE WHEN tr.status = 'active' THEN 0 ELSE 1 END,
-            tr.slot_group ASC,
-            tr.slot_index ASC,
-            pp.sort_order ASC,
-            p.name ASC
-    ");
-    $stmt->execute();
-    $playerIds = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
-
-    foreach ($playerIds as $playerId) {
-        matchLineupAssignConfirmedPlayer($pdo, $matchId, $playerId, null, false);
-    }
+    matchLineupSyncTeamRosterSnapshot($pdo, $matchId);
 }
 
 function matchLineupFillMissingTeamRosterReserves(PDO $pdo, int $matchId): void
@@ -751,182 +642,70 @@ function matchLineupFillMissingTeamRosterReserves(PDO $pdo, int $matchId): void
     ")->execute([$matchId, $matchId]);
 }
 
-function matchLineupSyncTeamRosterSnapshot(PDO $pdo, int $matchId): void
+function matchLineupSyncTeamRosterSnapshot(PDO $pdo, int $matchId, bool $initial = false): void
 {
-    $stmt = $pdo->prepare("
-        SELECT m.id, m.lineup_mode, c.context
-        FROM matches m
-        LEFT JOIN competitions c ON c.id = m.competition_id
-        WHERE m.id = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$matchId]);
-    $match = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$match || (string)($match['context'] ?? 'external') === 'internal') {
-        return;
-    }
-
-    if ((string)($match['lineup_mode'] ?? 'team_roster') !== 'team_roster') {
-        return;
-    }
-
-    $team = $pdo->query("SELECT team_type, starters_count, reserves_count, custom_slots_json FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-    $setup = matchLineupFieldSetup((string)($team['team_type'] ?? 'field'), $team['custom_slots_json'] ?? null);
-    $slots = $setup['slots'] ?? [];
-    $occupied = [];
-    $maxStarters = max(1, min(11, (int)($team['starters_count'] ?? 11)));
-    $maxReserves = max(0, min(8, (int)($team['reserves_count'] ?? 8)));
-    $starterTotal = 0;
-    $reserveTotal = 0;
-
-    $pdo->prepare("
-        INSERT INTO match_confirmations (match_id, player_id, status, payment_status, confirmed_at)
-        SELECT ?, p.id, 'confirmed', 'not_required', NOW()
-        FROM players p
-        WHERE p.status = 'active'
-        ON DUPLICATE KEY UPDATE
-            status = VALUES(status),
-            payment_status = VALUES(payment_status),
-            confirmed_at = COALESCE(match_confirmations.confirmed_at, VALUES(confirmed_at))
-    ")->execute([$matchId]);
-
-    $pdo->prepare("DELETE FROM match_lineup WHERE match_id = ?")->execute([$matchId]);
-
-    $stmt = $pdo->query("
-        SELECT
-            p.id AS player_id,
-            tr.status AS roster_status,
-            tr.slot_group,
-            tr.slot_index,
-            pp.sort_order
-        FROM players p
-        LEFT JOIN team_roster tr ON tr.player_id = p.id
-        LEFT JOIN player_positions pp ON pp.id = p.position_id
-        WHERE p.status = 'active'
-        ORDER BY
-            CASE WHEN tr.status = 'active' THEN 0 ELSE 1 END,
-            tr.slot_group IS NULL,
-            tr.slot_group,
-            tr.slot_index,
-            pp.sort_order,
-            p.name
-    ");
-
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $member) {
-        $status = 'reserve';
-        $slotGroup = null;
-        $slotIndex = null;
-
-        $candidateGroup = trim((string)($member['slot_group'] ?? ''));
-        $candidateIndex = $member['slot_index'] !== null ? (int)$member['slot_index'] : null;
-
-        if (
-            ($member['roster_status'] ?? '') === 'active'
-            && $candidateGroup !== ''
-            && $candidateIndex !== null
-            && isset($slots[$candidateGroup][$candidateIndex])
-            && $starterTotal < $maxStarters
-        ) {
-            $slotKey = $candidateGroup . ':' . $candidateIndex;
-            if (!isset($occupied[$slotKey])) {
-                $status = 'starter';
-                $slotGroup = $candidateGroup;
-                $slotIndex = $candidateIndex;
-                $occupied[$slotKey] = true;
-                $starterTotal++;
-            }
-        }
-
-        if ($status === 'reserve') {
-            if ($reserveTotal >= $maxReserves) {
-                continue;
-            }
-
-            $reserveTotal++;
-        }
-
-        matchLineupSavePlayer($pdo, $matchId, (int)$member['player_id'], $status, $slotGroup, $slotIndex, null, 'team_1');
-    }
+    matchLineupCopyOwnFormations($pdo, $matchId, false, $initial);
 }
 
-function matchLineupSyncTrainingSnapshot(PDO $pdo, int $matchId): void
+function matchLineupSyncTrainingSnapshot(PDO $pdo, int $matchId, bool $initial = false): void
 {
-    $stmt = $pdo->prepare("
-        SELECT m.id, c.context, c.type
-        FROM matches m
-        LEFT JOIN competitions c ON c.id = m.competition_id
-        WHERE m.id = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$matchId]);
-    $match = $stmt->fetch(PDO::FETCH_ASSOC);
+    matchLineupCopyOwnFormations($pdo, $matchId, true, $initial);
+}
 
-    if (!$match || (string)($match['context'] ?? '') !== 'internal' || (string)($match['type'] ?? '') !== 'training') {
-        return;
-    }
-
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM match_lineup WHERE match_id = ?");
-    $stmt->execute([$matchId]);
-    if ((int)$stmt->fetchColumn() > 0) {
-        return;
-    }
-
-    matchLineupSaveTrainingFieldSnapshot($pdo, $matchId, true);
-    matchLineupEnsureTrainingSchema($pdo);
-
-    $rows = $pdo->query("
-        SELECT
-            tr.player_id,
-            tr.team_key,
-            tr.status,
-            tr.slot_group,
-            tr.slot_index
-        FROM training_roster tr
-        INNER JOIN players p ON p.id = tr.player_id
-        WHERE p.status = 'active'
-          AND tr.status IN ('field', 'reserve')
-        ORDER BY tr.team_key ASC, tr.status ASC, tr.slot_group ASC, tr.slot_index ASC, p.name ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
-
-    if (empty($rows)) {
-        return;
-    }
-
-    $pdo->beginTransaction();
+function matchLineupCopyOwnFormations(PDO $pdo, int $matchId, bool $training, bool $initial = false): void
+{
+    matchLineupOwnTeam($pdo);
+    $ownsTransaction = !$pdo->inTransaction();
+    if ($ownsTransaction) $pdo->beginTransaction();
     try {
-        $confirmStmt = $pdo->prepare("
-            INSERT INTO match_confirmations (match_id, player_id, status, payment_status, confirmed_at)
-            VALUES (?, ?, 'confirmed', 'not_required', NOW())
-            ON DUPLICATE KEY UPDATE
-                status = VALUES(status),
-                payment_status = VALUES(payment_status),
-                confirmed_at = COALESCE(match_confirmations.confirmed_at, VALUES(confirmed_at))
-        ");
-
-        foreach ($rows as $row) {
-            $playerId = (int)($row['player_id'] ?? 0);
-            if ($playerId <= 0) {
-                continue;
+        $query = $pdo->prepare("SELECT m.*, c.context, c.type FROM matches m LEFT JOIN competitions c ON c.id=m.competition_id WHERE m.id=? FOR UPDATE");
+        $query->execute([$matchId]);
+        $match = $query->fetch(PDO::FETCH_ASSOC);
+        if (!$match || !empty($match['lineup_snapshot_at'])
+            || (!$initial && in_array($match['status'], ['finished', 'canceled'], true))
+            || ($training && ($match['context'] !== 'internal' || $match['type'] !== 'training'))
+            || (!$training && (($match['context'] ?? '') === 'internal' || $match['lineup_mode'] !== 'team_roster'))) {
+            if ($ownsTransaction) $pdo->commit();
+            return;
+        }
+        $count = $pdo->prepare('SELECT COUNT(*) FROM match_lineup WHERE match_id=?');
+        $count->execute([$matchId]);
+        if ((int)$count->fetchColumn() > 0) {
+            if ($ownsTransaction) $pdo->commit();
+            return;
+        }
+        $team = $pdo->query('SELECT * FROM team_profile WHERE id=1 FOR UPDATE')->fetch(PDO::FETCH_ASSOC) ?: [];
+        if ($training && (int)($team['formations_count'] ?? 1) !== 2) {
+            throw new RuntimeException('Ative os dois times em Meu Time para criar um treino.');
+        }
+        $resolved = teamResolveFormationRoster(teamLoadFormationRoster($pdo), $team);
+        $confirm = $pdo->prepare("INSERT INTO match_confirmations (match_id,player_id,status,payment_status,confirmed_at) VALUES (?,?,'confirmed','not_required',NOW()) ON DUPLICATE KEY UPDATE player_id=VALUES(player_id)");
+        $selected = [];
+        foreach ($resolved['teams'] as $key => $formation) {
+            if (!$training && $key !== 'time_1') continue;
+            foreach ($formation['players'] as $member) {
+                $selected[] = [$member, 'starter', $key === 'time_2' ? 'team_2' : 'team_1'];
             }
-
-            $confirmStmt->execute([$matchId, $playerId]);
-
-            $status = (string)($row['status'] ?? '') === 'field' ? 'starter' : 'reserve';
-            $lineupTeam = (string)($row['team_key'] ?? '') === 'time_2' ? 'team_2' : 'team_1';
-            $slotGroup = $status === 'starter' ? (trim((string)($row['slot_group'] ?? '')) ?: null) : null;
-            $slotIndex = $status === 'starter' && $row['slot_index'] !== null ? (int)$row['slot_index'] : null;
-
-            matchLineupSavePlayer($pdo, $matchId, $playerId, $status, $slotGroup, $slotIndex, null, $lineupTeam);
         }
-
-        $pdo->commit();
-    } catch (Throwable $exception) {
-        if ($pdo->inTransaction()) {
-            $pdo->rollBack();
+        if (!$training) {
+            foreach (array_slice($resolved['available'], 0, max(0, min(8, (int)($team['reserves_count'] ?? 8)))) as $member) {
+                $selected[] = [$member, 'reserve', 'team_1'];
+            }
         }
-
-        throw $exception;
+        foreach ($selected as [$member, $status, $key]) {
+            $playerId = (int)$member['player_id'];
+            $confirm->execute([$matchId, $playerId]);
+            matchLineupSavePlayer($pdo, $matchId, $playerId, $status,
+                $status === 'starter' ? $member['slot_group'] : null,
+                $status === 'starter' ? (int)$member['slot_index'] : null, null, $key);
+        }
+        $snapshot = matchLineupCurrentFieldSnapshot($pdo);
+        $save = $pdo->prepare("UPDATE matches SET field_type_snapshot=?,field_slots_snapshot_json=?,lineup_snapshot_at=NOW() WHERE id=?");
+        $save->execute([$snapshot['team_type'], $snapshot['custom_slots_json'], $matchId]);
+        if ($ownsTransaction) $pdo->commit();
+    } catch (Throwable $e) {
+        if ($ownsTransaction && $pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
     }
 }
 
@@ -1042,144 +821,5 @@ function matchLineupTeamLabel(?string $team): string
 
 function matchLineupAutoAssignInternal(PDO $pdo, int $matchId): void
 {
-    $stmt = $pdo->prepare("
-        SELECT m.id, m.lineup_mode, c.context
-        FROM matches m
-        LEFT JOIN competitions c ON c.id = m.competition_id
-        WHERE m.id = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$matchId]);
-    $match = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$match || ($match['context'] ?? '') !== 'internal') {
-        return;
-    }
-
-    $team = $pdo->query("SELECT team_type, custom_slots_json FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
-    $teamType = (string)($team['team_type'] ?? 'field');
-    $setup = matchLineupFieldSetup($teamType, $team['custom_slots_json'] ?? null);
-    $limits = $setup['limits'];
-    $teams = ['team_1', 'team_2'];
-
-    $occupied = [
-        'team_1' => matchLineupOccupiedSlots($pdo, $matchId, 'team_1'),
-        'team_2' => matchLineupOccupiedSlots($pdo, $matchId, 'team_2'),
-    ];
-
-    $teamCounts = ['team_1' => 0, 'team_2' => 0];
-    $countStmt = $pdo->prepare("
-        SELECT COALESCE(lineup_team, 'team_1') AS lineup_team, COUNT(*) AS total
-        FROM match_lineup
-        WHERE match_id = ? AND status = 'starter'
-        GROUP BY COALESCE(lineup_team, 'team_1')
-    ");
-    $countStmt->execute([$matchId]);
-
-    foreach ($countStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-        $team = (string)$row['lineup_team'];
-        if (isset($teamCounts[$team])) {
-            $teamCounts[$team] = (int)$row['total'];
-        }
-    }
-
-    $playersStmt = $pdo->prepare("
-        SELECT
-            p.id AS player_id,
-            p.name,
-            p.position_id,
-            p.secondary_position_id,
-            pp.name AS position_name,
-            pp.code AS position_code,
-            pp.group_key,
-            spp.name AS secondary_position_name,
-            spp.code AS secondary_position_code,
-            spp.group_key AS secondary_group_key
-        FROM match_confirmations mc
-        INNER JOIN players p ON p.id = mc.player_id
-        LEFT JOIN player_positions pp ON pp.id = p.position_id
-        LEFT JOIN player_positions spp ON spp.id = p.secondary_position_id
-        LEFT JOIN match_lineup ml ON ml.match_id = mc.match_id AND ml.player_id = mc.player_id
-        WHERE mc.match_id = ?
-          AND mc.status = 'confirmed'
-          AND p.status = 'active'
-          AND (ml.id IS NULL OR ml.status = 'reserve')
-    ");
-    $playersStmt->execute([$matchId]);
-    $players = $playersStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    if (empty($players)) {
-        return;
-    }
-
-    shuffle($players);
-
-    foreach ($players as $player) {
-        $candidateSlots = matchLineupIsReservePosition($player) ? [] : matchLineupCandidateSlotsForSetup($player, $setup);
-
-        if (!matchLineupIsReservePosition($player) && !empty($player['secondary_position_id']) && !matchLineupPositionIsReserve($pdo, (int)$player['secondary_position_id'])) {
-            $candidateSlots = array_merge($candidateSlots, matchLineupPositionSlotsForSetup($pdo, (int)$player['secondary_position_id'], $setup));
-        }
-
-        $uniqueCandidates = [];
-        foreach ($candidateSlots as $candidate) {
-            $uniqueCandidates[$candidate[0] . ':' . $candidate[1]] = $candidate;
-        }
-        $candidateSlots = array_values($uniqueCandidates);
-        shuffle($candidateSlots);
-
-        $teamOrder = $teams;
-        shuffle($teamOrder);
-        usort($teamOrder, static function (string $a, string $b) use ($teamCounts): int {
-            return $teamCounts[$a] <=> $teamCounts[$b];
-        });
-
-        $saved = false;
-
-        foreach ($teamOrder as $team) {
-            foreach ($candidateSlots as [$candidateGroup, $candidateIndex]) {
-                if (!isset($limits[$candidateGroup]) || $candidateIndex >= $limits[$candidateGroup]) {
-                    continue;
-                }
-
-                $key = $team . ':' . $candidateGroup . ':' . $candidateIndex;
-                if (isset($occupied[$team][$key])) {
-                    continue;
-                }
-
-                matchLineupSavePlayer($pdo, $matchId, (int)$player['player_id'], 'starter', $candidateGroup, (int)$candidateIndex, null, $team);
-                $occupied[$team][$key] = true;
-                $teamCounts[$team]++;
-                $saved = true;
-                break 2;
-            }
-        }
-
-        if (!$saved) {
-            $reserveTeam = $teamCounts['team_1'] <= $teamCounts['team_2'] ? 'team_1' : 'team_2';
-            matchLineupSavePlayer($pdo, $matchId, (int)$player['player_id'], 'reserve', null, null, null, $reserveTeam);
-        }
-    }
-}
-
-function matchLineupInitials(string $name): string
-{
-    $parts = preg_split('/\s+/', trim($name));
-    $substr = function_exists('mb_substr') ? 'mb_substr' : 'substr';
-    $upper = function_exists('mb_strtoupper') ? 'mb_strtoupper' : 'strtoupper';
-    return $upper($substr($parts[0] ?? '', 0, 1) . $substr($parts[1] ?? '', 0, 1));
-}
-
-function matchLineupAvatar(?string $avatar, string $name, string $class): string
-{
-    if ($avatar !== null && trim($avatar) !== '') {
-        return '<img class="' . htmlspecialchars($class) . '" src="' . htmlspecialchars(PROJECT_URL . '/' . ltrim($avatar, '/')) . '" alt="' . htmlspecialchars($name) . '">';
-    }
-
-    return '<span class="' . htmlspecialchars($class) . '">' . htmlspecialchars(matchLineupInitials($name)) . '</span>';
-}
-
-function matchLineupPositionDisplay(?string $code): string
-{
-    return preg_replace('/\d+$/', '', (string)$code) ?: '-';
+    matchLineupSyncTrainingSnapshot($pdo, $matchId);
 }

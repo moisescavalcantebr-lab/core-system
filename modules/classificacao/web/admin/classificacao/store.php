@@ -8,7 +8,7 @@ require __DIR__ . '/fields.php';
 
 requireProjectAdmin();
 
-if (!function_exists('projectModuleProvides') || !projectModuleProvides('individual_classification')) {
+if (!is_file(PROJECT_PATH . '/modules/classificacao/module.json')) {
     flash('error', 'Classificacao individual precisa do modulo Classificacao.');
     redirect(PROJECT_URL . '/admin/competicoes/index.php');
 }

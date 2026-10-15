@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS competitions (
     context ENUM('external','internal') DEFAULT 'external',
     type ENUM('championship','cup','league','tournament','friendly','training','challenge','ranking','other') DEFAULT 'tournament',
     season VARCHAR(80) NULL,
+    official_position INT UNSIGNED NULL,
     expected_participants INT NULL,
     expected_matches INT NULL,
     status ENUM('draft','active','finished','canceled') DEFAULT 'active',

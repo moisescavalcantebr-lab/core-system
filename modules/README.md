@@ -27,11 +27,12 @@ Cada tabela deve ter um responsável definido. Um addon pode estender uma tabela
 | Addon | Categorias, Cartão de Crédito | Financeiro |
 | Addon | Benefícios | Meu Holerite |
 | Addon | Jogadores | Participantes |
-| Addon | Competições, Treino | Meu Time |
+| Addon | Competições | Meu Time |
+| Legado aposentado | Treino | Redireciona para Meu Time |
 | Addon | Partidas, Treinos Internos | Competições |
 | Addon | Escalação, Placar, Placar Ao Vivo, Resultados | Partidas |
 
-Classificação e Estatísticas permanecem principais: possuem fluxos próprios e vínculos opcionais com o contexto esportivo. Treino organiza o elenco em dois times; Treinos Internos libera o recurso `internal_competitions` de Competições.
+Classificação e Estatísticas permanecem principais: possuem fluxos próprios e vínculos opcionais com o contexto esportivo. Na base Futebol, Meu Time organiza as duas formacoes e Competicoes/Partidas acompanham os treinos; o antigo modulo Treino foi aposentado, com redirecionamentos para compatibilidade. Treinos Internos permanece no catalogo legado como provedor de `internal_competitions`, mas nao e exigido pelo novo fluxo de Futebol.
 
 ### Separação de dados pendente
 

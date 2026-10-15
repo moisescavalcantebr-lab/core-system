@@ -28,7 +28,7 @@ if (!$match) {
 
 $team = $pdo->query("SELECT team_type, custom_slots_json FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC) ?: [];
 $teamType = (string)($team['team_type'] ?? 'field');
-$fieldSetup = matchLineupFieldSetup($teamType, $team['custom_slots_json'] ?? null);
+$fieldSetup = matchLineupFieldSetupForMatch($pdo, $match);
 $limits = $fieldSetup['limits'];
 $slots = $fieldSetup['slots'];
 $isInternalAutomatic = ($match['competition_context'] ?? '') === 'internal';

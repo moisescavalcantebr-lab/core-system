@@ -8,6 +8,7 @@ require __DIR__ . '/plan_fallback.php';
 require __DIR__ . '/competition_helpers.php';
 
 requireProjectAdmin();
+competitionEnsureTrackingSchema($pdo);
 
 function competitionRelatedCount(PDO $pdo, int $competitionId): int
 {
@@ -67,7 +68,7 @@ ob_start();
         <?php flash_show(); ?>
         <?php if ($hasRelatedData): ?>
             <div class="c-card">
-                Esta competicao ja possui dados cadastrados. Apenas nome e temporada podem ser alterados.
+                Esta competicao ja possui dados cadastrados. Apenas nome, temporada e posição oficial podem ser alterados.
             </div>
         <?php endif; ?>
         <?php require __DIR__ . '/form.php'; ?>

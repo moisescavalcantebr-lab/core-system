@@ -45,6 +45,10 @@ if ($competitionId > 0) {
     $stmt = $pdo->prepare("SELECT status, context, type FROM competitions WHERE id = ? LIMIT 1");
     $stmt->execute([$competitionId]);
     $competition = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+    if (!$competition) {
+        flash('error', 'Competicao nao encontrada.');
+        redirect(PROJECT_URL . '/admin/competicoes/index.php');
+    }
     $competitionStatus = (string)($competition['status'] ?? '');
     $competitionContext = (string)($competition['context'] ?? 'external');
     $competitionType = (string)($competition['type'] ?? '');
@@ -61,6 +65,18 @@ if ($competitionId > 0) {
     }
 } elseif ($lineupMode === 'automatic') {
     $lineupMode = 'team_roster';
+}
+
+$ownTeam = matchLineupOwnTeam($pdo);
+if ($competitionContext === 'internal' && $competitionType === 'training') {
+    if ((int)($ownTeam['formations_count'] ?? 1) !== 2) {
+        flash('error', 'Ative os dois times em Meu Time para criar um treino.');
+        redirect(PROJECT_URL . '/admin/competicoes/view.php?id=' . $competitionId);
+    }
+    $participantA = teamFormationName($ownTeam, 'time_1');
+    $participantB = teamFormationName($ownTeam, 'time_2');
+} else {
+    $participantA = trim((string)($ownTeam['name'] ?? '')) ?: 'Meu Time';
 }
 
 if ($status === 'live') {
@@ -94,39 +110,48 @@ if ($matchDate !== null) {
     $matchDate = str_replace('T', ' ', $matchDate);
 }
 
-$stmt = $pdo->prepare("
-    INSERT INTO matches (competition_id, participant_a, participant_b, match_date, venue, round_name, status, lineup_mode, match_fee, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-");
-$stmt->execute([
-    $competitionId > 0 ? $competitionId : null,
-    $participantA,
-    $participantB,
-    $matchDate,
-    trim((string)($_POST['venue'] ?? '')) ?: null,
-    trim((string)($_POST['round_name'] ?? '')) ?: null,
-    $status,
-    $lineupMode,
-    $matchFee,
-    trim((string)($_POST['notes'] ?? '')) ?: null,
-]);
+$pdo->beginTransaction();
+try {
+    $stmt = $pdo->prepare("
+        INSERT INTO matches (competition_id, participant_a, participant_b, match_date, venue, round_name, status, lineup_mode, match_fee, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->execute([
+        $competitionId > 0 ? $competitionId : null,
+        $participantA,
+        $participantB,
+        $matchDate,
+        trim((string)($_POST['venue'] ?? '')) ?: null,
+        trim((string)($_POST['round_name'] ?? '')) ?: null,
+        $status,
+        $lineupMode,
+        $matchFee,
+        trim((string)($_POST['notes'] ?? '')) ?: null,
+    ]);
 
-$matchId = (int)$pdo->lastInsertId();
+    $matchId = (int)$pdo->lastInsertId();
 
-if ($competitionContext === 'internal' && $competitionType === 'training') {
-    matchLineupSaveTrainingFieldSnapshot($pdo, $matchId, true);
-    matchLineupSyncTrainingSnapshot($pdo, $matchId);
-} else {
-    matchLineupSaveFieldSnapshot($pdo, $matchId, true);
-    matchLineupSyncTeamRosterSnapshot($pdo, $matchId);
-}
-
-if ($status === 'finished') {
     if ($competitionContext === 'internal' && $competitionType === 'training') {
-        matchLineupSaveTrainingFieldSnapshot($pdo, $matchId);
+        matchLineupSaveTrainingFieldSnapshot($pdo, $matchId, true);
+        matchLineupSyncTrainingSnapshot($pdo, $matchId, true);
     } else {
-        matchLineupSaveFieldSnapshot($pdo, $matchId);
+        matchLineupSaveFieldSnapshot($pdo, $matchId, true);
+        matchLineupSyncTeamRosterSnapshot($pdo, $matchId, true);
     }
+
+    if ($status === 'finished') {
+        if ($competitionContext === 'internal' && $competitionType === 'training') {
+            matchLineupSaveTrainingFieldSnapshot($pdo, $matchId);
+        } else {
+            matchLineupSaveFieldSnapshot($pdo, $matchId);
+        }
+    }
+    $pdo->commit();
+} catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    error_log('Match creation failed: '.$e->getMessage());
+    flash('error', 'Nao foi possivel criar a partida. Confira as formacoes de Meu Time.');
+    redirect(PROJECT_URL . '/admin/competicoes/index.php');
 }
 
 flash('success', 'Partida criada.');

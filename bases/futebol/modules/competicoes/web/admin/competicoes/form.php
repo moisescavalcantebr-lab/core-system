@@ -27,7 +27,7 @@ $internalTypes = [
     'training' => 'Treino',
 ];
 
-if (!function_exists('projectModuleProvides') || !projectModuleProvides('internal_competitions')) {
+if (!competitionTrainingAvailable($pdo) && empty($competition['id'])) {
     $internalTypes = [];
 }
 
@@ -109,6 +109,12 @@ $seasonTypes = ['championship', 'cup', 'league', 'tournament', 'challenge', 'ran
             <label>Temporada</label>
             <input type="text" name="season" class="c-input" value="<?= htmlspecialchars((string)($competition['season'] ?? '')) ?>">
         </div>
+        <?php if ($championshipMode || $type === 'championship'): ?>
+        <div class="c-form-group">
+            <label for="official-position">Posição oficial do meu time</label>
+            <input id="official-position" type="number" name="official_position" class="c-input" min="1" max="9999" step="1" value="<?= htmlspecialchars((string)($competition['official_position'] ?? '')) ?>">
+        </div>
+        <?php endif; ?>
 
         <div class="c-form-group">
             <label>Início</label>

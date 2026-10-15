@@ -37,6 +37,15 @@ $isFriendlyMatch = $competitionContext === 'external' && $competitionType === 'f
 $isChampionshipMatch = $competitionContext === 'external' && $competitionType === 'championship';
 $participantAValue = $competitionContext === 'internal' ? 'Time 1' : $teamName;
 $participantBValue = $competitionContext === 'internal' ? 'Time 2' : 'Time adversário';
+if ($competitionContext === 'internal' && $competitionType === 'training') {
+    $ownTeam = matchLineupOwnTeam($pdo);
+    if ((int)($ownTeam['formations_count'] ?? 1) !== 2) {
+        flash('error', 'Ative os dois times em Meu Time para criar um treino.');
+        redirect(PROJECT_URL . '/admin/competicoes/view.php?id=' . $competitionId);
+    }
+    $participantAValue = teamFormationName($ownTeam, 'time_1');
+    $participantBValue = teamFormationName($ownTeam, 'time_2');
+}
 $financeEnabled = projectPlanAllows('finance_enabled', true);
 $liveEnabled = projectPlanAllows('live_match_enabled', false);
 
@@ -67,7 +76,7 @@ ob_start();
             <div class="c-form-grid">
                 <div class="c-form-group">
                     <label>Time 1</label>
-                    <input type="text" name="participant_a" class="c-input" value="<?= htmlspecialchars($participantAValue) ?>" required>
+                    <input type="text" name="participant_a" class="c-input" value="<?= htmlspecialchars($participantAValue) ?>" readonly required>
                 </div>
 
                 <div class="c-form-group">

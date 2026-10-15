@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 csrf_verify();
+competitionEnsureTrackingSchema($pdo);
 
 function competitionRelatedCount(PDO $pdo, int $competitionId): int
 {
@@ -47,11 +48,6 @@ if ($id <= 0 || $name === '') {
 }
 
 if ($context === 'internal') {
-    if (!function_exists('projectModuleProvides') || !projectModuleProvides('internal_competitions')) {
-        flash('error', 'Treino interno precisa do modulo Treinos Internos.');
-        redirect(PROJECT_URL . '/admin/competicoes/index.php');
-    }
-
     $type = 'training';
 } elseif ($type === 'training') {
     $type = 'tournament';
@@ -72,22 +68,33 @@ if (competitionIsDefaultFriendly($competition)) {
 }
 
 $hasRelatedData = competitionRelatedCount($pdo, $id) > 0;
+if (!$hasRelatedData && $context === 'internal' && ($competition['context'] ?? '') !== 'internal' && !competitionTrainingAvailable($pdo)) {
+    flash('error', 'Ative os dois times em Meu Time para criar um treino.');
+    redirect(PROJECT_URL . '/admin/competicoes/index.php');
+}
+try {
+    $officialPosition = competitionOfficialPosition($_POST['official_position'] ?? ($competition['official_position'] ?? null));
+} catch (InvalidArgumentException $e) {
+    flash('error', $e->getMessage());
+    redirect(PROJECT_URL . '/admin/competicoes/edit.php?id=' . $id);
+}
 
 if ($hasRelatedData) {
     $stmt = $pdo->prepare("
         UPDATE competitions
-        SET name = ?, season = ?
+        SET name = ?, season = ?, official_position = ?
         WHERE id = ?
     ");
     $stmt->execute([
         $name,
         trim((string)($_POST['season'] ?? '')) ?: null,
+        ($competition['type'] ?? '') === 'championship' ? $officialPosition : null,
         $id,
     ]);
 } else {
     $stmt = $pdo->prepare("
         UPDATE competitions
-        SET name = ?, context = ?, type = ?, season = ?, status = ?, starts_at = ?, ends_at = ?, notes = ?
+        SET name = ?, context = ?, type = ?, season = ?, status = ?, starts_at = ?, ends_at = ?, notes = ?, official_position = ?
         WHERE id = ?
     ");
     $stmt->execute([
@@ -99,6 +106,7 @@ if ($hasRelatedData) {
         $startsAt,
         $endsAt,
         $notes,
+        $context === 'external' && $type === 'championship' ? $officialPosition : null,
         $id,
     ]);
 }

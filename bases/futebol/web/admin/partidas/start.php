@@ -58,10 +58,10 @@ $stmt = $pdo->prepare("SELECT COUNT(*) FROM match_lineup WHERE match_id = ?");
 $stmt->execute([$id]);
 if ((int)$stmt->fetchColumn() === 0) {
     if (($match['competition_context'] ?? '') === 'internal' && ($match['competition_type'] ?? '') === 'training') {
-        matchLineupSaveTrainingFieldSnapshot($pdo, $id, true);
+        matchLineupSaveTrainingFieldSnapshot($pdo, $id);
         matchLineupSyncTrainingSnapshot($pdo, $id);
     } else {
-        matchLineupSaveFieldSnapshot($pdo, $id, true);
+        matchLineupSaveFieldSnapshot($pdo, $id);
         matchLineupSyncTeamRosterSnapshot($pdo, $id);
     }
 }

@@ -2,7 +2,7 @@
     "name":  "competicoes",
     "label":  "Competicoes",
     "description":  "Addon do Meu Time para centralizar amistosos e, nos planos acima, treinos e campeonatos.",
-    "version":  "0.1.0",
+    "version":  "0.2.0",
     "type":  "project",
     "kind":  "addon",
     "attach_to":  [

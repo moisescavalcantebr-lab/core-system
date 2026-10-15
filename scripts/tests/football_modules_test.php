@@ -16,7 +16,8 @@ try {
         $schema=$manifest['database']['schema'] ?? '';
         if ($schema!=='') $pdo->exec((string)file_get_contents(dirname($path).'/'.$schema));
     }
-    footballCheck(count($modules)===7&&!isset($modules['placar_ao_vivo']),'Lista de modulos mudou');
+    footballCheck(count($modules)===8&&isset($modules['classificacao'])&&!isset($modules['placar_ao_vivo']),'Lista de modulos mudou');
+    footballCheck(($modules['treino']['menu'] ?? null)===null&&$modules['treino']['status']==='deprecated','Treino antigo permanece ativo');
     footballCheck($modules['participantes']['participant_access']==='optional','Politica de Futebol perdida');
     foreach ($modules as $slug=>$manifest) {
         foreach ($manifest['attach_to'] ?? [] as $parent) footballCheck(isset($modules[$parent]),'Addon sem modulo pai: '.$slug);
@@ -38,6 +39,7 @@ try {
             }
         }
     }
+    $pdo->exec((string)file_get_contents($base.'/modules/treino/database/schema.sql'));
     $pdo->exec("INSERT INTO participants (id,name,status) VALUES (101,'Pessoa de teste','active'); INSERT INTO players (id,participant_id,name,status) VALUES (101,101,'Atleta de teste','active'); INSERT INTO team_roster (id,player_id) VALUES (101,101); INSERT INTO training_roster (id,player_id) VALUES (101,101); INSERT INTO competitions (id,name) VALUES (101,'Competicao de teste'); INSERT INTO matches (id,competition_id,participant_a,participant_b) VALUES (101,101,'Meu Time','Visitante'); INSERT INTO finance_entries (id,type,title,amount) VALUES (101,'income','Contribuicao teste',10.00)");
     $tables=['participants','players','team_profile','team_roster','training_roster','competitions','matches','finance_entries'];
     $before=[];foreach ($tables as $table) $before[$table]=$pdo->query('SELECT * FROM '.$table.' ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
@@ -52,5 +54,5 @@ try {
     require $base.'/app/helpers/settings.php';
     require $base.'/web/admin/financeiro/helpers.php';
     footballCheck(count(financeCategoryOptions($pdo))>0,'Categorias do Financeiro indisponiveis');
-    echo "PASS: sete modulos de Futebol e rotas alinhados, pais presentes, schemas completos/idempotentes, dados esportivos e financeiros preservados e categorias disponiveis.\n";
+    echo "PASS: modulos de Futebol e rotas alinhados, Classificacao instalada, Treino antigo desativado, schemas idempotentes e dados esportivos/financeiros/legados preservados.\n";
 } finally { $server->exec('DROP DATABASE IF EXISTS `'.$database.'`'); }

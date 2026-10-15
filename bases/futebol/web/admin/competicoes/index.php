@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/plan_fallback.php';
+require_once __DIR__ . '/competition_helpers.php';
 
 requireProjectAdmin();
 
@@ -122,21 +123,6 @@ function competitionEnsureOpenChampionship(PDO $pdo): ?array
     }
 }
 
-function competitionTrainingModuleInstalled(): bool
-{
-    if (function_exists('projectModuleProvides') && projectModuleProvides('internal_competitions')) {
-        return true;
-    }
-
-    if (!defined('PROJECT_PATH')) {
-        return false;
-    }
-
-    return is_file(PROJECT_PATH . '/web/admin/treino/index.php')
-        || is_file(PROJECT_PATH . '/modules/treino/web/admin/treino/index.php')
-        || is_dir(PROJECT_PATH . '/web/admin/treino')
-        || is_dir(PROJECT_PATH . '/modules/treino');
-}
 
 function competitionRelatedCount(PDO $pdo, int $competitionId): int
 {
@@ -159,12 +145,10 @@ $search = trim((string)($_GET['q'] ?? ''));
 $contextFilter = in_array($_GET['context'] ?? '', ['external', 'internal'], true) ? $_GET['context'] : '';
 $typeFilter = in_array($_GET['type'] ?? '', ['championship','cup','league','tournament','friendly','training','challenge','ranking','other'], true) ? $_GET['type'] : '';
 $yearFilter = preg_match('/^\d{4}$/', (string)($_GET['year'] ?? '')) ? (string)$_GET['year'] : '';
-$internalCompetitionsEnabled = function_exists('projectModuleProvides')
-    && projectModuleProvides('internal_competitions');
-$trainingModuleInstalled = competitionTrainingModuleInstalled();
+$internalCompetitionsEnabled = competitionTrainingAvailable($pdo);
 $startFeaturesEnabled = competitionProjectPlanIsStart($pdo);
 
-if (($internalCompetitionsEnabled || $trainingModuleInstalled) && $startFeaturesEnabled) {
+if ($internalCompetitionsEnabled && $startFeaturesEnabled) {
     competitionEnsureDefaultTraining($pdo);
 }
 
@@ -367,6 +351,7 @@ ob_start();
                 </div>
             </div>
 
+            <?php if ($internalCompetitionsEnabled): ?>
             <div class="c-competition-card <?= $startFeaturesEnabled && $trainingCompetition ? 'c-competition-card--start-active' : 'c-competition-card--locked' ?>">
                 <div class="c-competition-card-visual c-competition-card-visual--training" aria-hidden="true"></div>
                 <div class="c-competition-card-body">
@@ -397,6 +382,7 @@ ob_start();
                 </div>
             </div>
 
+            <?php endif; ?>
             <div class="c-competition-card <?= $startFeaturesEnabled ? 'c-competition-card--start-active' : 'c-competition-card--locked' ?>">
                 <div class="c-competition-card-visual c-competition-card-visual--championship" aria-hidden="true"></div>
                 <div class="c-competition-card-body">

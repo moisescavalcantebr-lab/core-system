@@ -6,8 +6,7 @@ error_reporting(E_ALL);
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 
 $classificationFieldsPath = __DIR__ . '/../classificacao/fields.php';
-$classificationEnabled = function_exists('projectModuleProvides')
-    && projectModuleProvides('individual_classification')
+$classificationEnabled = is_file(PROJECT_PATH . '/modules/classificacao/module.json')
     && is_file($classificationFieldsPath);
 
 if ($classificationEnabled) {

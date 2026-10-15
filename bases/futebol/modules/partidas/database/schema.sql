@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS matches (
     lineup_mode enum('team_roster','arrival_order','automatic') NOT NULL DEFAULT 'team_roster',
     field_type_snapshot VARCHAR(40) NULL,
     field_slots_snapshot_json TEXT NULL,
+    lineup_snapshot_at DATETIME NULL,
     notes TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,

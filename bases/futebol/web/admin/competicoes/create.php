@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/plan_fallback.php';
+require_once __DIR__ . '/competition_helpers.php';
 
 requireProjectAdmin();
 

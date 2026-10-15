@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/plan_fallback.php';
+require_once __DIR__ . '/competition_helpers.php';
 
 requireProjectAdmin();
 
@@ -14,6 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 csrf_verify();
+competitionEnsureTrackingSchema($pdo);
+try {
+    $officialPosition = competitionOfficialPosition($_POST['official_position'] ?? null);
+} catch (InvalidArgumentException $e) {
+    flash('error', $e->getMessage());
+    redirect(PROJECT_URL . '/admin/competicoes/index.php');
+}
 
 function competitionStoreProjectPlanIsStart(PDO $pdo): bool
 {
@@ -62,8 +70,8 @@ if ($name === '') {
 }
 
 if ($context === 'internal') {
-    if (!function_exists('projectModuleProvides') || !projectModuleProvides('internal_competitions')) {
-        flash('error', 'Treino interno precisa do modulo Treinos Internos.');
+    if (!competitionTrainingAvailable($pdo)) {
+        flash('error', 'Ative os dois times em Meu Time para criar um treino.');
         redirect(PROJECT_URL . '/admin/competicoes/index.php');
     }
 
@@ -115,8 +123,8 @@ if (in_array($status, ['draft', 'active'], true)) {
 }
 
 $stmt = $pdo->prepare("
-    INSERT INTO competitions (name, context, type, season, status, starts_at, ends_at, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO competitions (name, context, type, season, status, starts_at, ends_at, notes, official_position)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ");
 $stmt->execute([
     $name,
@@ -127,6 +135,7 @@ $stmt->execute([
     $startsAt,
     $endsAt,
     $notes,
+    $context === 'external' && $type === 'championship' ? $officialPosition : null,
 ]);
 
 flash('success', 'Competicao criada com sucesso.');
