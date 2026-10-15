@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/helpers.php';
 
-requireProjectAdmin();
+participantRequireAdmin();
 
 $title = 'Novo ' . participantLabel();
 $participantSingular = participantLabel();
@@ -19,7 +19,7 @@ ob_start();
     <div class="c-page-header">
         <div>
             <h1 class="c-page-title"><?= htmlspecialchars($title) ?></h1>
-            <p class="c-page-subtitle">Cadastre o <?= htmlspecialchars(strtolower($participantSingular)) ?> e o acesso vinculado.</p>
+            <p class="c-page-subtitle"><?= participantOptionalAccess()?'Cadastro da pessoa':'Cadastro de '.htmlspecialchars(strtolower($participantSingular)).' e acesso vinculado' ?></p>
         </div>
         <a href="<?= participantAdminUrl() ?>" class="c-btn-secondary">Voltar</a>
     </div>

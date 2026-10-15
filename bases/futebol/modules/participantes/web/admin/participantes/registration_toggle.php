@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/helpers.php';
 
-requireProjectAdmin();
+participantRequireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

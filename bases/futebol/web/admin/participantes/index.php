@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/helpers.php';
 
-requireProjectAdmin();
+participantRequireAdmin();
 
 $title = participantLabel(true);
 $enabled = participantPublicRegistrationEnabled();
@@ -33,12 +33,14 @@ $participants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ob_start();
 ?>
 
-<div class="c-page">
+<div class="c-page c-participants-page">
     <div class="c-page-header">
         <div>
             <h1 class="c-page-title"><?= htmlspecialchars(participantLabel(true)) ?></h1>
-            <p class="c-page-subtitle">Cadastro de <?= htmlspecialchars(strtolower($participantPlural)) ?> vinculado aos usuarios do projeto</p>
+            <p class="c-page-subtitle"><?= participantOptionalAccess()?'Pessoas cadastradas no projeto':'Cadastro de '.htmlspecialchars(strtolower($participantPlural)).' vinculado aos usuarios do projeto' ?></p>
         </div>
+
+        <?php if (participantOptionalAccess()): ?><a class="c-btn-secondary" href="<?= participantAdminUrl('create.php') ?>">Novo <?= htmlspecialchars(participantLabel()) ?></a><?php endif; ?>
 
         <form action="<?= participantAdminUrl('registration_toggle.php') ?>" method="POST" style="display:inline;">
             <?= csrf_field(); ?>
@@ -73,7 +75,7 @@ ob_start();
             </div>
         </div>
 
-        <div class="c-card">
+        <div class="c-participant-list">
             <?php if (empty($participants)): ?>
                 <p>Nenhum <?= htmlspecialchars(strtolower($participantSingular)) ?> cadastrado.</p>
             <?php else: ?>
@@ -87,6 +89,7 @@ ob_start();
                             <span class="c-badge <?= participantStatusBadge((string)$participant['status']) ?>">
                                 <?= htmlspecialchars(participantStatusLabel((string)$participant['status'])) ?>
                             </span>
+                            <?php if (participantOptionalAccess()): ?><span class="c-badge c-badge--neutral"><?= htmlspecialchars(empty($participant['user_id'])?'Sem acesso':match ($participant['user_status'] ?? '') { 'active'=>'Acesso ativo','inactive'=>'Acesso inativo','blocked'=>'Acesso bloqueado',default=>'Acesso vinculado' }) ?></span><?php endif; ?>
                             <div class="c-participant-actions">
                                 <a class="c-btn-secondary" href="<?= participantAdminUrl('edit.php?id=' . (int)$participant['id']) ?>">Editar</a>
                                 <form action="<?= participantAdminUrl('toggle.php?id=' . (int)$participant['id']) ?>" method="POST">
@@ -105,6 +108,11 @@ ob_start();
 </div>
 
 <style>
+.c-participants-page .c-kpi-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.c-participants-page .c-kpi-card{padding:10px 0;border-bottom:1px solid var(--border,#334155)}
+.c-participants-page .c-kpi-card span{display:block;color:var(--muted);font-size:13px}
+.c-participants-page .c-kpi-card strong{display:block;font-size:22px;margin-top:4px}
+.c-participant-card strong{max-width:100%;overflow-wrap:anywhere}
 .c-participant-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));

@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/helpers.php';
 
-requireProjectAdmin();
+participantRequireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -31,7 +31,7 @@ try {
     $stmt = $pdo->prepare("UPDATE participants SET status = ? WHERE id = ?");
     $stmt->execute([$newStatus, $id]);
 
-    if (!empty($participant['user_id'])) {
+    if (!participantOptionalAccess() && !empty($participant['user_id'])) {
         $stmt = $pdo->prepare("UPDATE project_users SET status = ? WHERE id = ?");
         $stmt->execute([$newStatus === 'active' ? 'active' : 'inactive', (int)$participant['user_id']]);
     }

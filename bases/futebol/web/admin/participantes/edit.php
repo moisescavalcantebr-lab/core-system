@@ -6,11 +6,11 @@ error_reporting(E_ALL);
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/helpers.php';
 
-requireProjectAdmin();
+participantRequireAdmin();
 
 $id = (int)($_GET['id'] ?? 0);
 $stmt = $pdo->prepare("
-    SELECT p.*, u.email, u.username
+    SELECT p.*, u.email, u.username, u.status AS user_status
     FROM participants p
     LEFT JOIN project_users u ON u.id = p.user_id
     WHERE p.id = ?
