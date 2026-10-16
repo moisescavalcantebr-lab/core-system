@@ -46,6 +46,13 @@ const root = path.resolve(__dirname, '../..');
         if (!await page.locator('.c-team-page').evaluate(el => el.classList.contains('is-hiding-field-actions'))) throw new Error('Controle de acoes nao funcionou');
         if (!await page.getByText('Jogadores disponíveis', { exact: true }).isVisible()) throw new Error('Disponiveis ausentes');
         const avatar = page.locator('[data-available-page]:not([hidden]) summary').first();
+        const availableAvatar = await avatar.locator('.c-team-avatar-initial').boundingBox();
+        for (const fieldAvatar of await page.locator('.c-team-token-avatar').all()) {
+          const box = await fieldAvatar.boundingBox();
+          if (!box || !availableAvatar || Math.abs(box.width - availableAvatar.width) > 0.5 || Math.abs(box.height - availableAvatar.height) > 0.5) throw new Error(`Avatar em campo difere dos disponiveis: ${width}/${count}`);
+          const field = await fieldAvatar.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " c-team-field ")]').boundingBox();
+          if (box.x < field.x || box.y < field.y || box.x + box.width > field.x + field.width || box.y + box.height > field.y + field.height) throw new Error('Avatar ultrapassa o campo');
+        }
         await avatar.click();
         if (!await page.locator('details[open] .c-team-available-menu').isVisible()) throw new Error('Avatar nao abriu escolha de time');
         await page.keyboard.press('Escape');

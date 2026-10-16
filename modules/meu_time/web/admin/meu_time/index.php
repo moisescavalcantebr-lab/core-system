@@ -1227,8 +1227,9 @@ img.c-team-avatar-initial {
 }
 
 .c-team-token-avatar {
-    width: 36px;
-    height: 36px;
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
     margin-bottom: 2px;
     border-radius: 50%;
     display: grid !important;
@@ -1241,7 +1242,7 @@ img.c-team-avatar-initial {
         0 0 0 1px rgba(34, 197, 94, .26),
         0 2px 5px rgba(0,0,0,.45);
     color: #08111f;
-    font-size: 10px !important;
+    font-size: 12px !important;
     font-weight: 700;
     opacity: 1 !important;
     text-shadow: none;
@@ -1300,9 +1301,9 @@ img.c-team-token-avatar {
     }
 
     .c-team-token-avatar {
-        width: 48px;
-        height: 48px;
-        font-size: 12px;
+        width: 36px;
+        height: 36px;
+        font-size: 11px !important;
     }
 
     .c-team-reserve-grid .c-team-avatar-initial {
@@ -1338,7 +1339,7 @@ img.c-team-token-avatar {
 .c-team-available-player summary { display: grid; place-items: center; cursor: pointer; list-style: none; border-radius: 50%; }
 .c-team-available-player summary::-webkit-details-marker { display: none; }
 .c-team-available-player summary:focus-visible { outline: 2px solid var(--primary-color, #3b82f6); outline-offset: 3px; }
-.c-team-available-player .c-team-avatar-initial { width: 44px; height: 44px; font-size: 12px; }
+.c-team-available-player .c-team-avatar-initial { box-sizing: border-box; width: 44px; height: 44px; font-size: 12px; }
 .c-team-available-menu { position: absolute; z-index: 20; top: 20%; left: 4px; right: 4px; padding: 12px; border: 1px solid var(--border-color, #64748b); border-radius: 4px; background: var(--bg-secondary, #111827); box-shadow: 0 4px 12px #0006; }
 .c-team-available-menu strong { display: block; margin-bottom: 8px; overflow-wrap: anywhere; }
 .c-team-available-menu form { display: flex; flex-wrap: wrap; gap: 6px; }
