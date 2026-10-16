@@ -147,6 +147,42 @@ function matchLineupModeLabel(?string $mode): string
     };
 }
 
+function matchLineupInitials(string $name): string
+{
+    $parts = preg_split('/\s+/', trim($name));
+    $substr = function_exists('mb_substr') ? 'mb_substr' : 'substr';
+    $upper = function_exists('mb_strtoupper') ? 'mb_strtoupper' : 'strtoupper';
+    return $upper($substr($parts[0] ?? '', 0, 1) . $substr($parts[1] ?? '', 0, 1));
+}
+
+function matchLineupAvatar(?string $avatar, string $name, string $class): string
+{
+    if ($avatar !== null && trim($avatar) !== '') {
+        return '<img class="' . htmlspecialchars($class) . '" src="' . htmlspecialchars(PROJECT_URL . '/' . ltrim($avatar, '/')) . '" alt="' . htmlspecialchars($name) . '">';
+    }
+    return '<span class="' . htmlspecialchars($class) . '">' . htmlspecialchars(matchLineupInitials($name)) . '</span>';
+}
+
+function matchLineupPositionDisplay(?string $code): string
+{
+    return preg_replace('/\d+$/', '', (string)$code) ?: '-';
+}
+
+function matchLineupFieldPosition(array $slots, array $player): string
+{
+    $group = (string)($player['slot_group'] ?? '');
+    $index = $player['slot_index'] ?? null;
+    $slot = $index !== null ? ($slots[$group][(int)$index] ?? null) : null;
+    if ($slot === null) return matchLineupPositionDisplay($player['position_code'] ?? null);
+    return matchLineupPositionDisplay($slot['label'] ?? match ($group) {
+        'goleiro' => 'GO', 'zagueiro' => 'ZC',
+        'lateral' => (int)$index === 0 ? 'LE' : 'LD',
+        'meia' => (int)$index === 0 ? 'VOL' : 'MAT',
+        'ponta' => (int)$index === 0 ? 'PTE' : 'PTD',
+        'atacante' => 'CA', default => $player['position_code'] ?? null,
+    });
+}
+
 function matchLineupPositionKey(?string $position, ?string $groupKey = null): string
 {
     if ($groupKey !== null && $groupKey !== '') {

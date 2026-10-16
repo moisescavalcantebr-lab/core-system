@@ -167,15 +167,7 @@ function matchShowRenderField(array $slots, array $fieldPlayers, string $emptyTe
                     <?php continue; ?>
                 <?php endif; ?>
                 <span class="c-match-field-slot" style="left:<?= (int)$slot['x'] ?>%;top:<?= (int)$slot['y'] ?>%;">
-                    <?= htmlspecialchars(matchLineupPositionDisplay((string)($slot['label'] ?? match ($positionKey) {
-                        'goleiro' => 'GO',
-                        'zagueiro' => 'ZC',
-                        'lateral' => $slotIndex === 0 ? 'LE' : 'LD',
-                        'meia' => $slotIndex === 0 ? 'VOL' : 'MAT',
-                        'ponta' => $slotIndex === 0 ? 'PTE' : 'PTD',
-                        'atacante' => 'CA',
-                        default => '',
-                    }))) ?>
+                    <?= htmlspecialchars(matchLineupFieldPosition($slots, ['slot_group'=>$positionKey, 'slot_index'=>$slotIndex])) ?>
                 </span>
             <?php endforeach; ?>
         <?php endforeach; ?>
@@ -184,7 +176,7 @@ function matchShowRenderField(array $slots, array $fieldPlayers, string $emptyTe
             <div class="c-match-field-player" style="left:<?= (int)$player['x'] ?>%;top:<?= (int)$player['y'] ?>%;">
                 <?= matchLineupAvatar($player['avatar'] ?? null, $player['player_name'] ?? '-', 'c-match-field-avatar') ?>
                 <strong><?= htmlspecialchars((string)($player['player_name'] ?? '-')) ?></strong>
-                <small><?= htmlspecialchars(matchLineupPositionDisplay($player['position_code'] ?? null)) ?></small>
+                <small><?= htmlspecialchars(matchLineupFieldPosition($slots, $player)) ?></small>
             </div>
         <?php endforeach; ?>
 

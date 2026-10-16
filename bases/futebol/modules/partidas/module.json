@@ -2,7 +2,7 @@
     "name":  "partidas",
     "label":  "Partidas",
     "description":  "Motor de partidas usado pelas competicoes para criar amistosos e jogos vinculados.",
-    "version":  "0.2.0",
+    "version":  "0.2.1",
     "type":  "project",
     "kind":  "addon",
     "attach_to":  [

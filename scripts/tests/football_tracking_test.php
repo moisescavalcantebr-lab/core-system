@@ -2,6 +2,7 @@
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') exit(1);
 $root = dirname(__DIR__, 2);
+define('PROJECT_URL', '/projects/football-test/web');
 function trackingCheck(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
 function trackingRoute(string $path, array $post = [], array $get = [], int $actor = 1): string
 {
@@ -118,8 +119,41 @@ try {
     $retired = json_decode(file_get_contents($root.'/modules/treino/module.json'),true);
     trackingCheck($retired['menu']===null && !isset($retired['database']['schema']),'Treino antigo continua ativo');
     if (!is_dir($root.'/_deploy')) mkdir($root.'/_deploy',0700,true);
+    trackingCheck(matchLineupPositionDisplay('VOL2') === 'VOL' && matchLineupPositionDisplay(null) === '-', 'Exibicao das siglas indisponivel');
+    trackingCheck(matchLineupInitials('Moises Cavalcante') === 'MC', 'Iniciais indisponiveis');
+    trackingCheck(str_contains(matchLineupAvatar(null, 'Moises Cavalcante', 'avatar'), '>MC</span>'), 'Avatar sem foto falhou');
+    trackingCheck(str_contains(matchLineupAvatar('foto".png', '<Nome>', 'avatar'), '&quot;.png') && str_contains(matchLineupAvatar(null, '<Nome>', 'avatar'), '&lt;'), 'Avatar nao escapa dados');
+    // Friendly games copy the chosen field slot, not the player's primary position.
+    $pdo->exec("UPDATE team_profile SET team_type='custom',custom_slots_json='{\"GO\":1,\"CA1\":1,\"MAT1\":1}',starters_count=3 WHERE id=1; UPDATE team_roster SET status='inactive'");
+    $pdo->exec("UPDATE team_roster SET status='active',team_key='time_1',slot_group='goleiro',slot_index=0,field_position_code='GO' WHERE player_id=1; UPDATE team_roster SET status='active',team_key='time_1',slot_group='atacante',slot_index=0,field_position_code='CA1' WHERE player_id=2");
+    $winger = (int)$pdo->query("SELECT id FROM player_positions WHERE code='PTD1'")->fetchColumn();
+    $pdo->prepare('UPDATE players SET position_id=? WHERE id=2')->execute([$winger]);
+    trackingRoute($routes.'competicoes/store.php',['_csrf'=>'test','name'=>'Amistosos 2026','context'=>'external','type'=>'friendly','status'=>'active']);
+    $friendlyId = (int)$pdo->query("SELECT id FROM competitions WHERE name='Amistosos 2026'")->fetchColumn();
+    trackingRoute($routes.'partidas/store.php',[...$game,'competition_id'=>$friendlyId,'participant_b'=>'Visitante','lineup_mode'=>'team_roster']);
+    $friendlyMatchId = (int)$pdo->query('SELECT MAX(id) FROM matches')->fetchColumn();
+    $friendlyRows = $pdo->query('SELECT * FROM match_lineup WHERE match_id='.$friendlyMatchId.' ORDER BY player_id')->fetchAll(PDO::FETCH_ASSOC);
+    $chosen = array_values(array_filter($friendlyRows, static fn($row) => (int)$row['player_id'] === 2));
+    trackingCheck(count($chosen)===1 && $chosen[0]['status']==='starter' && $chosen[0]['slot_group']==='atacante' && (int)$chosen[0]['slot_index']===0, 'Amistoso nao copiou posicao escolhida');
+    trackingCheck((int)$pdo->query('SELECT position_id FROM players WHERE id=2')->fetchColumn()===$winger, 'Amistoso alterou posicao principal');
+    trackingCheck(str_contains(trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId],2),'Acesso negado'), 'Cliente acessou tela administrativa');
+    trackingCheck(str_contains(trackingRoute($routes.'partidas/show.php',[],['id'=>999999]),'Partida nao encontrada'), 'Partida inexistente nao tratada');
+    $friendlyView = trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId]);
+    trackingCheck(str_contains($friendlyView,'Atleta 2') && str_contains($friendlyView,'<small>CA</small>') && !str_contains($friendlyView,'<small>PTD</small>'), 'Campo exibe a principal em vez da posicao escalada');
+    trackingCheck((bool)preg_match('/>\s*MAT\s*<\/span>/', $friendlyView), 'Vaga vazia personalizada nao exibiu MAT');
+    // A later change to Meu Time or to the registration must not rewrite a match.
+    $pdo->exec("UPDATE team_profile SET custom_slots_json='{\"GO\":1}' WHERE id=1; UPDATE team_roster SET status='inactive' WHERE player_id=2; UPDATE players SET position_id=(SELECT id FROM player_positions WHERE code='GO1' LIMIT 1) WHERE id=2");
+    $friendlyView = trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId]);
+    $friendlyLineup = trackingRoute($routes.'partidas/lineup.php',[],['id'=>$friendlyMatchId]);
+    trackingCheck(str_contains($friendlyView,'<small>CA</small>') && str_contains($friendlyLineup,'<small>CA</small>'), 'Mudanca posterior alterou sigla da partida');
+    trackingCheck((bool)preg_match('/>\s*MAT\s*<\/span>/', $friendlyLineup), 'Escalacao trocou a sigla da vaga vazia');
+    trackingCheck($friendlyRows===$pdo->query('SELECT * FROM match_lineup WHERE match_id='.$friendlyMatchId.' ORDER BY player_id')->fetchAll(PDO::FETCH_ASSOC), 'Abrir partida reescreveu escalacao');
+    $pdo->exec("UPDATE matches SET status='finished' WHERE id=$friendlyMatchId");
+    trackingCheck(str_contains(trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId]),'<small>CA</small>'), 'Historico finalizado perdeu posicao de campo');
+    file_put_contents($root.'/_deploy/football-friendly-preview.html',$friendlyView);
+    file_put_contents($root.'/_deploy/football-friendly-lineup-preview.html',$friendlyLineup);
     foreach (['championship'=>$champView,'training'=>$trainingView,'tracking-edit'=>trackingRoute($routes.'competicoes/edit.php',[],['id'=>$champId]),'tracking-index'=>trackingRoute($routes.'competicoes/index.php')] as $key=>$html) file_put_contents($root.'/_deploy/football-'.$key.'-preview.html',$html);
-    echo "PASS: campeonato do meu time, posicao editavel, duas formacoes, snapshots preservados, classificacao individual 3/1/0, bloqueio de treino com um time, rollback, CSRF e legado preservado.\n";
+    echo "PASS: amistoso com posicao alternativa, Ver Partida/Escalacao sem fatal, vagas vazias, avatares, snapshots preservados, campeonato, treino, classificacao 3/1/0, rollback e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');
     if (is_dir($fixture)) {

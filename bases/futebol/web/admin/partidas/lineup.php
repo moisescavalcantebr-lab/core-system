@@ -204,15 +204,7 @@ if (!function_exists('renderMatchLineupField')) {
             <?php foreach ($slots as $positionKey => $positionSlots): ?>
                 <?php foreach ($positionSlots as $slotIndex => $slot): ?>
                     <span class="c-lineup-position-slot" style="left:<?= (int)$slot['x'] ?>%;top:<?= (int)$slot['y'] ?>%;">
-                        <?= htmlspecialchars(matchLineupPositionDisplay(match ($positionKey) {
-                            'goleiro' => 'GO',
-                            'zagueiro' => 'ZC',
-                            'lateral' => $slotIndex === 0 ? 'LE' : 'LD',
-                            'meia' => $slotIndex === 0 ? 'VOL' : 'MAT',
-                            'ponta' => $slotIndex === 0 ? 'PTE' : 'PTD',
-                            'atacante' => 'CA',
-                            default => '',
-                        })) ?>
+                        <?= htmlspecialchars(matchLineupFieldPosition($slots, ['slot_group'=>$positionKey, 'slot_index'=>$slotIndex])) ?>
                     </span>
                 <?php endforeach; ?>
             <?php endforeach; ?>
@@ -220,7 +212,7 @@ if (!function_exists('renderMatchLineupField')) {
                 <div class="c-lineup-token" style="left:<?= (int)$player['x'] ?>%;top:<?= (int)$player['y'] ?>%;">
                     <?= matchLineupAvatar($player['avatar'] ?? null, $player['player_name'], 'c-lineup-token-avatar') ?>
                     <strong><?= htmlspecialchars($player['player_name']) ?></strong>
-                    <small><?= htmlspecialchars(matchLineupPositionDisplay($player['position_code'] ?? null)) ?></small>
+                    <small><?= htmlspecialchars(matchLineupFieldPosition($slots, $player)) ?></small>
                     <form action="<?= PROJECT_URL ?>/admin/partidas/lineup_remove.php?id=<?= (int)$player['id'] ?>" method="POST">
                         <?= csrf_field(); ?>
                         <button title="Remover do campo">x</button>
