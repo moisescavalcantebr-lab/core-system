@@ -620,6 +620,8 @@ ob_start();
                                             <details class="c-team-available-player">
                                                 <summary title="<?= htmlspecialchars($player['name'].' - '.teamPositionDisplay($player['position_code'] ?? null)) ?>" aria-label="Escalar <?= htmlspecialchars($player['name']) ?>">
                                                     <?= teamAvatarHtml($player['avatar'] ?? null, $player['name'], 'c-team-avatar-initial') ?>
+                                                    <strong class="c-team-available-name"><?= htmlspecialchars($player['name']) ?></strong>
+                                                    <span class="c-team-available-position"><?= htmlspecialchars(teamPositionDisplay($player['position_code'] ?? null)) ?></span>
                                                 </summary>
                                                 <div class="c-team-available-menu">
                                                     <strong><?= htmlspecialchars($player['name']) ?></strong>
@@ -1358,10 +1360,13 @@ img.c-team-token-avatar {
 .c-team-available-page { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .c-team-available-page[hidden] { display: none; }
 .c-team-available-player { display: grid; place-items: center; min-width: 0; }
-.c-team-available-player summary { display: grid; place-items: center; cursor: pointer; list-style: none; border-radius: 50%; }
+.c-team-available-player summary { display: grid; place-items: center; gap: 2px; width: 100%; min-width: 0; cursor: pointer; list-style: none; border-radius: 4px; }
+.c-team-available-name, .c-team-available-position { display: block; width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+.c-team-available-name { font-size: 11px; line-height: 12px; }
+.c-team-available-position { font-size: 10px; line-height: 11px; color: var(--text-secondary, #cbd5e1); }
 .c-team-available-player summary::-webkit-details-marker { display: none; }
 .c-team-available-player summary:focus-visible { outline: 2px solid var(--primary-color, #3b82f6); outline-offset: 3px; }
-.c-team-available-player .c-team-avatar-initial { box-sizing: border-box; width: 44px; height: 44px; font-size: 12px; }
+.c-team-available-player .c-team-avatar-initial { grid-area: auto; box-sizing: border-box; width: 44px; height: 44px; font-size: 12px; }
 .c-team-available-menu { position: absolute; z-index: 20; top: 20%; left: 4px; right: 4px; padding: 12px; border: 1px solid var(--border-color, #64748b); border-radius: 4px; background: var(--bg-secondary, #111827); box-shadow: 0 4px 12px #0006; }
 .c-team-available-menu strong { display: block; margin-bottom: 8px; overflow-wrap: anywhere; }
 .c-team-available-menu form { display: grid; gap: 10px; }
@@ -1370,7 +1375,7 @@ img.c-team-token-avatar {
 .c-team-available-menu .c-team-update-primary { display: flex; align-items: flex-start; gap: 6px; }
 .c-team-available-menu button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 @media (max-width: 900px) {
-    .c-team-available-stage { flex: none; height: 300px; }
+    .c-team-available-stage { flex: none; height: 360px; }
     .c-team-available-player .c-team-avatar-initial { width: 36px; height: 36px; font-size: 11px; }
     .c-team-available-page { gap: 4px; }
 }

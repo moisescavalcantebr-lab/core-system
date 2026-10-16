@@ -47,6 +47,15 @@ const root = path.resolve(__dirname, '../..');
         if (!await page.getByText('Jogadores disponíveis', { exact: true }).isVisible()) throw new Error('Disponiveis ausentes');
         const avatar = page.locator('[data-available-page]:not([hidden]) summary').first();
         const availableAvatar = await avatar.locator('.c-team-avatar-initial').boundingBox();
+        for (const summary of await page.locator('[data-available-page]:not([hidden]) summary').all()) {
+          const photo = await summary.locator('.c-team-avatar-initial').boundingBox();
+          const name = summary.locator('.c-team-available-name');
+          const position = summary.locator('.c-team-available-position');
+          if (!await name.isVisible() || !await position.isVisible() || !(await name.innerText()).trim() || !(await position.innerText()).trim()) throw new Error('Nome ou posicao ausente abaixo do disponivel');
+          const nameBox = await name.boundingBox();
+          const positionBox = await position.boundingBox();
+          if (nameBox.y < photo.y + photo.height || positionBox.y < nameBox.y + nameBox.height) throw new Error('Identificacao sobrepoe avatar');
+        }
         for (const fieldAvatar of await page.locator('.c-team-token-avatar').all()) {
           const box = await fieldAvatar.boundingBox();
           if (!box || !availableAvatar || Math.abs(box.width - availableAvatar.width) > 0.5 || Math.abs(box.height - availableAvatar.height) > 0.5) throw new Error(`Avatar em campo difere dos disponiveis: ${width}/${count}`);
@@ -100,10 +109,13 @@ const root = path.resolve(__dirname, '../..');
             if (await grid.locator('summary').count() !== (count === 'crowded' ? 30 : 14)) throw new Error('Quantidade de avatares incorreta');
             const cells = await grid.locator('summary').all();
             const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
+            const photos = await Promise.all(cells.map(cell => cell.locator('.c-team-avatar-initial').boundingBox()));
             if (Math.abs(boxes[0].y - boxes[5].y) > 1 || boxes[6].y <= boxes[0].y) throw new Error('Grade nao tem seis por linha');
             for (let i = 0; i < boxes.length; i++) {
-              if (boxes[i].width < (width > 900 ? 44 : 36)) throw new Error('Avatar pequeno');
+              if (photos[i].width < (width > 900 ? 44 : 36)) throw new Error('Avatar pequeno');
+              if (i % 6 && photos[i - 1].x + photos[i - 1].width > photos[i].x + 1) throw new Error('Fotos sobrepostas');
               if (i % 6 && boxes[i - 1].x + boxes[i - 1].width > boxes[i].x + 1) throw new Error('Avatares sobrepostos');
+              if (i >= 6 && boxes[i - 6].y + boxes[i - 6].height > boxes[i].y + 1) throw new Error('Nomes ou posicoes sobrepoem outra linha');
             }
         }
         if (count === 'crowded') {

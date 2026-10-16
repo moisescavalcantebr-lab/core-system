@@ -2,7 +2,7 @@
     "name":  "meu_time",
     "label":  "Meu Time",
     "description":  "Identidade do time, elenco ativo e base para escalações.",
-    "version":  "0.3.0",
+    "version":  "0.3.1",
     "type":  "project",
     "kind":  "main",
     "status":  "draft",
