@@ -4,7 +4,7 @@
 - No desktop, um campo fica a esquerda e os disponiveis a direita. Com dois campos, a ordem e Time 1, disponiveis e Time 2, em tres colunas. Em telas de ate 900px, os blocos ficam empilhados nessa ordem.
 - Configurar Time permite renomear as duas formacoes (ate 80 caracteres). Campos vazios recuperam Time 1/Time 2. Os nomes aparecem nos campos e nas identificacoes dos botoes de destino e permanecem salvos ao desativar o segundo campo.
 - A opcao Segundo time habilita o campo Time 2. Ambos usam a modalidade e a configuracao de posicoes de Meu Time.
-- Jogadores disponiveis reune os jogadores fora dos campos, incluindo os antigos reservas. A lista mostra somente avatares, em dois grupos de quinze (tres por linha). Clicar no avatar abre a escolha do time; nome e posicao ficam no tooltip. Acima de trinta jogadores, as setas alternam paginas sem ocultar cadastros definitivamente.
+- Jogadores disponiveis reune os jogadores fora dos campos, incluindo os antigos reservas. A lista mostra somente avatares, em uma grade unica de seis por linha, com ate trinta jogadores por pagina. Os avatares medem 44px no desktop e 36px no celular. Clicar no avatar abre a escolha do time; nome e posicao ficam no tooltip. Acima de trinta jogadores, as setas alternam paginas sem ocultar cadastros definitivamente.
 - A validacao de inclusao e o desenho do campo compartilham a mesma resolucao de vagas: posicoes alteradas, vagas removidas, indices invalidos e registros duplicados nao bloqueiam quem aparece disponivel. Registros realmente escalados continuam protegidos contra duplicacao entre times.
 - O mesmo jogador nao pode ocupar os dois campos. Retirar do campo libera o jogador sem excluir cadastro.
 - Vaga ocupada nao substitui outro atleta: o jogador continua disponivel.

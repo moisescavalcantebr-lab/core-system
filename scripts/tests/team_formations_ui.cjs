@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const count of ['one', 'two', 'renamed', 'crowded', 'config']) {
+      for (const count of ['one', 'two', 'renamed', 'crowded', 'fourteen', 'config']) {
         await page.route('http://team-test.local/**', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(root, `_deploy/team-${count}-preview.html`), 'utf8') }));
         await page.goto(`http://team-test.local/${count}`);
         if (count === 'config') {
@@ -55,14 +55,18 @@ const root = path.resolve(__dirname, '../..');
           const stage = await page.locator('.c-team-available-stage').boundingBox();
           if (Math.abs(field.y - stage.y) > 4 || Math.abs(field.y + field.height - stage.y - stage.height) > 4) throw new Error('Avatares nao alinham com altura do campo');
         }
-        if (count === 'crowded') {
-          const sides = page.locator('[data-available-page="0"] .c-team-available-side');
-          for (const side of await sides.all()) {
-            if (await side.locator('summary').count() !== 15) throw new Error('Grupo nao tem quinze avatares');
-            const cells = await side.locator('summary').all();
+        if (count === 'crowded' || count === 'fourteen') {
+          const grid = page.locator('[data-available-page="0"]');
+            if (await grid.locator('summary').count() !== (count === 'crowded' ? 30 : 14)) throw new Error('Quantidade de avatares incorreta');
+            const cells = await grid.locator('summary').all();
             const boxes = await Promise.all(cells.map(cell => cell.boundingBox()));
-            if (Math.abs(boxes[0].y - boxes[2].y) > 1 || boxes[3].y <= boxes[0].y) throw new Error('Grade nao tem tres por linha');
-          }
+            if (Math.abs(boxes[0].y - boxes[5].y) > 1 || boxes[6].y <= boxes[0].y) throw new Error('Grade nao tem seis por linha');
+            for (let i = 0; i < boxes.length; i++) {
+              if (boxes[i].width < (width > 900 ? 44 : 36)) throw new Error('Avatar pequeno');
+              if (i % 6 && boxes[i - 1].x + boxes[i - 1].width > boxes[i].x + 1) throw new Error('Avatares sobrepostos');
+            }
+        }
+        if (count === 'crowded') {
           await page.locator('[data-available-next]').click();
           if (!await page.locator('[data-available-page="1"]').isVisible()) throw new Error('Nao mostrou atletas excedentes');
           if (!await page.locator('[data-available-next]').isDisabled()) throw new Error('Paginacao ultrapassa ultima pagina');

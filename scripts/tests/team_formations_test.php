@@ -136,6 +136,8 @@ try {
     teamCheck(substr_count($crowded, 'data-available-page=') === 2, 'Mais de trinta jogadores nao gerou segunda pagina');
     teamCheck(!str_contains($crowded,'<strong>Goleiros</strong>'), 'Cabecalhos de posicao permanecem na lista');
     file_put_contents($root.'/_deploy/team-crowded-preview.html', $crowded);
+    $pdo->exec("UPDATE players SET status='inactive' WHERE id>=32");
+    file_put_contents($root.'/_deploy/team-fourteen-preview.html', teamRoute($routes.'index.php'));
     echo "PASS: formacoes, migracao, posicao alterada, vagas invalidas/duplicadas, retirada e reinclusao, trinta avatares por pagina, CSRF e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');

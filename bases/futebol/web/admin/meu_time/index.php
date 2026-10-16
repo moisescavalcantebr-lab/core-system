@@ -615,9 +615,7 @@ ob_start();
                     <div class="c-team-available-stage">
                         <?php foreach ($availablePages as $pageIndex => $pagePlayers): ?>
                             <div class="c-team-available-page" data-available-page="<?= $pageIndex ?>" <?= $pageIndex > 0 ? 'hidden' : '' ?>>
-                                <?php foreach ([array_slice($pagePlayers, 0, 15), array_slice($pagePlayers, 15, 15)] as $sidePlayers): ?>
-                                    <div class="c-team-available-side">
-                                        <?php foreach ($sidePlayers as $player): ?>
+                                        <?php foreach ($pagePlayers as $player): ?>
                                             <details class="c-team-available-player">
                                                 <summary title="<?= htmlspecialchars($player['name'].' - '.teamPositionDisplay($player['position_code'] ?? null)) ?>" aria-label="Escalar <?= htmlspecialchars($player['name']) ?>">
                                                     <?= teamAvatarHtml($player['avatar'] ?? null, $player['name'], 'c-team-avatar-initial') ?>
@@ -635,8 +633,6 @@ ob_start();
                                                 </div>
                                             </details>
                                         <?php endforeach; ?>
-                                    </div>
-                                <?php endforeach; ?>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -696,7 +692,7 @@ body:has(.c-team-page) .c-layout {
 }
 
 .c-team-layout[data-team-count="2"] {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, .9fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(304px, .9fr) minmax(0, 1fr);
     grid-template-areas: "time1 available time2" "info info info";
 }
 .c-team-field-card[data-team-key="time_1"] { grid-area: time1; }
@@ -1336,19 +1332,22 @@ img.c-team-token-avatar {
 .c-team-available-pagination { display: flex; align-items: center; gap: 4px; font-size: 11px; }
 .c-team-available-pagination button { padding: 2px 5px; min-width: 24px; }
 .c-team-available-stage { position: relative; flex: 1; min-height: 240px; }
-.c-team-available-page { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.c-team-available-page { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .c-team-available-page[hidden] { display: none; }
-.c-team-available-side { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .c-team-available-player { display: grid; place-items: center; min-width: 0; }
 .c-team-available-player summary { display: grid; place-items: center; cursor: pointer; list-style: none; border-radius: 50%; }
 .c-team-available-player summary::-webkit-details-marker { display: none; }
 .c-team-available-player summary:focus-visible { outline: 2px solid var(--primary-color, #3b82f6); outline-offset: 3px; }
-.c-team-available-player .c-team-avatar-initial { width: 32px; height: 32px; }
+.c-team-available-player .c-team-avatar-initial { width: 44px; height: 44px; font-size: 12px; }
 .c-team-available-menu { position: absolute; z-index: 20; top: 20%; left: 4px; right: 4px; padding: 12px; border: 1px solid var(--border-color, #64748b); border-radius: 4px; background: var(--bg-secondary, #111827); box-shadow: 0 4px 12px #0006; }
 .c-team-available-menu strong { display: block; margin-bottom: 8px; overflow-wrap: anywhere; }
 .c-team-available-menu form { display: flex; flex-wrap: wrap; gap: 6px; }
 .c-team-available-menu button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
-@media (max-width: 900px) { .c-team-available-stage { flex: none; height: 380px; } }
+@media (max-width: 900px) {
+    .c-team-available-stage { flex: none; height: 300px; }
+    .c-team-available-player .c-team-avatar-initial { width: 36px; height: 36px; font-size: 11px; }
+    .c-team-available-page { gap: 4px; }
+}
 .c-team-assign-actions { gap: 4px; }
 .c-team-assign-actions button { white-space: nowrap; padding: 3px 6px; }
 </style>
