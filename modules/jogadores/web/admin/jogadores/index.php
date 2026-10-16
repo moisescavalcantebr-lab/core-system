@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 
 require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/positions_helper.php';
+require __DIR__ . '/card_helpers.php';
 
 requireProjectAdmin();
 playerEnsureDefaultPositions($pdo);
@@ -32,43 +33,7 @@ $stmt = $pdo->query("
     ORDER BY name ASC
 ");
 $players = $stmt->fetchAll(PDO::FETCH_ASSOC);
-$rankingByPlayer = [];
-
-try {
-    $hasAttendance = (bool)$pdo->query("SHOW TABLES LIKE 'match_attendance'")->fetchColumn();
-
-    if ($hasAttendance) {
-        $rankingRows = $pdo->query("
-            SELECT
-                p.id,
-                p.birth_date,
-                COALESCE((
-                    SELECT SUM(ma.points)
-                    FROM match_attendance ma
-                    INNER JOIN matches m ON m.id = ma.match_id
-                    WHERE ma.player_id = p.id
-                      AND m.status = 'finished'
-                ), 0) AS points,
-                COALESCE((
-                    SELECT COUNT(*)
-                    FROM match_attendance ma
-                    INNER JOIN matches m ON m.id = ma.match_id
-                    WHERE ma.player_id = p.id
-                      AND ma.status = 'present'
-                      AND m.status = 'finished'
-                ), 0) AS presences
-            FROM players p
-            WHERE p.status = 'active'
-            ORDER BY points DESC, p.birth_date IS NULL ASC, p.birth_date ASC, p.name ASC
-        ")->fetchAll(PDO::FETCH_ASSOC);
-
-        foreach ($rankingRows as $index => $row) {
-            $rankingByPlayer[(int)$row['id']] = $index + 1;
-        }
-    }
-} catch (Throwable $e) {
-    $rankingByPlayer = [];
-}
+$formationLabels = playerCardFormationLabels($pdo);
 
 function playerIndexInitials(string $name): string
 {
@@ -88,14 +53,8 @@ function playerIndexAvatar(?string $avatar, string $name): string
     return '<span class="c-player-card-avatar">' . htmlspecialchars(playerIndexInitials($name)) . '</span>';
 }
 
-$rightSidebarEnabled = true;
-$rightSidebarContent = '
-<div class="c-card">
-    <h3>Resumo</h3>
-    <p>Use Ver para abrir a ficha completa do jogador.</p>
-    <p>Ativos: ' . $activeCount . '/' . playerActiveLimit() . '<br>Inativos: ' . $inactiveCount . '<br>Acesso do jogador: ' . ($playerAccessAvailable ? 'Start ativo' : 'Disponivel no Start') . '</p>
-</div>
-';
+$rightSidebarEnabled = false;
+$rightSidebarContent = '';
 
 ob_start();
 ?>
@@ -154,46 +113,40 @@ ob_start();
                     <?php foreach ($players as $player): ?>
                         <?php
                             $positionCode = preg_replace('/\d+$/', '', (string)($player['position_code'] ?? '')) ?: '-';
-                            $shirtNumber = $player['shirt_number'] ? (string)$player['shirt_number'] : '-';
-                            $position = trim((string)($player['position_code'] ?? '') . ' ' . (string)($player['position_name'] ?? $player['position'] ?? '-'));
-                            $rosterStatus = (string)($player['roster_status'] ?? 'titular');
+                            $shirtNumber = $player['shirt_number'] !== null ? (string)$player['shirt_number'] : '-';
                             $displayName = playerDisplayName($player['nickname'] ?? null, (string)$player['name']);
+                            $formation = $formationLabels === null ? 'Sem formação definida' : ($formationLabels[(int)$player['id']] ?? 'Disponível');
+                            $profileUrl = PROJECT_URL . '/admin/jogadores/show.php?id=' . (int)$player['id'];
                         ?>
-                        <div class="c-player-row-card c-player-row-card--<?= htmlspecialchars($rosterStatus) ?>" title="<?= htmlspecialchars($position !== '' ? $position : '-') ?>">
-                            <?php if (isset($rankingByPlayer[(int)$player['id']])): ?>
-                                <span class="c-player-ranking-badge">
-                                    #<?= (int)$rankingByPlayer[(int)$player['id']] ?>
-                                </span>
-                            <?php endif; ?>
-                            <div class="c-player-card-main">
-                                <div class="c-player-card-avatar-wrap">
-                                    <?= playerIndexAvatar($player['avatar'] ?? null, $displayName) ?>
-                                </div>
-
-                                <div class="c-player-card-meta">
-                                    <span class="c-player-access-badge c-player-access-badge--<?= htmlspecialchars(playerAccessBadge(!empty($player['user_id']) ? (int)$player['user_id'] : null, $player['user_status'] ?? null)) ?>">
-                                        <?= htmlspecialchars(playerAccessLabel(!empty($player['user_id']) ? (int)$player['user_id'] : null, $player['user_status'] ?? null)) ?>
-                                    </span>
-                                    <span class="c-player-shirt-chip"><?= htmlspecialchars($shirtNumber) ?></span>
-                                    <span class="c-player-position-chip"><?= htmlspecialchars($positionCode) ?></span>
-                                </div>
+                        <article class="c-player-row-card" data-player-id="<?= (int)$player['id'] ?>">
+                            <header class="c-player-card-top">
+                                <span class="c-player-active"><span aria-hidden="true"></span>Ativo</span>
+                                <span class="c-player-shirt"><small>Camisa</small><strong><?= htmlspecialchars($shirtNumber) ?></strong></span>
+                            </header>
+                            <a href="<?= htmlspecialchars($profileUrl) ?>" class="c-player-card-identity" aria-label="Ver perfil de <?= htmlspecialchars($displayName) ?>">
+                                <?= playerIndexAvatar($player['avatar'] ?? null, $displayName) ?>
+                                <h2 title="<?= htmlspecialchars((string)$player['name']) ?>"><?= htmlspecialchars($displayName) ?></h2>
+                                <span class="c-player-card-position"><?= htmlspecialchars(playerCardPosition($player)) ?><?php if ($positionCode !== '-'): ?><span class="c-player-position-code"> · <?= htmlspecialchars($positionCode) ?></span><?php endif; ?></span>
+                            </a>
+                            <div class="c-player-formation" title="<?= htmlspecialchars($formation) ?>"><?= htmlspecialchars($formation) ?></div>
+                            <div class="c-player-participation" data-ranking-state="pending" title="Ranking de participação ainda não calculado">
+                                <span>Ranking de participação</span>
+                                <strong aria-label="Ainda não calculado">—</strong>
                             </div>
-
-                            <strong title="<?= htmlspecialchars((string)$player['name']) ?>"><?= htmlspecialchars($displayName) ?></strong>
-
-                            <div class="c-player-card-actions">
-                                <a href="<?= PROJECT_URL ?>/admin/jogadores/show.php?id=<?= (int)$player['id'] ?>" class="c-btn-secondary">
-                                    Ver
-                                </a>
-
-                                <form action="<?= PROJECT_URL ?>/admin/jogadores/toggle.php?id=<?= (int)$player['id'] ?>" method="POST">
-                                    <?= csrf_field(); ?>
-                                    <button type="submit" class="c-btn-secondary">
-                                        Desativar
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                            <footer class="c-player-card-actions">
+                                <a href="<?= htmlspecialchars($profileUrl) ?>" class="c-btn-secondary c-player-profile-link">Ver perfil</a>
+                                <details class="c-player-card-options">
+                                    <summary class="c-btn-secondary" aria-label="Opções de <?= htmlspecialchars($displayName) ?>" title="Opções do jogador"><span aria-hidden="true">&hellip;</span></summary>
+                                    <div class="c-player-card-menu">
+                                        <a href="<?= PROJECT_URL ?>/admin/jogadores/edit.php?id=<?= (int)$player['id'] ?>" class="c-btn-secondary">Editar cadastro</a>
+                                        <form action="<?= PROJECT_URL ?>/admin/jogadores/toggle.php?id=<?= (int)$player['id'] ?>" method="POST" data-deactivate-player>
+                                            <?= csrf_field(); ?>
+                                            <button type="submit" class="c-btn-secondary">Desativar jogador</button>
+                                        </form>
+                                    </div>
+                                </details>
+                            </footer>
+                        </article>
                     <?php endforeach; ?>
                 </div>
 
@@ -206,224 +159,84 @@ ob_start();
 </div>
 
 <style>
-.c-player-list-grid {
-    display: grid;
-    grid-template-columns: repeat(10, 102px);
-    align-items: start;
-    gap: 8px;
-}
-
-.c-player-header-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-}
-
-.c-player-header-actions form {
-    margin: 0;
-}
-
-.c-player-list-section {
-    padding: 0;
-}
-
-.c-player-row-card {
-    position: relative;
-    display: grid;
-    width: 102px;
-    gap: 4px;
-    justify-items: center;
-    border: 1px solid rgba(148, 163, 184, .28);
-    background: var(--bg-sidebar);
-    padding: 22px 6px 6px;
-    min-width: 0;
-    min-height: 122px;
-    text-align: center;
-    box-shadow: 0 10px 22px rgba(0, 0, 0, .08);
-}
-
-.c-player-row-card--titular {
-    border-color: rgba(34, 197, 94, .56);
-    box-shadow: inset 3px 0 0 rgba(34, 197, 94, .55), 0 10px 22px rgba(0, 0, 0, .08);
-}
-
-.c-player-row-card--reserva {
-    border-color: rgba(245, 158, 11, .58);
-    box-shadow: inset 3px 0 0 rgba(245, 158, 11, .62), 0 10px 22px rgba(0, 0, 0, .08);
-}
-
-.c-player-ranking-badge {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 17px;
-    padding: 0 4px;
-    border: 1px solid rgba(96, 165, 250, .36);
-    background: rgba(59, 130, 246, .16);
-    color: #dbeafe;
-    font-size: 9px;
-    font-weight: 900;
-    line-height: 1;
-}
-
-.c-player-access-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 17px;
-    padding: 0 5px;
-    border: 1px solid rgba(148, 163, 184, .24);
-    background: rgba(15, 23, 42, .72);
-    color: rgba(226, 232, 240, .82);
-    font-size: 9px;
-    font-weight: 800;
-    line-height: 1;
-    width: 100%;
-}
-
-.c-player-access-badge--success {
-    border-color: rgba(34, 197, 94, .28);
-    background: rgba(34, 197, 94, .14);
-    color: #bbf7d0;
-}
-
-.c-player-card-main {
-    display: grid;
-    grid-template-columns: 42px minmax(0, 1fr);
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    min-width: 0;
-}
-
-.c-player-card-avatar-wrap {
-    width: 42px;
-    height: 42px;
-    display: grid;
-    place-items: center;
-}
-
-.c-player-card-avatar {
-    display: grid;
-    place-items: center;
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: 2px solid rgba(255,255,255,.78);
-    overflow: hidden;
-    object-fit: cover;
-    color: #fff;
-    font-size: 13px;
-    font-weight: 800;
-    background:
-        radial-gradient(circle at 35% 28%, rgba(255,255,255,.95) 0 9px, transparent 10px),
-        linear-gradient(145deg, #f7d4bf 0 45%, #2f7c44 46% 100%);
-}
-
-.c-player-row-card > strong {
-    display: block;
-    width: 100%;
-    font-size: 10px;
-    line-height: 1.15;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.c-player-card-meta {
-    display: grid;
-    grid-template-columns: 1fr;
-    justify-content: stretch;
-    align-items: center;
-    gap: 4px;
-    width: 100%;
-    min-width: 0;
-}
-
-.c-player-position-chip,
-.c-player-shirt-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    min-height: 17px;
-    padding: 1px 3px;
-    border: 1px solid rgba(148, 163, 184, .26);
-    background: rgba(255,255,255,.04);
-    font-size: 8.5px;
-    font-weight: 700;
-}
-
-.c-player-card-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    width: 100%;
-}
-
-.c-player-card-actions form {
-    margin: 0;
-}
-
-.c-player-card-actions .c-btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 22px;
-    min-height: 22px;
-    padding: 3px 2px;
-    font-size: 9.5px;
-    line-height: 1;
-}
-
+.c-player-header-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 10px; margin-left: auto; }
+.c-player-header-actions form { margin: 0; }
+.c-player-list-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: stretch; gap: 14px; }
+.c-player-list-section { padding: 0; min-width: 0; }
+.c-player-row-card { position: relative; display: grid; grid-template-rows: auto 1fr minmax(36px, auto) auto auto; min-width: 0; min-height: 340px; padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: var(--text-primary); letter-spacing: 0; }
+.c-player-row-card.is-menu-open { z-index: 5; }
+.c-player-card-top { display: flex; justify-content: space-between; align-items: start; gap: 8px; min-height: 36px; }
+.c-player-active { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
+.c-player-active > span { width: 7px; height: 7px; border-radius: 50%; background: var(--color-success); }
+.c-player-shirt { display: grid; justify-items: end; line-height: 1.15; }
+.c-player-shirt small { font-size: 11px; color: var(--text-secondary); }
+.c-player-shirt strong { font-size: 21px; font-weight: 600; }
+.c-player-card-identity { display: grid; grid-template-rows: 80px minmax(44px, auto) minmax(36px, auto); align-content: start; justify-items: center; gap: 8px; min-width: 0; padding-top: 12px; color: inherit; text-decoration: none; text-align: center; }
+.c-player-card-identity:hover { color: inherit; }
+.c-player-card-avatar { display: grid; place-items: center; width: 80px; height: 80px; border-radius: 50%; background: color-mix(in srgb, var(--color-success) 14%, var(--bg-card)); color: var(--text-primary); object-fit: cover; font-size: 25px; font-weight: 500; }
+.c-player-card-identity h2 { align-self: center; width: 100%; margin: 0; font-size: 18px; line-height: 1.25; font-weight: 600; overflow-wrap: anywhere; }
+.c-player-card-position { font-size: 12px; line-height: 1.5; color: var(--text-secondary); overflow-wrap: anywhere; }
+.c-player-position-code { white-space: nowrap; }
+.c-player-formation { display: grid; align-items: center; padding: 6px 0; text-align: center; font-size: 13px; overflow-wrap: anywhere; }
+.c-player-participation { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 48px; margin-top: 8px; padding: 8px 0; border-top: 1px solid var(--border-color); font-size: 11px; color: var(--text-secondary); }
+.c-player-participation > span { max-width: 124px; overflow-wrap: anywhere; }
+.c-player-participation > strong { font-size: 20px; font-weight: 500; color: var(--text-primary); }
+.c-player-card-actions { display: flex; align-items: stretch; gap: 8px; min-width: 0; padding-top: 8px; }
+.c-player-profile-link { display: flex; align-items: center; justify-content: center; flex: 1; min-width: 0; text-align: center; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+.c-player-card-options summary { display: grid; place-items: center; width: 40px; min-height: 40px; padding: 0; list-style: none; cursor: pointer; font-size: 22px; line-height: 1; }
+.c-player-card-options summary::-webkit-details-marker { display: none; }
+.c-player-card-options:not([open]) > .c-player-card-menu { display: none; }
+.c-player-card-menu { position: absolute; left: 10px; right: 10px; bottom: 68px; z-index: 10; display: grid; gap: 6px; padding: 8px; border: 1px solid var(--border-color); border-radius: 5px; background: var(--bg-card); box-shadow: var(--shadow-card); }
+.c-player-card-menu form { margin: 0; min-width: 0; }
+.c-player-card-menu .c-btn-secondary { display: block; width: 100%; min-height: 36px; text-align: left; font-size: 12px; white-space: normal; overflow-wrap: anywhere; }
+.c-player-card-menu button { color: var(--color-danger); }
+@media (max-width: 1500px) { .c-player-list-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (max-width: 1180px) { .c-player-list-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (max-width: 900px) {
-    .c-player-header-actions {
-        justify-content: flex-start;
-        margin-left: 0;
-    }
-
-    .c-player-list-grid {
-        grid-template-columns: repeat(auto-fit, minmax(102px, 1fr));
-        gap: 10px;
-    }
-
-    .c-right-sidebar .c-card {
-        margin-top: 0;
-    }
+    .c-player-header-actions { justify-content: flex-start; margin-left: 0; }
+    .c-player-list-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
-@media (min-width: 901px) and (max-width: 1180px) {
-    .c-player-list-grid {
-        grid-template-columns: repeat(auto-fit, 102px);
-        gap: 10px;
-    }
+@media (max-width: 640px) { .c-player-list-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 420px) {
+    .c-player-row-card { padding: 12px; }
+    .c-player-card-identity { grid-template-rows: 68px minmax(44px, auto) minmax(36px, auto); }
+    .c-player-card-avatar { width: 68px; height: 68px; font-size: 22px; }
+    .c-player-card-identity h2 { font-size: 16px; }
+    .c-player-card-actions { gap: 6px; }
 }
-
-@media (max-width: 520px) {
-    .c-player-list-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .c-player-row-card {
-        width: auto;
-    }
-}
-
-@media (max-width: 360px) {
-    .c-player-list-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+@media (pointer: coarse) {
+    .c-player-profile-link, .c-player-card-options summary, .c-player-card-menu .c-btn-secondary { min-height: 44px; }
+    .c-player-card-options summary { width: 44px; }
 }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const cards = Array.from(document.querySelectorAll('.c-player-row-card'));
+    cards.forEach(function (card) {
+        const menu = card.querySelector('details');
+        menu.addEventListener('toggle', function () {
+            card.classList.toggle('is-menu-open', menu.open);
+            if (menu.open) cards.forEach(function (other) {
+                if (other !== card) other.querySelector('details').open = false;
+            });
+        });
+    });
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.c-player-card-options')) cards.forEach(function (card) { card.querySelector('details').open = false; });
+    });
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') cards.forEach(function (card) {
+            const menu = card.querySelector('details');
+            if (menu.open) { menu.open = false; menu.querySelector('summary').focus(); }
+        });
+    });
+    document.querySelectorAll('[data-deactivate-player]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (!window.confirm('Desativar este jogador? A posição e o número da camisa serão liberados.')) event.preventDefault();
+        });
+    });
+});
+</script>
 
 <?php
 $content = ob_get_clean();
