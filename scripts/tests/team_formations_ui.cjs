@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const count of ['one', 'two', 'renamed', 'crowded', 'fourteen', 'config']) {
+      for (const count of ['one', 'two', 'renamed', 'crowded', 'fourteen', 'flexible', 'full', 'config']) {
         await page.route('http://team-test.local/**', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(root, `_deploy/team-${count}-preview.html`), 'utf8') }));
         await page.goto(`http://team-test.local/${count}`);
         if (count === 'config') {
@@ -18,7 +18,7 @@ const root = path.resolve(__dirname, '../..');
           await page.screenshot({ path: path.join(root, `_deploy/team-config-${width}.png`), fullPage: true });
           continue;
         }
-        const expected = count === 'one' ? 1 : 2;
+        const expected = ['one', 'full'].includes(count) ? 1 : 2;
         if (await page.locator('.c-team-field').count() !== expected) throw new Error('Quantidade de campos incorreta');
         if (count === 'renamed' && !await page.locator('.c-team-field-card h3').last().innerText().then(text => text.includes('Equipe <Verde>'))) throw new Error('Nome personalizado ausente');
         if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Overflow ${width}/${count}`);
@@ -55,6 +55,39 @@ const root = path.resolve(__dirname, '../..');
         }
         await avatar.click();
         if (!await page.locator('details[open] .c-team-available-menu').isVisible()) throw new Error('Avatar nao abriu escolha de time');
+        const assignment = page.locator('details[open] [data-assignment-form]');
+        if (await assignment.locator('[name=update_primary_position]').isChecked()) throw new Error('Atualizacao da principal marcada por padrao');
+        async function checkVacancies() {
+          const state = await assignment.evaluate(form => {
+            const team = form.elements.team_key.value;
+            const groups = Array.from(form.elements.field_slot.querySelectorAll('optgroup'));
+            const active = groups.find(group => group.dataset.team === team);
+            const suggested = Array.from(active.children).find(option => option.dataset.suggested === '1');
+            return { invalid: groups.some(group => group.dataset.team !== team && (!group.disabled || !group.hidden)),
+              expected: suggested ? suggested.value : '', actual: form.elements.field_slot.value,
+              vacancies: active.children.length, disabled: form.querySelector('[data-assignment-submit]').disabled };
+          });
+          if (state.invalid || state.expected !== state.actual || state.disabled !== (state.vacancies === 0)) throw new Error('Selecao ou sugestao de vagas incorreta');
+        }
+        await checkVacancies();
+        if (expected === 2) {
+          await assignment.locator('[name=update_primary_position]').check();
+          await assignment.locator('[name=team_key]').selectOption('time_2');
+          await checkVacancies();
+          if (await assignment.locator('[name=update_primary_position]').isChecked()) throw new Error('Trocar time manteve confirmacao antiga');
+        }
+        const choices = assignment.locator('optgroup:not([disabled]) option');
+        if (count === 'full' && (await choices.count() || !await assignment.locator('[data-assignment-submit]').isDisabled())) throw new Error('Time cheio permitiu escalar');
+        if (count === 'flexible') {
+          if (await choices.count() !== 1 || await choices.first().getAttribute('value') !== 'atacante:0') throw new Error('Exibiu posicao removida ou vaga ocupada');
+          await assignment.locator('[name=field_slot]').selectOption('atacante:0');
+          await assignment.locator('[name=update_primary_position]').check();
+          const values = await assignment.evaluate(form => Object.fromEntries(new FormData(form)));
+          if (values.team_key !== 'time_2' || values.field_slot !== 'atacante:0' || values.update_primary_position !== '1') throw new Error('Formulario nao envia escolha completa');
+          const menu = await page.locator('details[open] .c-team-available-menu').boundingBox();
+          if (menu.x < 0 || menu.x + menu.width > width) throw new Error('Menu ultrapassa a tela');
+          await page.screenshot({ path: path.join(root, `_deploy/team-assignment-${width}.png`), fullPage: true });
+        }
         await page.keyboard.press('Escape');
         if (await page.locator('details[open]').count()) throw new Error('Escape nao fechou menu');
         if (width > 900) {

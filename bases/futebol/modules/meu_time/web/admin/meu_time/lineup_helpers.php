@@ -34,6 +34,7 @@ function teamResolveFormationRoster(array $roster, array $team): array
     $type = teamFormationType($team);
     $custom = (string)($team['custom_slots_json'] ?? '');
     $limits = teamFieldLimits($type, $custom);
+    $fieldSlots = teamFormationSlots($team);
     $result = ['teams' => [], 'available' => [], 'assigned' => []];
     foreach ($keys as $key) $result['teams'][$key] = ['players' => [], 'occupied' => []];
     foreach ($roster as $member) {
@@ -55,7 +56,9 @@ function teamResolveFormationRoster(array $roster, array $team): array
         }
         $slot = $group.':'.$index;
         $valid = $valid && $index !== null && $index >= 0 && $index < ($limits[$group] ?? 0)
-            && in_array([$group, $index], $candidates, true)
+            && (!empty($member['field_position_code'])
+                ? ($fieldSlots[$slot]['code'] ?? null) === $member['field_position_code']
+                : in_array([$group, $index], $candidates, true))
             && !isset($result['teams'][$key]['occupied'][$slot]);
         if (!$valid) {
             $result['available'][] = $member;
@@ -68,6 +71,34 @@ function teamResolveFormationRoster(array $roster, array $team): array
         $result['assigned'][(int)$member['player_id']] = true;
     }
     return $result;
+}
+
+function teamFormationSlots(array $team): array
+{
+    $type = teamFormationType($team);
+    $orders = [
+        'goleiro' => ['GO'], 'zagueiro' => ['ZC1', 'ZC2'],
+        'lateral' => ['LE', 'LD'], 'meia' => ['VOL1', 'MAT1', 'MAT2'],
+        'ponta' => ['PTE', 'PTD'], 'atacante' => ['CA1', 'CA2'],
+    ];
+    if ($type === 'custom') {
+        $orders['meia'] = ['VOL1', 'VOL2', 'MAT1', 'MAT2'];
+        $selected = teamNormalizeCustomSlots(json_decode((string)($team['custom_slots_json'] ?? ''), true) ?: []);
+        foreach ($orders as &$codes) $codes = array_values(array_filter($codes, static fn($code) => !empty($selected[$code])));
+        unset($codes);
+    }
+    $names = ['GO'=>'Goleiro', 'ZC'=>'Zagueiro', 'LE'=>'Lateral esquerdo', 'LD'=>'Lateral direito',
+        'VOL'=>'Volante', 'MAT'=>'Meia atacante', 'PTE'=>'Ponta esquerda', 'PTD'=>'Ponta direita', 'CA'=>'Atacante'];
+    $slots = [];
+    foreach (teamFieldLimits($type, $team['custom_slots_json'] ?? null) as $group => $limit) {
+        for ($index = 0; $index < $limit; $index++) {
+            $code = $orders[$group][$index];
+            $prefix = preg_replace('/\d+$/', '', $code);
+            $slots[$group.':'.$index] = ['group'=>$group, 'index'=>$index, 'code'=>$code,
+                'label'=>$names[$prefix].(preg_match('/\d+$/', $code, $match) ? ' '.$match[0] : '')];
+        }
+    }
+    return $slots;
 }
 
 function teamPositionKey(?string $position, ?string $groupKey = null): string

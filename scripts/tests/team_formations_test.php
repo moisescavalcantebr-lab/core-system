@@ -25,6 +25,7 @@ try {
     $schema = (string)file_get_contents($root.'/modules/meu_time/database/schema.sql');
     $legacy = str_replace(["    formations_count TINYINT UNSIGNED NOT NULL DEFAULT 1,\n", "    team_key ENUM('time_1','time_2') NOT NULL DEFAULT 'time_1',\n"], '', str_replace("\r\n", "\n", $schema));
     $legacy = str_replace(["    time_1_name VARCHAR(80) NOT NULL DEFAULT 'Time 1',\n", "    time_2_name VARCHAR(80) NOT NULL DEFAULT 'Time 2',\n"], '', $legacy);
+    $legacy = str_replace("    field_position_code VARCHAR(20) NULL,\n", '', $legacy);
     $pdo->exec($legacy);
     $pdo->exec("INSERT INTO project_users (id,name,email,username,password,role,status) VALUES (991,'Admin','team-admin@example.com','team-admin','test','ADMIN','active'),(992,'Cliente','team-client@example.com','team-client','test','CLIENT','active')");
     $position = (int)$pdo->query("SELECT id FROM player_positions WHERE code = 'GO1' LIMIT 1")->fetchColumn();
@@ -129,6 +130,41 @@ try {
     teamCheck(!str_contains(teamRoute($routes.'roster_store.php', [...$post,'player_id'=>4]),'ja esta em campo'), 'Vaga duplicada bloqueou jogador disponivel');
     teamRoute($routes.'roster_remove.php', ['_csrf'=>'test'], ['id'=>$read(2)['id']]);
     teamCheck(str_contains(teamRoute($routes.'roster_store.php', $post),'adicionado ao campo'), 'Retirar e recolocar continuou bloqueado');
+    require_once $root.'/modules/jogadores/web/admin/jogadores/positions_helper.php';
+    teamCheck(count(playerAvailablePositions($pdo)) === (int)$pdo->query("SELECT COUNT(*) FROM player_positions WHERE status='active'")->fetchColumn(), 'Cadastro esconde posicoes usadas');
+    teamCheck(playerValidateActiveRoster($pdo, 'active', $position, 3) === null, 'Posicao principal ainda e exclusiva');
+    $flexible = ['_csrf'=>'test','player_id'=>3,'team_key'=>'time_1','field_slot'=>'meia:1'];
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'_csrf'=>'wrong']), 'CSRF'), 'Escalacao flexivel ignorou CSRF');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', $flexible, [], 2), 'Acesso negado'), 'Cliente escalou jogador');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'field_slot'=>'meia:99']), 'posicao do campo'), 'Vaga inexistente aceita');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', $flexible), 'adicionado ao campo'), 'Goleiro nao atuou como meia');
+    teamCheck($read(3)['field_position_code'] === 'MAT1', 'Posicao de campo nao foi salva');
+    teamCheck((int)$pdo->query('SELECT position_id FROM players WHERE id=3')->fetchColumn() === $position, 'Escalacao alterou principal sem autorizacao');
+    $flexibleHtml = teamRoute($routes.'index.php');
+    teamCheck(!str_contains($flexibleHtml, 'name="player_id" value="3"'), 'Escalado fora da principal voltou aos disponiveis');
+    $pdo->prepare('UPDATE players SET position_id=? WHERE id=3')->execute([$attacker]);
+    teamCheck(!str_contains(teamRoute($routes.'index.php'), 'name="player_id" value="3"'), 'Alterar principal invalidou posicao escolhida');
+    $beforeOccupied = $read(4);
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'player_id'=>4,'update_primary_position'=>'1']), 'Vaga ocupada'), 'Sobrepos posicao escolhida');
+    teamCheck($beforeOccupied === $read(4) && (int)$pdo->query('SELECT position_id FROM players WHERE id=4')->fetchColumn() === $position, 'Vaga ocupada alterou jogador');
+    teamRoute($routes.'roster_remove.php', ['_csrf'=>'test'], ['id'=>$read(3)['id']]);
+    $beforeUnavailable = $read(3);
+    $pdo->exec("UPDATE player_positions SET status='inactive' WHERE code LIKE 'MAT%'");
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'update_primary_position'=>'1']), 'principal indisponivel'), 'Atualizou principal inexistente');
+    teamCheck($beforeUnavailable === $read(3) && (int)$pdo->query('SELECT position_id FROM players WHERE id=3')->fetchColumn() === $attacker, 'Falha na principal alterou escalacao ou cadastro');
+    $pdo->exec("UPDATE player_positions SET status='active' WHERE code LIKE 'MAT%'");
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'update_primary_position'=>'1']), 'adicionado ao campo'), 'Reinclusao flexivel falhou');
+    $mat = (int)$pdo->query("SELECT id FROM player_positions WHERE code='MAT1'")->fetchColumn();
+    teamCheck((int)$pdo->query('SELECT position_id FROM players WHERE id=3')->fetchColumn() === $mat, 'Checkbox nao atualizou principal');
+    // A custom formation without wings still accepts a winger in an available striker slot.
+    $pdo->exec("UPDATE team_profile SET custom_slots_json='{\"GO\":1,\"CA1\":1}',team_type='custom' WHERE id=1");
+    $winger = (int)$pdo->query("SELECT id FROM player_positions WHERE code='PTD1'")->fetchColumn();
+    $pdo->prepare('UPDATE players SET position_id=? WHERE id=3')->execute([$winger]);
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'field_slot'=>'ponta:0']), 'posicao do campo'), 'Aceitou posicao fora da configuracao');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', [...$flexible,'field_slot'=>'atacante:0']), 'adicionado ao campo'), 'Ponta nao atuou como atacante no personalizado');
+    file_put_contents($root.'/_deploy/team-flexible-preview.html', teamRoute($routes.'index.php'));
+    $pdo->exec("UPDATE team_profile SET custom_slots_json=NULL,team_type='field' WHERE id=1");
+    teamRoute($routes.'roster_remove.php', ['_csrf'=>'test'], ['id'=>$read(3)['id']]);
     for ($i = 20; $i < 55; $i++) {
         $pdo->prepare('INSERT INTO players (id,name,nickname,position_id,status) VALUES (?,?,?,?,?)')->execute([$i,'Atleta disponivel '.$i,'Atleta '.$i,$position,'active']);
     }
@@ -138,7 +174,10 @@ try {
     file_put_contents($root.'/_deploy/team-crowded-preview.html', $crowded);
     $pdo->exec("UPDATE players SET status='inactive' WHERE id>=32");
     file_put_contents($root.'/_deploy/team-fourteen-preview.html', teamRoute($routes.'index.php'));
-    echo "PASS: formacoes, migracao, posicao alterada, vagas invalidas/duplicadas, retirada e reinclusao, trinta avatares por pagina, CSRF e permissoes.\n";
+    teamRoute($routes.'formations_save.php', ['_csrf'=>'test']);
+    $pdo->exec("UPDATE team_profile SET custom_slots_json='{\"GO\":1}',team_type='custom',starters_count=1 WHERE id=1");
+    file_put_contents($root.'/_deploy/team-full-preview.html', teamRoute($routes.'index.php'));
+    echo "PASS: formacoes, migracao, vagas e posicao escolhida independentes da principal, atualizacao opcional atomica, cadastro compartilhado, retirada/reinclusao, CSRF e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');
     if (is_dir($fixture)) {

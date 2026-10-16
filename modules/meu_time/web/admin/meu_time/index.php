@@ -469,6 +469,7 @@ if ($teamType !== 'custom') {
 }
 
 $resolved = teamResolveFormationRoster($roster, $team);
+$assignmentSlots = teamFormationSlots($team);
 $formationFields = [];
 $fieldPlayers = [];
 foreach ($resolved['teams'] as $key => $formation) {
@@ -478,7 +479,7 @@ foreach ($resolved['teams'] as $key => $formation) {
         $player = [
             'roster_id' => (int)$member['id'],
             'name' => $member['player_name'] ?? '-',
-            'position_code' => $member['position_code'] ?? null,
+            'position_code' => $assignmentSlots[$member['slot_group'].':'.$member['slot_index']]['code'],
             'avatar' => $member['avatar'] ?? null,
             'x' => $slot['x'],
             'y' => $slot['y'],
@@ -492,12 +493,12 @@ foreach ($players as $player) {
     $availablePlayers[(int)$player['id']] = $player;
 }
 foreach ($resolved['available'] as $member) {
-    $availablePlayers[(int)$member['player_id']] = [
+    $availablePlayers[(int)$member['player_id']] = array_merge($member, [
         'id' => (int)$member['player_id'],
         'name' => $member['player_name'] ?? '-',
         'position_code' => $member['position_code'] ?? null,
         'avatar' => $member['avatar'] ?? null,
-    ];
+    ]);
 }
 uasort($availablePlayers, static fn(array $a, array $b): int => strnatcasecmp($a['name'], $b['name']));
 $availablePages = array_chunk(array_values($availablePlayers), 30) ?: [[]];
@@ -622,13 +623,34 @@ ob_start();
                                                 </summary>
                                                 <div class="c-team-available-menu">
                                                     <strong><?= htmlspecialchars($player['name']) ?></strong>
-                                                    <form action="<?= PROJECT_URL ?>/admin/meu_time/roster_store.php" method="POST">
+                                                    <small>Principal: <?= htmlspecialchars($player['position_name'] ?? 'Sem posicao') ?></small>
+                                                    <form action="<?= PROJECT_URL ?>/admin/meu_time/roster_store.php" method="POST" data-assignment-form>
                                                         <?= csrf_field(); ?>
                                                         <input type="hidden" name="player_id" value="<?= (int)$player['id'] ?>">
                                                         <input type="hidden" name="roster_role" value="player">
-                                                        <?php foreach ($formationKeys as $targetKey): ?>
-                                                            <button type="submit" name="team_key" value="<?= $targetKey ?>" class="c-btn-secondary" title="Adicionar ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>"><?= htmlspecialchars(teamFormationName($team, $targetKey)) ?></button>
-                                                        <?php endforeach; ?>
+                                                        <label>Time
+                                                            <select name="team_key" class="c-input" data-assignment-team>
+                                                                <?php foreach ($formationKeys as $targetKey): ?>
+                                                                    <option value="<?= $targetKey ?>" title="Adicionar ao <?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>"><?= htmlspecialchars(teamFormationName($team, $targetKey)) ?></option>
+                                                                <?php endforeach; ?>
+                                                            </select>
+                                                        </label>
+                                                        <label>Posição na formação
+                                                            <select name="field_slot" class="c-input" required data-assignment-slot>
+                                                                <option value="">Selecione uma posicao</option>
+                                                                <?php $suggestedSlots = teamCandidateSlots($player, $fieldLimits, $teamType, $team['custom_slots_json'] ?? null); ?>
+                                                                <?php foreach ($formationKeys as $targetKey): ?>
+                                                                    <optgroup label="<?= htmlspecialchars(teamFormationName($team, $targetKey)) ?>" data-team="<?= $targetKey ?>">
+                                                                        <?php foreach ($assignmentSlots as $slotKey => $assignmentSlot): ?>
+                                                                            <?php if (isset($resolved['teams'][$targetKey]['occupied'][$slotKey])) continue; ?>
+                                                                            <option value="<?= $slotKey ?>" data-suggested="<?= in_array([$assignmentSlot['group'], $assignmentSlot['index']], $suggestedSlots, true) && !teamIsReservePosition($player) ? '1' : '0' ?>"><?= htmlspecialchars($assignmentSlot['label']) ?></option>
+                                                                        <?php endforeach; ?>
+                                                                    </optgroup>
+                                                                <?php endforeach; ?>
+                                                            </select>
+                                                        </label>
+                                                        <label class="c-team-update-primary"><input type="checkbox" name="update_primary_position" value="1"> Atualizar também a posição principal</label>
+                                                        <button type="submit" class="c-btn-secondary" data-assignment-submit>Escalar</button>
                                                     </form>
                                                 </div>
                                             </details>
@@ -1342,7 +1364,10 @@ img.c-team-token-avatar {
 .c-team-available-player .c-team-avatar-initial { box-sizing: border-box; width: 44px; height: 44px; font-size: 12px; }
 .c-team-available-menu { position: absolute; z-index: 20; top: 20%; left: 4px; right: 4px; padding: 12px; border: 1px solid var(--border-color, #64748b); border-radius: 4px; background: var(--bg-secondary, #111827); box-shadow: 0 4px 12px #0006; }
 .c-team-available-menu strong { display: block; margin-bottom: 8px; overflow-wrap: anywhere; }
-.c-team-available-menu form { display: flex; flex-wrap: wrap; gap: 6px; }
+.c-team-available-menu form { display: grid; gap: 10px; }
+.c-team-available-menu label { display: grid; gap: 4px; min-width: 0; }
+.c-team-available-menu .c-input { width: 100%; min-width: 0; box-sizing: border-box; }
+.c-team-available-menu .c-team-update-primary { display: flex; align-items: flex-start; gap: 6px; }
 .c-team-available-menu button { white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 @media (max-width: 900px) {
     .c-team-available-stage { flex: none; height: 300px; }
@@ -1355,6 +1380,31 @@ img.c-team-token-avatar {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-assignment-form]').forEach(function (form) {
+        const team = form.querySelector('[data-assignment-team]');
+        const slot = form.querySelector('[data-assignment-slot]');
+        const submit = form.querySelector('[data-assignment-submit]');
+        function refreshPositions() {
+            let suggestion = null;
+            let vacancies = 0;
+            slot.querySelectorAll('optgroup').forEach(function (group) {
+                const active = group.dataset.team === team.value;
+                group.disabled = !active;
+                group.hidden = !active;
+                if (active) {
+                    vacancies += group.children.length;
+                    suggestion = Array.from(group.children).find(option => option.dataset.suggested === '1') || null;
+                }
+            });
+            slot.selectedIndex = suggestion ? suggestion.index : 0;
+            slot.options[0].textContent = vacancies ? 'Selecione uma posicao' : 'Sem vagas neste time';
+            slot.disabled = !vacancies;
+            submit.disabled = !vacancies;
+            form.elements.update_primary_position.checked = false;
+        }
+        team.addEventListener('change', refreshPositions);
+        refreshPositions();
+    });
     const playerMenus = Array.from(document.querySelectorAll('.c-team-available-player'));
     playerMenus.forEach(function (menu) {
         menu.addEventListener('toggle', function () {

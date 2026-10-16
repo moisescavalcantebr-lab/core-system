@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS team_roster (
     status ENUM('active','inactive') DEFAULT 'active',
     slot_group VARCHAR(40) NULL,
     slot_index INT NULL,
+    field_position_code VARCHAR(20) NULL,
     roster_role ENUM('player','captain','coach') DEFAULT 'player',
     joined_at DATE NULL,
     notes TEXT NULL,

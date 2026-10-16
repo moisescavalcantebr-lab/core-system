@@ -133,6 +133,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN player_positions pp2 ON pp2.id = p.secondary_position_id
     WHERE p.id = ?
     LIMIT 1
+    FOR UPDATE
 ");
 $stmt->execute([$playerId]);
 $player = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -151,8 +152,33 @@ if (($player['status'] ?? '') !== 'active') {
 
 $positionKey = teamPositionKey($player['position_name'] ?? '', $player['group_key'] ?? null);
 $candidateSlots = teamCandidateSlotsWithSecondary($player, $fieldLimits, $teamType, $customSlotsJson);
+$selectedSlot = $_POST['field_slot'] ?? null;
+$fieldPositionCode = null;
+$primaryPosition = null;
+if ($selectedSlot !== null) {
+    $slots = teamFormationSlots($team);
+    if (!is_string($selectedSlot) || !isset($slots[$selectedSlot])) {
+        $pdo->rollBack();
+        flash('error', 'Selecione uma posicao do campo atual.');
+        redirect(PROJECT_URL . '/admin/meu_time/index.php');
+    }
+    $selection = $slots[$selectedSlot];
+    $candidateSlots = [[$selection['group'], $selection['index']]];
+    $fieldPositionCode = $selection['code'];
+    if (($_POST['update_primary_position'] ?? '') === '1') {
+        $prefix = preg_replace('/\d+$/', '', $fieldPositionCode);
+        $query = $pdo->prepare("SELECT id FROM player_positions WHERE status='active' AND code REGEXP ? ORDER BY (code = ?) DESC, sort_order, id LIMIT 1");
+        $query->execute(['^'.$prefix.'[0-9]*$', $fieldPositionCode]);
+        $primaryPosition = $query->fetchColumn();
+        if (!$primaryPosition) {
+            $pdo->rollBack();
+            flash('error', 'Posicao principal indisponivel no cadastro.');
+            redirect(PROJECT_URL . '/admin/meu_time/index.php');
+        }
+    }
+}
 
-if (!teamIsReservePosition($player) && !isset($fieldLimits[$positionKey]) && empty($candidateSlots)) {
+if ($selectedSlot === null && !teamIsReservePosition($player) && !isset($fieldLimits[$positionKey]) && empty($candidateSlots)) {
     $pdo->rollBack();
     flash('error', 'A posicao principal e a secundaria nao fazem parte do campo atual. Ajuste a posicao do jogador para adicionar.');
     redirect(PROJECT_URL . '/admin/meu_time/index.php');
@@ -176,20 +202,29 @@ foreach ($candidateSlots as [$candidateGroup, $candidateIndex]) {
 }
 
 if ($newSlotGroup === null || $newSlotIndex === null) {
+    if ($selectedSlot !== null) {
+        $pdo->rollBack();
+        flash('error', 'Vaga ocupada. Jogador continua disponivel.');
+        redirect(PROJECT_URL . '/admin/meu_time/index.php');
+    }
     $status = 'inactive';
 }
 
 $stmt = $pdo->prepare("
-    INSERT INTO team_roster (player_id, roster_role, status, slot_group, slot_index, team_key)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO team_roster (player_id, roster_role, status, slot_group, slot_index, team_key, field_position_code)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON DUPLICATE KEY UPDATE
         roster_role = VALUES(roster_role),
         status = VALUES(status),
         slot_group = VALUES(slot_group),
         slot_index = VALUES(slot_index),
-        team_key = VALUES(team_key)
+        team_key = VALUES(team_key),
+        field_position_code = VALUES(field_position_code)
 ");
-$stmt->execute([$playerId, $role, $status, $newSlotGroup, $newSlotIndex, $teamKey]);
+$stmt->execute([$playerId, $role, $status, $newSlotGroup, $newSlotIndex, $teamKey, $fieldPositionCode]);
+if ($primaryPosition !== null) {
+    $pdo->prepare('UPDATE players SET position_id = ? WHERE id = ?')->execute([(int)$primaryPosition, $playerId]);
+}
 $pdo->commit();
 
 flash('success', $status === 'active' ? 'Jogador adicionado ao campo.' : 'Vaga ocupada. Jogador continua disponivel.');

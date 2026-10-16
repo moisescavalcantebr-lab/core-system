@@ -24,6 +24,9 @@ function teamEnsureFormationsSchema(PDO $pdo): void
         $pdo->exec('ALTER TABLE team_profile ADD COLUMN formations_count TINYINT UNSIGNED NOT NULL DEFAULT 1');
     }
     $columns = $pdo->query('SHOW COLUMNS FROM team_roster')->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('field_position_code', $columns, true)) {
+        $pdo->exec('ALTER TABLE team_roster ADD COLUMN field_position_code VARCHAR(20) NULL AFTER slot_index');
+    }
     if (!in_array('team_key', $columns, true)) {
         $pdo->exec("ALTER TABLE team_roster ADD COLUMN team_key ENUM('time_1','time_2') NOT NULL DEFAULT 'time_1'");
     }

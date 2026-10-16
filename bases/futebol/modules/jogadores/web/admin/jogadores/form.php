@@ -108,7 +108,7 @@
 
             <div class="c-form-grid">
                 <div class="c-form-group">
-                    <label>Posição</label>
+                <label>Posição principal</label>
                     <select name="position_id" class="c-input">
                         <option value="">Selecione a posição</option>
                         <?php

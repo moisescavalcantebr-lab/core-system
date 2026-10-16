@@ -532,28 +532,12 @@ function playerValidateShirtNumber(PDO $pdo, ?int $shirtNumber, ?int $ignorePlay
 
 function playerAvailablePositions(PDO $pdo, ?int $ignorePlayerId = null): array
 {
-    $params = [];
-    $ignoreSql = '';
-
-    if ($ignorePlayerId !== null) {
-        $ignoreSql = ' AND p.id <> ?';
-        $params[] = $ignorePlayerId;
-    }
-
-    $stmt = $pdo->prepare("
+    $stmt = $pdo->query("
         SELECT pp.*
         FROM player_positions pp
         WHERE pp.status = 'active'
-          AND NOT EXISTS (
-              SELECT 1
-              FROM players p
-              WHERE p.status = 'active'
-                AND p.position_id = pp.id
-                {$ignoreSql}
-          )
         ORDER BY pp.sort_order ASC, pp.name ASC
     ");
-    $stmt->execute($params);
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
@@ -607,23 +591,6 @@ function playerValidateActiveRoster(PDO $pdo, string $status, ?int $positionId, 
 
     if ((int)$stmt->fetchColumn() >= playerActiveLimit()) {
         return 'Limite de ' . playerActiveLimit() . ' jogadores ativos no elenco atingido. Desative outro jogador para ativar este.';
-    }
-
-    if ($positionId !== null) {
-        $params = [$positionId];
-        $where = "status = 'active' AND position_id = ?";
-
-        if ($ignorePlayerId !== null) {
-            $where .= " AND id <> ?";
-            $params[] = $ignorePlayerId;
-        }
-
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM players WHERE {$where}");
-        $stmt->execute($params);
-
-        if ((int)$stmt->fetchColumn() > 0) {
-            return 'Esta posicao ja esta ocupada por outro jogador ativo.';
-        }
     }
 
     return null;
