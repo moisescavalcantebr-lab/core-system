@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({ viewport: { width, height: 900 } });
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      for (const count of ['one', 'two', 'renamed', 'crowded', 'fourteen', 'flexible', 'full', 'config']) {
+      for (const count of ['one', 'two', 'renamed', 'crowded', 'fourteen', 'flexible', 'full', 'free', 'config']) {
         await page.route('http://team-test.local/**', route => route.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(root, `_deploy/team-${count}-preview.html`), 'utf8') }));
         await page.goto(`http://team-test.local/${count}`);
         if (count === 'config') {
@@ -18,7 +18,8 @@ const root = path.resolve(__dirname, '../..');
           await page.screenshot({ path: path.join(root, `_deploy/team-config-${width}.png`), fullPage: true });
           continue;
         }
-        const expected = ['one', 'full'].includes(count) ? 1 : 2;
+        const expected = ['one', 'full', 'free'].includes(count) ? 1 : 2;
+        if (count==='free' && await page.locator('[name=second_team], [name=team_key] option[value=time_2]').count()) throw new Error('Gratis oferece segundo time');
         if (await page.locator('.c-team-field').count() !== expected) throw new Error('Quantidade de campos incorreta');
         if (count === 'renamed' && !await page.locator('.c-team-field-card h3').last().innerText().then(text => text.includes('Equipe <Verde>'))) throw new Error('Nome personalizado ausente');
         if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) throw new Error(`Overflow ${width}/${count}`);

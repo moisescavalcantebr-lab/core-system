@@ -91,6 +91,10 @@ if (!in_array($teamKey, ['time_1', 'time_2'], true)) {
     http_response_code(422);
     exit('Time invalido.');
 }
+if ($teamKey === 'time_2' && !teamSecondFormationAllowed()) {
+    flash('error', 'Segundo time disponivel a partir do Plano Start.');
+    redirect(PROJECT_URL . '/admin/meu_time/index.php');
+}
 $role = in_array($_POST['roster_role'] ?? '', ['player', 'captain'], true) ? $_POST['roster_role'] : 'player';
 
 if ($playerId <= 0) {
@@ -102,6 +106,7 @@ require_once __DIR__ . '/lineup_helpers.php';
 
 $pdo->beginTransaction();
 $team = $pdo->query("SELECT team_type, custom_slots_json, formations_count FROM team_profile WHERE id = 1 FOR UPDATE")->fetch(PDO::FETCH_ASSOC) ?: [];
+$team = teamUsableFormations($team);
 if ($teamKey === 'time_2' && (int)($team['formations_count'] ?? 1) !== 2) {
     $pdo->rollBack();
     flash('error', 'Ative o segundo time antes de adicionar jogadores.');

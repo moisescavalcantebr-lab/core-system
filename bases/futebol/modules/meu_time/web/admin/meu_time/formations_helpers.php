@@ -1,6 +1,22 @@
 <?php
 declare(strict_types=1);
 
+function teamSecondFormationAllowed(): bool
+{
+    global $project;
+    $name = (string)($project['plan_name'] ?? '');
+    $cycle = strtolower((string)($project['billing_cycle'] ?? ''));
+    if ($name === '' && $cycle === '' && function_exists('projectPlanName')) $name = projectPlanName();
+    if ($cycle === 'free' || preg_match('/gr(?:a|\x{00E1})tis|free/iu', $name)) return false;
+    return (bool)preg_match('/\b(start|plus)\b/i', $name) || in_array($cycle, ['monthly', 'annual'], true);
+}
+
+function teamUsableFormations(array $team): array
+{
+    if (!teamSecondFormationAllowed()) $team['formations_count'] = 1;
+    return $team;
+}
+
 function teamEnsureFormationNamesSchema(PDO $pdo): void
 {
     $columns = $pdo->query('SHOW COLUMNS FROM team_profile')->fetchAll(PDO::FETCH_COLUMN);
@@ -36,6 +52,9 @@ function teamSetFormationsCount(PDO $pdo, int $count): void
 {
     if (!in_array($count, [1, 2], true)) {
         throw new InvalidArgumentException('Quantidade de times invalida.');
+    }
+    if ($count === 2 && !teamSecondFormationAllowed()) {
+        throw new RuntimeException('Segundo time disponivel a partir do Plano Start.');
     }
     $pdo->beginTransaction();
     try {

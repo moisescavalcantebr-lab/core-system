@@ -300,10 +300,12 @@ ob_start();
                         </div>
                     <?php endif; ?>
                 <?php elseif (($competition['context'] ?? '') === 'external'): ?>
+                    <?php if (!$isFriendlyExternal): ?>
                     <div class="c-dashboard-card c-card--info">
                         <h4>Pontos do meu time</h4>
                         <div class="c-metric"><?= $points ?></div>
                     </div>
+                    <?php endif; ?>
                     <?php if (($competition['type'] ?? '') === 'championship'): ?>
                     <div class="c-dashboard-card c-card--neutral">
                         <h4>Posição oficial</h4>

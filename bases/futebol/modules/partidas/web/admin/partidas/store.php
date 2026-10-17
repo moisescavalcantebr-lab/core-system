@@ -68,8 +68,9 @@ if ($competitionId > 0) {
 }
 
 $ownTeam = matchLineupOwnTeam($pdo);
+if ($competitionContext === 'external' && $competitionType === 'friendly') $lineupMode = 'team_roster';
 if ($competitionContext === 'internal' && $competitionType === 'training') {
-    if ((int)($ownTeam['formations_count'] ?? 1) !== 2) {
+    if (!teamSecondFormationAllowed() || (int)($ownTeam['formations_count'] ?? 1) !== 2) {
         flash('error', 'Ative os dois times em Meu Time para criar um treino.');
         redirect(PROJECT_URL . '/admin/competicoes/view.php?id=' . $competitionId);
     }

@@ -200,10 +200,12 @@ ob_start();
                     <label for="time-1-name">Nome do Time 1</label>
                     <input id="time-1-name" type="text" name="time_1_name" class="c-input" maxlength="80" value="<?= htmlspecialchars(teamFormationName($team, 'time_1')) ?>">
                 </div>
+                <?php if (teamSecondFormationAllowed()): ?>
                 <div class="c-form-group">
                     <label for="time-2-name">Nome do Time 2</label>
                     <input id="time-2-name" type="text" name="time_2_name" class="c-input" maxlength="80" value="<?= htmlspecialchars(teamFormationName($team, 'time_2')) ?>">
                 </div>
+                <?php endif; ?>
             </div>
 
             <div class="c-team-config-custom-card" id="customSlotsCard">

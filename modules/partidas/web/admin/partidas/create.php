@@ -39,7 +39,7 @@ $participantAValue = $competitionContext === 'internal' ? 'Time 1' : $teamName;
 $participantBValue = $competitionContext === 'internal' ? 'Time 2' : 'Time adversário';
 if ($competitionContext === 'internal' && $competitionType === 'training') {
     $ownTeam = matchLineupOwnTeam($pdo);
-    if ((int)($ownTeam['formations_count'] ?? 1) !== 2) {
+    if (!teamSecondFormationAllowed() || (int)($ownTeam['formations_count'] ?? 1) !== 2) {
         flash('error', 'Ative os dois times em Meu Time para criar um treino.');
         redirect(PROJECT_URL . '/admin/competicoes/view.php?id=' . $competitionId);
     }
@@ -120,6 +120,10 @@ ob_start();
 
             <div class="c-form-group">
                 <label>Modo de escalação</label>
+                <?php if ($isFriendlyMatch): ?>
+                <input type="hidden" name="lineup_mode" value="team_roster">
+                <input type="text" class="c-input" value="Meu Time principal" readonly>
+                <?php else: ?>
                 <select name="lineup_mode" class="c-input">
                     <?php if ($competitionContext === 'internal'): ?>
                         <option value="automatic">Automático</option>
@@ -130,6 +134,7 @@ ob_start();
                         <option value="arrival_order">Ordem de confirmação</option>
                     <?php endif; ?>
                 </select>
+                <?php endif; ?>
             </div>
 
             <?php if ($isFriendlyMatch): ?>

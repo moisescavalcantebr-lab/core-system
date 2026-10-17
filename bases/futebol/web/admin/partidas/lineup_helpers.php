@@ -711,7 +711,7 @@ function matchLineupCopyOwnFormations(PDO $pdo, int $matchId, bool $training, bo
             return;
         }
         $team = $pdo->query('SELECT * FROM team_profile WHERE id=1 FOR UPDATE')->fetch(PDO::FETCH_ASSOC) ?: [];
-        if ($training && (int)($team['formations_count'] ?? 1) !== 2) {
+        if ($training && (!teamSecondFormationAllowed() || (int)($team['formations_count'] ?? 1) !== 2)) {
             throw new RuntimeException('Ative os dois times em Meu Time para criar um treino.');
         }
         $resolved = teamResolveFormationRoster(teamLoadFormationRoster($pdo), $team);

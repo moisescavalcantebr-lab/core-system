@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({viewport:{width,height:900}});
       const errors = [];
       page.on('pageerror',error=>errors.push(error.message));
-      for (const name of ['championship','training','tracking-edit','tracking-index','friendly','friendly-lineup']) {
+      for (const name of ['championship','training','tracking-edit','tracking-index','friendly','friendly-lineup','friendly-create','friendly-edit','friendly-stats']) {
         await page.route('http://football-test.local/**',route=>route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(root,`_deploy/football-${name}-preview.html`),'utf8')}));
         await page.goto(`http://football-test.local/${name}`);
         if (name==='championship') {
@@ -19,6 +19,11 @@ const root = path.resolve(__dirname, '../..');
           if (await points.locator('.c-metric').innerText() !== '4') throw new Error('Pontos do campeonato incorretos');
         }
         if (name==='tracking-edit' && await page.locator('[name=official_position]').inputValue()!=='4') throw new Error('Posicao nao recuperada');
+        if (name==='friendly-create' || name==='friendly-edit') {
+          if (await page.locator('select[name=lineup_mode]').count() || await page.locator('input[name=lineup_mode]').inputValue()!=='team_roster') throw new Error('Amistoso oferece outro modo');
+          if (!await page.locator('input[value="Meu Time principal"]').isVisible()) throw new Error('Escalacao principal nao identificada');
+        }
+        if (name==='friendly-stats' && (await page.getByText('Pontos do meu time',{exact:true}).count() || !await page.getByText('Desempenho',{exact:true}).isVisible())) throw new Error('Resumo do amistoso incorreto');
         if (name==='friendly' || name==='friendly-lineup') {
           const selector = name==='friendly' ? '.c-match-field-player' : '.c-lineup-token';
           const attacker = page.locator(selector).filter({has:page.getByText('Atleta 2',{exact:true})});

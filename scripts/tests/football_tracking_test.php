@@ -31,7 +31,7 @@ try {
     copy($root.'/modules/classificacao/module.json',$fixture.'/modules/classificacao/module.json');
     foreach (['project_auth.php','csrf.php'] as $file) copy($root.'/bases/futebol/app/helpers/'.$file,$fixture.'/app/helpers/'.$file);
     $connection = '$pdo=new PDO('.var_export('mysql:host='.$db['host'].';dbname='.$database.';charset=utf8mb4',true).','.var_export($db['user'],true).','.var_export($db['pass'],true).',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);';
-    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php','<?php ob_start();define("PROJECT_PATH",'.var_export($fixture,true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/football-test/web");$_SESSION=["project_user_id"=>$actor===1?991:992,"_csrf"=>"test"];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";function flash($type,$msg){$_SESSION["flash"]=$msg;echo $msg;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}function projectPlanName(){return "Plano Start";}function projectPlanAllows($key,$default=false){return true;}function projectPlanLimit($key,$default=0){return 100;}function projectPlanList($key,$default=[]){return $default;}');
+    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php','<?php ob_start();define("PROJECT_PATH",'.var_export($fixture,true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/football-test/web");$_SESSION=["project_user_id"=>$actor===1?991:992,"_csrf"=>"test"];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";function flash($type,$msg){$_SESSION["flash"]=$msg;echo $msg;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}function projectPlanName(){return is_file(PROJECT_PATH."/test-plan") ? trim(file_get_contents(PROJECT_PATH."/test-plan")) : "Plano Start";}function projectPlanAllows($key,$default=false){return projectPlanName()!=="Plano Gratis";}function projectPlanLimit($key,$default=0){return 100;}function projectPlanList($key,$default=[]){return $default;}');
     $css = '';
     foreach (['core_base.css','admin/layout.css','admin/components.css','themes/dark.css'] as $file) $css .= file_get_contents($root.'/bases/futebol/web/assets/css/'.$file);
     file_put_contents($fixture.'/app/views/layout_admin.php','<?php echo "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><style>".'.var_export($css,true).'."body{padding:16px}.c-content{margin:0!important;max-width:1200px}</style></head><body class=c-app><main class=c-content>".$content."</main></body></html>";');
@@ -126,13 +126,22 @@ try {
     // Friendly games copy the chosen field slot, not the player's primary position.
     $pdo->exec("UPDATE team_profile SET team_type='custom',custom_slots_json='{\"GO\":1,\"CA1\":1,\"MAT1\":1}',starters_count=3 WHERE id=1; UPDATE team_roster SET status='inactive'");
     $pdo->exec("UPDATE team_roster SET status='active',team_key='time_1',slot_group='goleiro',slot_index=0,field_position_code='GO' WHERE player_id=1; UPDATE team_roster SET status='active',team_key='time_1',slot_group='atacante',slot_index=0,field_position_code='CA1' WHERE player_id=2");
+    $pdo->exec("UPDATE team_roster SET status='active' WHERE player_id IN (3,4)");
     $winger = (int)$pdo->query("SELECT id FROM player_positions WHERE code='PTD1'")->fetchColumn();
     $pdo->prepare('UPDATE players SET position_id=? WHERE id=2')->execute([$winger]);
+    file_put_contents($fixture.'/test-plan', 'Plano Gratis');
+    $beforeTraining = (int)$pdo->query('SELECT COUNT(*) FROM matches')->fetchColumn();
+    trackingCheck(str_contains(trackingRoute($routes.'partidas/store.php',$game),'Ative os dois times'), 'Gratis nao bloqueou treino pelo plano');
+    trackingCheck((int)$pdo->query('SELECT COUNT(*) FROM matches')->fetchColumn()===$beforeTraining, 'Gratis criou treino usando segundo time antigo');
     trackingRoute($routes.'competicoes/store.php',['_csrf'=>'test','name'=>'Amistosos 2026','context'=>'external','type'=>'friendly','status'=>'active']);
     $friendlyId = (int)$pdo->query("SELECT id FROM competitions WHERE name='Amistosos 2026'")->fetchColumn();
-    trackingRoute($routes.'partidas/store.php',[...$game,'competition_id'=>$friendlyId,'participant_b'=>'Visitante','lineup_mode'=>'team_roster']);
+    $friendlyCreate = trackingRoute($routes.'partidas/create.php',[],['competition_id'=>$friendlyId]);
+    trackingCheck(!preg_match('/<select[^>]*name="lineup_mode"/', $friendlyCreate) && str_contains($friendlyCreate,'value="team_roster"'), 'Amistoso permite selecionar modo');
+    trackingRoute($routes.'partidas/store.php',[...$game,'competition_id'=>$friendlyId,'participant_b'=>'Visitante','lineup_mode'=>'arrival_order']);
     $friendlyMatchId = (int)$pdo->query('SELECT MAX(id) FROM matches')->fetchColumn();
+    trackingCheck($pdo->query('SELECT lineup_mode FROM matches WHERE id='.$friendlyMatchId)->fetchColumn()==='team_roster', 'POST direto mudou modo do amistoso');
     $friendlyRows = $pdo->query('SELECT * FROM match_lineup WHERE match_id='.$friendlyMatchId.' ORDER BY player_id')->fetchAll(PDO::FETCH_ASSOC);
+    trackingCheck(array_map('intval',array_column($friendlyRows,'player_id'))===[1,2], 'Amistoso incluiu jogadores do segundo time');
     $chosen = array_values(array_filter($friendlyRows, static fn($row) => (int)$row['player_id'] === 2));
     trackingCheck(count($chosen)===1 && $chosen[0]['status']==='starter' && $chosen[0]['slot_group']==='atacante' && (int)$chosen[0]['slot_index']===0, 'Amistoso nao copiou posicao escolhida');
     trackingCheck((int)$pdo->query('SELECT position_id FROM players WHERE id=2')->fetchColumn()===$winger, 'Amistoso alterou posicao principal');
@@ -141,6 +150,15 @@ try {
     $friendlyView = trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId]);
     trackingCheck(str_contains($friendlyView,'Atleta 2') && str_contains($friendlyView,'<small>CA</small>') && !str_contains($friendlyView,'<small>PTD</small>'), 'Campo exibe a principal em vez da posicao escalada');
     trackingCheck((bool)preg_match('/>\s*MAT\s*<\/span>/', $friendlyView), 'Vaga vazia personalizada nao exibiu MAT');
+    $friendlyEdit = trackingRoute($routes.'partidas/edit.php',[],['id'=>$friendlyMatchId]);
+    trackingCheck(!preg_match('/<select[^>]*name="lineup_mode"/', $friendlyEdit), 'Edicao permite mudar modo do amistoso');
+    trackingRoute($routes.'partidas/update.php', ['_csrf'=>'test','participant_a'=>'Indevido','participant_b'=>'Visitante','status'=>'scheduled','lineup_mode'=>'arrival_order','match_date'=>'2026-11-01T10:00'], ['id'=>$friendlyMatchId]);
+    trackingCheck($pdo->query('SELECT lineup_mode FROM matches WHERE id='.$friendlyMatchId)->fetchColumn()==='team_roster', 'Edicao direta mudou modo do amistoso');
+    $friendlyStats = trackingRoute($routes.'competicoes/view.php',[],['id'=>$friendlyId]);
+    trackingCheck(!str_contains($friendlyStats,'Pontos do meu time') && str_contains($friendlyStats,'Desempenho') && str_contains($friendlyStats,'Gols'), 'Resumo do amistoso exibe pontos ou perdeu estatisticas');
+    file_put_contents($root.'/_deploy/football-friendly-create-preview.html',$friendlyCreate);
+    file_put_contents($root.'/_deploy/football-friendly-edit-preview.html',$friendlyEdit);
+    file_put_contents($root.'/_deploy/football-friendly-stats-preview.html',$friendlyStats);
     // A later change to Meu Time or to the registration must not rewrite a match.
     $pdo->exec("UPDATE team_profile SET custom_slots_json='{\"GO\":1}' WHERE id=1; UPDATE team_roster SET status='inactive' WHERE player_id=2; UPDATE players SET position_id=(SELECT id FROM player_positions WHERE code='GO1' LIMIT 1) WHERE id=2");
     $friendlyView = trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId]);
@@ -152,6 +170,7 @@ try {
     trackingCheck(str_contains(trackingRoute($routes.'partidas/show.php',[],['id'=>$friendlyMatchId]),'<small>CA</small>'), 'Historico finalizado perdeu posicao de campo');
     file_put_contents($root.'/_deploy/football-friendly-preview.html',$friendlyView);
     file_put_contents($root.'/_deploy/football-friendly-lineup-preview.html',$friendlyLineup);
+    file_put_contents($fixture.'/test-plan', 'Plano Start');
     foreach (['championship'=>$champView,'training'=>$trainingView,'tracking-edit'=>trackingRoute($routes.'competicoes/edit.php',[],['id'=>$champId]),'tracking-index'=>trackingRoute($routes.'competicoes/index.php')] as $key=>$html) file_put_contents($root.'/_deploy/football-'.$key.'-preview.html',$html);
     echo "PASS: amistoso com posicao alternativa, Ver Partida/Escalacao sem fatal, vagas vazias, avatares, snapshots preservados, campeonato, treino, classificacao 3/1/0, rollback e permissoes.\n";
 } finally {

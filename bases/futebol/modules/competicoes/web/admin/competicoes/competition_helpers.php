@@ -12,6 +12,10 @@ function competitionEnsureTrackingSchema(PDO $pdo): void
 function competitionTrainingAvailable(PDO $pdo): bool
 {
     try {
+        $helper = __DIR__.'/../meu_time/formations_helpers.php';
+        if (!is_file($helper)) return false;
+        require_once $helper;
+        if (!teamSecondFormationAllowed()) return false;
         return (int)$pdo->query('SELECT formations_count FROM team_profile WHERE id=1')->fetchColumn() === 2
             && is_file(__DIR__.'/../meu_time/lineup_helpers.php');
     } catch (Throwable $e) {

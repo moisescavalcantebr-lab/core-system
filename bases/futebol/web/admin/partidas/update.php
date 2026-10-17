@@ -59,7 +59,7 @@ if ($scoreA !== null && $scoreB !== null) {
 }
 
 $stmt = $pdo->prepare("
-    SELECT m.competition_id, m.participant_a, m.participant_b, c.context
+    SELECT m.competition_id, m.participant_a, m.participant_b, c.context, c.type
     FROM matches m
     LEFT JOIN competitions c ON c.id = m.competition_id
     WHERE m.id = ?
@@ -77,6 +77,8 @@ if ($competitionContext === 'internal') $participantB = (string)$matchContext['p
 
 if ($competitionContext === 'internal') {
     $lineupMode = 'automatic';
+} elseif (($matchContext['type'] ?? '') === 'friendly') {
+    $lineupMode = 'team_roster';
 } elseif ($lineupMode === 'automatic') {
     $lineupMode = 'team_roster';
 }

@@ -117,6 +117,10 @@ ob_start();
 
             <div class="c-form-group">
                 <label>Modo de escalação</label>
+                <?php if ($isFriendlyMatch): ?>
+                <input type="hidden" name="lineup_mode" value="team_roster">
+                <input type="text" class="c-input" value="Meu Time principal" readonly>
+                <?php else: ?>
                 <select name="lineup_mode" class="c-input">
                     <?php if ($competitionContext === 'internal'): ?>
                         <option value="automatic" <?= $currentLineupMode === 'automatic' ? 'selected' : '' ?>>Automático</option>
@@ -125,6 +129,7 @@ ob_start();
                         <option value="arrival_order" <?= $currentLineupMode === 'arrival_order' ? 'selected' : '' ?>>Ordem de confirmação</option>
                     <?php endif; ?>
                 </select>
+                <?php endif; ?>
             </div>
 
             <div class="c-form-group">

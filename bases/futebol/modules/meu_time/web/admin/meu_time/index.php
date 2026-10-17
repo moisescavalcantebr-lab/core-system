@@ -132,6 +132,7 @@ if (file_exists($positionsHelperPath)) {
 $pdo->exec("INSERT INTO team_profile (id, name) VALUES (1, 'Meu Time') ON DUPLICATE KEY UPDATE id = id");
 
 $team = $pdo->query("SELECT * FROM team_profile WHERE id = 1 LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+$team = teamUsableFormations($team ?: []);
 $formationKeys = (int)($team['formations_count'] ?? 1) === 2 ? ['time_1', 'time_2'] : ['time_1'];
 
 $allPositions = [];
@@ -528,11 +529,13 @@ ob_start();
         </div>
 
         <div class="c-team-header-actions">
+            <?php if (teamSecondFormationAllowed()): ?>
             <form action="<?= PROJECT_URL ?>/admin/meu_time/formations_save.php" method="POST" class="c-team-formations-toggle" data-second-team-active="<?= count($formationKeys) === 2 ? '1' : '0' ?>">
                 <?= csrf_field(); ?>
                 <label title="Ao desativar, os jogadores do Time 2 voltam aos disponiveis"><input type="checkbox" name="second_team" value="1" <?= count($formationKeys) === 2 ? 'checked' : '' ?>> Segundo time</label>
                 <button class="c-btn-secondary" type="submit" title="Aplicar quantidade de times">Aplicar</button>
             </form>
+            <?php endif; ?>
             <a href="<?= PROJECT_URL ?>/admin/meu_time/config.php" class="c-btn-secondary">
                 Configurar Time
             </a>

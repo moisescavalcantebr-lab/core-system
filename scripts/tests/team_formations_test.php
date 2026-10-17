@@ -37,7 +37,7 @@ try {
     foreach (glob($root.'/modules/meu_time/web/admin/meu_time/*.php') as $file) copy($file, $fixture.'/web/admin/meu_time/'.basename($file));
     foreach (['project_auth.php', 'csrf.php'] as $file) copy($root.'/bases/futebol/app/helpers/'.$file, $fixture.'/app/helpers/'.$file);
     $connection = '$pdo=new PDO('.var_export('mysql:host='.$db['host'].';dbname='.$database.';charset=utf8mb4', true).','.var_export($db['user'], true).','.var_export($db['pass'], true).',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);';
-    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php', '<?php ob_start();define("PROJECT_PATH",'.var_export($fixture, true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/team-test/web");$_SESSION=["project_user_id"=>$actor===1?991:992,"_csrf"=>"test"];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";function flash($type,$msg){echo $msg;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}');
+    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php', '<?php ob_start();define("PROJECT_PATH",'.var_export($fixture, true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/team-test/web");$_SESSION=["project_user_id"=>$actor===1?991:992,"_csrf"=>"test"];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";function flash($type,$msg){echo $msg;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}function projectPlanName(){return is_file(PROJECT_PATH."/test-plan") ? trim(file_get_contents(PROJECT_PATH."/test-plan")) : "Plano Start";}');
     $css = '';
     foreach (['core_base.css','admin/layout.css','admin/components.css','themes/dark.css'] as $file) $css .= file_get_contents($root.'/bases/futebol/web/assets/css/'.$file);
     file_put_contents($fixture.'/app/views/layout_admin.php', '<?php echo "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><style>".'.var_export($css, true).'."body{padding:16px}.c-content{margin:0!important;max-width:1200px}</style></head><body class=c-app><main class=c-content>".$content."</main></body></html>";');
@@ -177,6 +177,25 @@ try {
     teamRoute($routes.'formations_save.php', ['_csrf'=>'test']);
     $pdo->exec("UPDATE team_profile SET custom_slots_json='{\"GO\":1}',team_type='custom',starters_count=1 WHERE id=1");
     file_put_contents($root.'/_deploy/team-full-preview.html', teamRoute($routes.'index.php'));
+    teamRoute($routes.'formations_save.php', ['_csrf'=>'test','second_team'=>1]);
+    teamRoute($routes.'roster_store.php', ['_csrf'=>'test','player_id'=>2,'team_key'=>'time_2','field_slot'=>'goleiro:0']);
+    $savedTeam = $pdo->query('SELECT * FROM team_profile WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+    $savedRoster = $pdo->query('SELECT * FROM team_roster ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+    file_put_contents($fixture.'/test-plan', 'Plano Gratis');
+    $free = teamRoute($routes.'index.php');
+    teamCheck(substr_count($free, 'class="c-card c-team-field-card"')===1 && !str_contains($free,'name="second_team"'), 'Gratis exibe segundo time ou ativacao');
+    teamCheck(!str_contains(teamRoute($routes.'config.php'),'name="time_2_name"'), 'Gratis permite configurar nome do segundo time');
+    teamCheck(str_contains(teamRoute($routes.'formations_save.php', ['_csrf'=>'test','second_team'=>1]), 'Plano Start'), 'POST direto ativou segundo time no Gratis');
+    teamCheck(str_contains(teamRoute($routes.'roster_store.php', ['_csrf'=>'test','player_id'=>3,'team_key'=>'time_2','field_slot'=>'goleiro:0']), 'Plano Start'), 'POST direto escalou no segundo time no Gratis');
+    teamCheck($savedTeam===$pdo->query('SELECT * FROM team_profile WHERE id=1')->fetch(PDO::FETCH_ASSOC) && $savedRoster===$pdo->query('SELECT * FROM team_roster ORDER BY id')->fetchAll(PDO::FETCH_ASSOC), 'Restricao apagou ou alterou formacao antiga');
+    file_put_contents($root.'/_deploy/team-free-preview.html', $free);
+    file_put_contents($fixture.'/test-plan', 'Plano Start');
+    teamCheck(substr_count(teamRoute($routes.'index.php'), 'class="c-card c-team-field-card"')===2 && $read(2)['status']==='active', 'Voltar ao Start nao recuperou formacao preservada');
+    foreach ([["Plano Gr\u{00E1}tis",'monthly',false], ['Plano Gratis','free',false], ['Plano Start','monthly',true], ['Plano Plus','annual',true], ['', '', false]] as [$name,$cycle,$expected]) {
+        $project = ['plan_name'=>$name,'billing_cycle'=>$cycle];
+        teamCheck(teamSecondFormationAllowed()===$expected, 'Politica de segundo time incorreta para '.$name);
+    }
+    unset($project);
     echo "PASS: formacoes, migracao, vagas e posicao escolhida independentes da principal, atualizacao opcional atomica, cadastro compartilhado, retirada/reinclusao, CSRF e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');
