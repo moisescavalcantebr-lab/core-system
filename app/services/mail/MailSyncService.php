@@ -38,6 +38,19 @@ final class MailSyncService
                 $cursor['queue']=array_values(array_unique($ids));$cursor['deleted']=array_values(array_unique($deleted));$cursor['following']=(string)($response['nextPageToken']??'');$cursor['latest']=(string)($response['historyId']??$cursor['history']);$cursor['loaded']=true;
             }
             foreach($cursor['deleted']as$id)$this->store->missing($account,$id);$cursor['deleted']=[];
+            // A long bootstrap/history backlog must not hide newly arrived mail.
+            // Prioritize up to one bounded page of missing recent IDs, without
+            // advancing or discarding the historical page/cursor being drained.
+            if(!$poll&&(!empty($cursor['page'])||!empty($cursor['following'])||count($cursor['queue'])>10)){
+                $recent=$this->api->listMessages($token,'after:'.(time()-30*86400));$priority=[];
+                $recentRows=$recent['messages']??[];if(!is_array($recentRows)||count($recentRows)>10)throw new MailProviderException('provider');
+                $exists=$this->store->pdo->prepare('SELECT COUNT(*) FROM core_mail_messages WHERE owner_user_id=? AND account_id=? AND remote_id=? AND remote_missing=0');
+                foreach($recentRows as$row){
+                    $id=$row['id']??null;if(!is_string($id)||!preg_match('~^[a-zA-Z0-9_+=/-]{1,255}$~D',$id))throw new MailProviderException('provider');
+                    $exists->execute([$this->store->owner,$account,$id]);if(!(int)$exists->fetchColumn())$priority[]=$id;
+                }
+                $cursor['queue']=array_values(array_unique(array_merge($priority,$cursor['queue'])));
+            }
             $processed=0;$deadline=microtime(true)+18;
             while($cursor['queue']&&$processed<10&&microtime(true)<$deadline){
                 $remote=$cursor['queue'][0];
