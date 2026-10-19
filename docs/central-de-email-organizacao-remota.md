@@ -12,7 +12,7 @@ Validação local: suíte piloto aprovada com 325 verificações, incluindo 27 n
 
 1. **Marcar lida/não lida, mover e enviar para a lixeira/restaurar.** Ação explícita na mensagem, aplicada à conta de origem. Destinos pertencem à mesma conta; mover entre Gmail e Zoho não faz parte deste recurso. Na visão unificada, cada ação resolve o provedor da mensagem. Não marcar automaticamente como lida ao abrir sem uma preferência definida.
 2. **Criar e renomear pastas próprias.** Controles discretos no menu da pasta. Bloquear mudanças nas pastas de sistema. Gmail usa marcadores e permite múltiplos por mensagem: definir mover como adicionar destino e remover apenas a origem escolhida, preservando outros marcadores.
-3. **Excluir pastas próprias.** Separar da exclusão de mensagens. No Gmail excluir marcador preserva as mensagens; no Zoho excluir pasta pode excluir seu conteúdo e subpastas. Começar permitindo somente pastas vazias, sem subpastas, com confirmação explícita e nova conferência remota antes da operação. Considerar alterações concorrentes no webmail; não prometer atomicidade sem garantia da API.
+3. **Excluir pastas próprias.** Regra confirmada pelo proprietário em 19/10/2026: permitir somente pastas vazias, sem subpastas, com confirmação explícita. Conferir o estado remoto completo, incluindo mensagens fora do cache/lote local, imediatamente antes da operação; se a consulta falhar ou não provar que está vazia, bloquear. No Gmail excluir marcador preserva as mensagens; no Zoho excluir pasta pode excluir seu conteúdo e subpastas. Considerar alterações concorrentes no webmail; não prometer atomicidade sem garantia da API. Renomear pastas próprias é a prioridade de organização, mantendo os controles no Core.
 
 ## Permissões necessárias
 
