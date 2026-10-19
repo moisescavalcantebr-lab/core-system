@@ -8,6 +8,8 @@ Escopo autorizado em 19/10/2026: publicar os ajustes locais da Central, mantendo
 
 Sem PackageOnly, conecta por senha SSH ao servidor confirmado 157.230.214.72. A senha é digitada pelo proprietário somente no terminal. O pacote vai para uma pasta privada em `/opt/private-mail-center/releases`, com checksum e validação de sintaxe. Salva o código/configuração anteriores, instala os arquivos, habilita `remote_organization_enabled` na configuração privada preservando o inode montado no container e faz reload do Apache. Não troca a imagem Docker, não recria o banco, não aplica migrações e não importa tokens locais.
 
+O modo `-StatusOnly` confere permissões efetivamente registradas, contagens e estado de sincronização no servidor, sem publicar arquivos, sincronizar caixas ou chamar os provedores. Relatório: `_deploy/mail-organization-status.txt`. É a conferência apropriada depois de o proprietário renovar os consentimentos de produção.
+
 A conferência após a publicação verifica hashes, schema existente, login público HTTP 200 e restrição anônima da Central HTTP 404. Falha de publicação restaura os arquivos e a configuração anteriores. Falha posterior de sincronização é reportada separadamente, sem repetir escrita nem reverter código saudável. Relatório técnico local: `_deploy/mail-organization-publication.txt`.
 
 Conexões com permissões antigas continuam lendo/enviando normalmente. As ações remotas só aparecem depois de o proprietário conceder as permissões adicionais **em produção**, na opção Autorizar organização de mensagens em Configurações. O fato de o consentimento existir no Docker local não o transfere ao servidor.
@@ -25,6 +27,8 @@ Validação local: 516 verificações da suíte piloto e oito cenários de inter
 ## Resultado em produção
 
 Publicação concluída em 19/10/2026, com backup `/opt/private-mail-center/releases/organization-20261019T220112Z-LqShbdS4`. Baselines, sintaxe, hashes instalados e saúde do Core aprovados. Segredos e imagem Docker preservados, sem recriação de containers ou migrações. A configuração de organização está habilitada. As duas conexões ainda exigiam novo consentimento de organização em produção na conferência final; a renovação foi solicitada ao proprietário.
+
+Após o proprietário concluir as autorizações, a conferência `-StatusOnly` confirmou **gmail_organization_ready=yes** e **zoho_organization_ready=yes**, com organização habilitada, sem erros, cooldowns ou leases ativos. Nenhuma chamada aos provedores ou alteração de mensagens foi executada nessa conferência. Gmail tinha dez registros: um com INBOX, um com SENT e oito com TRASH; portanto, a visão normal corretamente exclui oito registros. Zoho tinha cinco registros. Relatório técnico: `_deploy/mail-organization-status.txt`.
 
 Validação limitada: Gmail processou duas mensagens e concluiu o ciclo, com dez registros no cache; Zoho processou cinco e concluiu o ciclo, com cinco registros. Sem falhas, cooldowns ou leases ativos. Esses números incluem registros que podem estar em pastas excluídas da visão normal e não equivalem ao total mostrado na Caixa de entrada.
 

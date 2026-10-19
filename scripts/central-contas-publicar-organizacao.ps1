@@ -1,10 +1,20 @@
 #requires -Version 7.0
-param([string]$Config='', [switch]$PackageOnly)
+param([string]$Config='', [switch]$PackageOnly, [switch]$StatusOnly)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 if(!$Config){$Config=Join-Path $PSScriptRoot 'deploy.local.ps1'}
 $taskSettings=. $Config;$taskServer=[string]$taskSettings.Server;$taskUser=[string]$taskSettings.User
 if($taskServer -ne '157.230.214.72' -or $taskUser -notmatch '^[a-zA-Z0-9_-]+$'){throw 'Servidor diferente do autorizado.'}
+if($StatusOnly){
+ if($PackageOnly){throw 'Escolha somente um modo de execução.'}
+ $taskSource=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'central-contas-status-organizacao.php')).Replace("`r`n","`n")
+ $taskEncoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($taskSource))
+ $taskCommand=('printf ''%s'' ''{0}'' | base64 -d | docker exec -i --user www-data app_php php /dev/stdin --status-only' -f $taskEncoded)
+ Write-Host 'Conferência de permissões e contagens em produção, sem chamadas aos provedores ou alterações. Digite a senha SSH somente neste terminal.' -ForegroundColor Cyan
+ & ssh.exe -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o NumberOfPasswordPrompts=1 -o PreferredAuthentications=password -o PubkeyAuthentication=no "${taskUser}@${taskServer}" $taskCommand | Tee-Object -FilePath (Join-Path $taskRoot '_deploy/mail-organization-status.txt')
+ if($LASTEXITCODE -ne 0){throw 'Conferência não concluída; veja o relatório técnico.'}
+ exit 0
+}
 $taskBaseline=Join-Path $taskRoot '_deploy/mail-core-overlay-14b3bfd2623c4c96b31fb4c28b52505c'
 if(!(Test-Path -LiteralPath (Join-Path $taskBaseline 'mail-overlay.json'))){throw 'Pacote original necessário para conferir baseline.'}
 $taskPaths=@(
