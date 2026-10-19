@@ -15,6 +15,6 @@ if command -v nginx >/dev/null 2>&1; then
 fi
 docker exec app_php php -r '$root="/var/www/html";$text=(string)@file_get_contents($root."/.htaccess");echo "htaccess_trusts_forwarded_proto=".(stripos($text,"X-Forwarded-Proto")!==false?"yes":"no").PHP_EOL;echo "htaccess_trusts_cf_visitor=".(stripos($text,"CF-Visitor")!==false?"yes":"no").PHP_EOL;$config=require $root."/env/env.production.php";echo "session_secure_explicit_false=".((($config["app"]["session_secure"]??null)===false)?"yes":"no").PHP_EOL;'
 if command -v curl >/dev/null 2>&1; then
-    curl --silent --show-error --max-time 15 --output /dev/null --write-out 'public_https_status=%{http_code}\npublic_tls_verification=%{ssl_verify_result}\n' https://meuprojetoweb.com/web/login.php
+    curl --silent --show-error --max-time 15 --output /dev/null --write-out 'public_https_status=%{http_code}\npublic_tls_verification=%{ssl_verify_result}\n' https://meuprojetoweb.com/web/admin/login.php
 fi
 printf 'https_topology_probe_complete=yes\n'

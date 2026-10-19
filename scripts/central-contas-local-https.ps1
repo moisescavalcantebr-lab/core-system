@@ -25,7 +25,7 @@ try {
     if ($Build) { $composeArguments += '--build' }
     & $dockerPath @composeArguments app
     if ($LASTEXITCODE -ne 0) { throw 'Não foi possível iniciar o HTTPS local.' }
-    Write-Output 'Core local: https://localhost:8443/web/login.php'
+    Write-Output 'Core local: https://localhost:8443/web/admin/login.php'
 } finally {
     $env:MAIL_CENTER_PRIVATE_DIR = $previousPrivateDirectory
 }

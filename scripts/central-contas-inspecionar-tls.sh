@@ -19,5 +19,5 @@ if docker exec app_php test -f /etc/apache2/conf-enabled/mail-center.conf; then 
 if ss -lntH '( sport = :443 )' | grep -q .; then echo 'host_443_in_use=yes'; else echo 'host_443_in_use=no'; fi
 if command -v ufw >/dev/null; then ufw status | head -n 1; fi
 printf 'public_http_status='
-curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1/web/login.php
+curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}\n' http://127.0.0.1/web/admin/login.php
 echo 'tls_preflight_readonly=yes'

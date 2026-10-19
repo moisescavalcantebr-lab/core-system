@@ -8,7 +8,7 @@ headers=$(mktemp "$private/.headers-XXXXXXXX")
 trap 'rm -f -- "$headers"' EXIT
 since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 probe="mail_probe_$(openssl rand -hex 12)"
-status=$(curl --silent --show-error --max-time 20 --dump-header "$headers" --output /dev/null --write-out '%{http_code}' "https://meuprojetoweb.com/web/login.php?mail_log_probe=${probe}_control")
+status=$(curl --silent --show-error --max-time 20 --dump-header "$headers" --output /dev/null --write-out '%{http_code}' "https://meuprojetoweb.com/web/admin/login.php?mail_log_probe=${probe}_control")
 [[ "$status" == 200 ]] || exit 1
 if grep -qi '^set-cookie:' "$headers"; then
     echo 'public_login_sets_cookie=yes'

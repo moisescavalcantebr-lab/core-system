@@ -86,6 +86,8 @@ O cookie emitido pelo Core atualmente instalado não apresentou Secure, HttpOnly
 
 ## Sequência restante
 
+A revisão do deploy geral identificou efeitos em outros módulos. Foi preparado um [plano de publicação limitada](central-de-email-publicacao-limitada.md), com pacote exclusivo da Central e comparação dos seis arquivos compartilhados. Prévia no servidor aprovada: 956 arquivos íntegros, nenhum conflito e runtime compatível, sem alterar aplicação/banco. Git registrado e branch enviada ao repositório que o proprietário confirmou como privado e autorizou. Usar esse plano para a instalação inicial desabilitada; não executar o deploy geral supondo equivalência de escopo.
+
 1. **Concluído:** ensaio de restauração e migrações sobre a cópia isolada do banco.
 2. **Callbacks concluídos por confirmação do proprietário:** Google e Zoho. Revisar ainda a situação do consentimento Google para uso contínuo.
 3. **HTTPS da origem concluído:** proprietário confirmou a regra Full (strict) na Cloudflare; acesso público e origem direta passaram depois da mudança. Concluir mounts/integração privada e conferência de cookies/logs, com módulo bloqueado até os testes. Segredos e trecho desabilitado do proprietário já foram provisionados.

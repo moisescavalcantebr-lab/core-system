@@ -55,7 +55,7 @@ for name in index.html privacidade.html termos.html site.css; do
     cmp --silent "$target/$name" "$stage/response" || exit 1
     printf 'branding_%s_origin_status=200\n' "$name"
 done
-status=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/login.php)
+status=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/admin/login.php)
 [[ "$status" == 200 ]] || exit 1
 completed=yes
 rm -f -- "$stage/response"

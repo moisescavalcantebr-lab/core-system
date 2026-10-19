@@ -30,9 +30,9 @@ docker inspect app_php >"$backup/before-container.json"
 sha256sum docker-compose.yml docker-compose.prod.yml >"$backup/compose.sha256"
 docker image tag "$expected_image" "mail-origin-rollback:$(basename "$backup" | tr '[:upper:]' '[:lower:]')"
 printf 'services:\n  app:\n    image: "%s"\n    pull_policy: never\n' "$expected_image" >"$backup/rollback-image.yml"
-before_http=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' http://127.0.0.1/web/login.php)
+before_http=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' http://127.0.0.1/web/admin/login.php)
 [[ "$before_http" == 200 ]] || exit 1
-before_public=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/login.php)
+before_public=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/admin/login.php)
 [[ "$before_public" == 200 ]] || exit 1
 docker run --rm --network none \
     --mount "type=bind,source=$release/origin-cert.pem,target=/run/mail-center/tls/fullchain.pem,readonly" \
@@ -67,7 +67,7 @@ finish(){
             rm -f -- "$override"
             echo 'origin_rollback_container_restored=yes'
             for attempt in {1..20}; do
-                if [[ "$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1/web/login.php || true)" == 200 ]]; then echo 'origin_rollback_http_healthy=yes'; break; fi
+                if [[ "$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1/web/admin/login.php || true)" == 200 ]]; then echo 'origin_rollback_http_healthy=yes'; break; fi
                 sleep 1
             done
         else
@@ -86,13 +86,13 @@ armed=yes
 "${base[@]}" -f "$override" up -d --no-build --no-deps --force-recreate app >"$backup/activation.log" 2>&1
 healthy=no
 for attempt in {1..30}; do
-    http_status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1/web/login.php || true)
-    https_status=$(curl -s --noproxy '*' --max-time 3 --cacert "$release/cloudflare-origin-ca-rsa.pem" --resolve meuprojetoweb.com:443:127.0.0.1 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/login.php || true)
+    http_status=$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' http://127.0.0.1/web/admin/login.php || true)
+    https_status=$(curl -s --noproxy '*' --max-time 3 --cacert "$release/cloudflare-origin-ca-rsa.pem" --resolve meuprojetoweb.com:443:127.0.0.1 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/admin/login.php || true)
     if [[ "$http_status" == 200 && "$https_status" == 200 ]]; then healthy=yes; break; fi
     sleep 1
 done
 [[ "$healthy" == yes ]] || exit 1
-public_status=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/login.php)
+public_status=$(curl --silent --show-error --max-time 15 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/admin/login.php)
 [[ "$public_status" == 200 ]] || exit 1
 [[ "$(docker inspect --format '{{.Image}}' app_php)" == "$expected_image" ]] || exit 1
 completed=yes
