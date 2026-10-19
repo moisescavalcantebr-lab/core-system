@@ -11,7 +11,8 @@ flock -n 9 || exit 1
 backup=$(mktemp -d "$private/releases/organization-$(date -u +%Y%m%dT%H%M%SZ)-XXXXXXXX")
 echo "organization_backup=$backup"
 cat >"$backup/package.tar"
-[[ "$(sha256sum "$backup/package.tar" | cut -d' ' -f1)" == "$1" ]] || exit 1
+[[ "$(sha256sum "$backup/package.tar" | cut -d' ' -f1)" == "$1" ]] || { echo 'package_checksum=FAIL'; exit 1; }
+echo 'package_checksum=PASS'
 mkdir "$backup/stage"
 tar -xf "$backup/package.tar" -C "$backup/stage"
 stage="$backup/stage"

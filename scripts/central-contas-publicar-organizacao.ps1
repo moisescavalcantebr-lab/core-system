@@ -34,7 +34,7 @@ $taskManifest=@{schema=1;files=$taskEntries}
 [IO.File]::WriteAllText((Join-Path $taskStage 'organization-manifest.json'),($taskManifest|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'central-contas-status-organizacao.php') -Destination (Join-Path $taskStage 'status.php')
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'central-contas-conferir-organizacao.php') -Destination (Join-Path $taskStage 'check.php')
-$taskArchive=Join-Path $taskRoot '_deploy/mail-organization.tar'
+$taskArchive=$taskStage+'.tar'
 & tar.exe -cf $taskArchive -C $taskStage .
 if($LASTEXITCODE -ne 0){throw 'Empacotamento falhou.'}
 $taskHash=(Get-FileHash -LiteralPath $taskArchive -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -43,15 +43,16 @@ if($PackageOnly){Write-Output "package_sha256=$taskHash";exit 0}
 $taskScript=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'central-contas-publicar-organizacao.sh')).Replace("`r`n","`n")
 $taskEncoded=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($taskScript))
 $taskCommand=('bash -c "$(printf ''%s'' ''{0}'' | base64 -d)" -- {1} --publish-organization' -f $taskEncoded,$taskHash)
-$taskInfo=[Diagnostics.ProcessStartInfo]::new('ssh.exe');$taskInfo.UseShellExecute=$false;$taskInfo.RedirectStandardInput=$true;$taskInfo.RedirectStandardOutput=$true
+$taskInfo=[Diagnostics.ProcessStartInfo]::new('ssh.exe');$taskInfo.UseShellExecute=$false;$taskInfo.RedirectStandardInput=$true;$taskInfo.RedirectStandardOutput=$true;$taskInfo.RedirectStandardError=$true
 foreach($taskArg in @('-o','ConnectTimeout=15','-o','ServerAliveInterval=15','-o','ServerAliveCountMax=4','-o','NumberOfPasswordPrompts=1','-o','PreferredAuthentications=password','-o','PubkeyAuthentication=no',"${taskUser}@${taskServer}",$taskCommand)){[void]$taskInfo.ArgumentList.Add($taskArg)}
 Write-Host 'Digite a senha SSH somente neste terminal. Publicação da Central com backup/reversão e até cinco lotes por caixa; sem envio ou exclusão de e-mails.' -ForegroundColor Cyan
 $taskProcess=[Diagnostics.Process]::new();$taskProcess.StartInfo=$taskInfo
 try{
- [void]$taskProcess.Start();$taskStream=[IO.File]::OpenRead($taskArchive)
+ [void]$taskProcess.Start();$taskErrors=$taskProcess.StandardError.ReadToEndAsync();$taskStream=[IO.File]::OpenRead($taskArchive)
  try{$taskStream.CopyTo($taskProcess.StandardInput.BaseStream);$taskProcess.StandardInput.Close()}finally{$taskStream.Dispose()}
  $taskReport=Join-Path $taskRoot '_deploy/mail-organization-publication.txt';[IO.File]::WriteAllText($taskReport,'',[Text.UTF8Encoding]::new($false))
  while($null -ne ($taskLine=$taskProcess.StandardOutput.ReadLine())){[IO.File]::AppendAllText($taskReport,$taskLine+"`n",[Text.UTF8Encoding]::new($false));Write-Host $taskLine}
  $taskProcess.WaitForExit()
+ $taskErrorText=$taskErrors.GetAwaiter().GetResult();if($taskErrorText){[IO.File]::AppendAllText($taskReport,$taskErrorText,[Text.UTF8Encoding]::new($false));Write-Host $taskErrorText}
  if($taskProcess.ExitCode -ne 0){throw 'Publicação não concluída. Confira o relatório antes de repetir.'}
 }finally{$taskProcess.Dispose()}

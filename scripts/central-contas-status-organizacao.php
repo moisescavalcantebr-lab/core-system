@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-if(PHP_SAPI!=='cli'||!array_intersect(['--status-only','--sync-limited'],$argv))exit(1);
+if(PHP_SAPI!=='cli'||!array_intersect(['--status-only','--sync-limited','--probe-gmail'],$argv))exit(1);
 ini_set('display_errors','0');
 try{
     define('ROOT_PATH','/var/www/html');define('APP_PATH',ROOT_PATH.'/app');
@@ -15,6 +15,23 @@ try{
     foreach($boxes as$box){
         $account=(int)$box['id'];$provider=$box['code'];$runtime=mailPilotRuntime($pdo,$config,$owner,$account);
         echo $provider.'_organization_ready='.(isset($runtime['organization'])&&$runtime['organization']->available($account)?'yes':'no').PHP_EOL;
+        if($provider==='gmail'&&in_array('--probe-gmail',$argv,true)){
+            $token=$runtime['oauth']->token($account);$profile=$runtime['api']->profile($token);
+            echo 'gmail_profile_matches='.(strtolower((string)($profile['emailAddress']??''))===strtolower($runtime['store']->account($account)['email'])?'yes':'no').PHP_EOL;
+            foreach([false,true]as$includeAll){
+                $page='';$total=0;$missing=0;
+                for($probe=0;$probe<5;$probe++){
+                    $query=['maxResults'=>10,'q'=>'after:'.(time()-30*86400),'includeSpamTrash'=>$includeAll?'true':'false'];if($page!=='')$query['pageToken']=$page;
+                    $response=(new MailHttpClient())->request('GET','https://gmail.googleapis.com/gmail/v1/users/me/messages?'.http_build_query($query,'','&',PHP_QUERY_RFC3986),['Authorization: Bearer '.$token]);
+                    foreach($response['messages']??[]as$row){$total++;$s=$pdo->prepare('SELECT COUNT(*) FROM core_mail_messages WHERE owner_user_id=? AND account_id=? AND remote_id=? AND remote_missing=0');$s->execute([$owner,$account,(string)$row['id']]);if(!(int)$s->fetchColumn())$missing++;}
+                    $page=(string)($response['nextPageToken']??'');if($page==='')break;
+                }
+                $prefix=$includeAll?'gmail_api_all_30d':'gmail_api_regular_30d';echo $prefix.'_count='.$total.PHP_EOL;echo $prefix.'_missing='.$missing.PHP_EOL;echo $prefix.'_more='.($page===''?'no':'yes').PHP_EOL;
+            }
+            $s=$pdo->prepare("SELECT m.remote_id FROM core_mail_messages m JOIN core_mail_message_folders mf ON mf.message_id=m.id AND mf.account_id=m.account_id AND mf.owner_user_id=m.owner_user_id JOIN core_mail_folders f ON f.id=mf.folder_id AND f.account_id=mf.account_id AND f.owner_user_id=mf.owner_user_id WHERE m.owner_user_id=? AND m.account_id=? AND m.remote_missing=0 AND f.remote_id='INBOX' ORDER BY m.received_at DESC LIMIT 10");$s->execute([$owner,$account]);$sample=$s->fetchAll(PDO::FETCH_COLUMN);$kinds=['inbox'=>0,'trash'=>0,'spam'=>0,'other'=>0,'missing'=>0];
+            foreach($sample as$id){try{$metadata=$runtime['api']->message($token,(string)$id);$labels=$metadata['labelIds']??[];$kind=in_array('TRASH',$labels,true)?'trash':(in_array('SPAM',$labels,true)?'spam':(in_array('INBOX',$labels,true)?'inbox':'other'));$kinds[$kind]++;}catch(MailProviderException $e){if($e->kind!=='missing')throw $e;$kinds['missing']++;}}
+            foreach($kinds as$kind=>$number)echo 'gmail_cached_inbox_sample_remote_'.$kind.'='.$number.PHP_EOL;
+        }
         if(in_array('--sync-limited',$argv,true)){
             for($round=1;$round<=5;$round++){
                 try{$batch=$runtime['sync']->run($account);echo $provider.'_batch_'.$round.'_processed='.(int)$batch['processed'].PHP_EOL;echo $provider.'_batch_'.$round.'_complete='.($batch['complete']?'yes':'no').PHP_EOL;}
@@ -25,6 +42,7 @@ try{
         }
         $s=$pdo->prepare('SELECT COUNT(*) AS total,SUM(remote_missing=0) AS available,SUM(remote_missing=0 AND received_at>=UTC_TIMESTAMP()-INTERVAL 30 DAY) AS recent FROM core_mail_messages WHERE owner_user_id=? AND account_id=?');$s->execute([$owner,$account]);$count=$s->fetch(PDO::FETCH_ASSOC);
         echo $provider.'_cached_total='.(int)$count['total'].PHP_EOL;echo $provider.'_cached_available='.(int)$count['available'].PHP_EOL;echo $provider.'_cached_recent='.(int)$count['recent'].PHP_EOL;
+        if($provider==='gmail')foreach(['INBOX','SENT','SPAM','TRASH']as$label){$s=$pdo->prepare('SELECT COUNT(DISTINCT m.id) FROM core_mail_messages m JOIN core_mail_message_folders mf ON mf.message_id=m.id AND mf.account_id=m.account_id AND mf.owner_user_id=m.owner_user_id JOIN core_mail_folders f ON f.id=mf.folder_id AND f.account_id=mf.account_id AND f.owner_user_id=mf.owner_user_id WHERE m.owner_user_id=? AND m.account_id=? AND m.remote_missing=0 AND f.remote_id=?');$s->execute([$owner,$account,$label]);echo 'gmail_cached_'.strtolower($label).'='.(int)$s->fetchColumn().PHP_EOL;}
         $s=$pdo->prepare('SELECT *,lease_until>UTC_TIMESTAMP() AS leased,retry_after>UTC_TIMESTAMP() AS cooldown FROM core_mail_sync_states WHERE owner_user_id=? AND account_id=?');$s->execute([$owner,$account]);$state=$s->fetch(PDO::FETCH_ASSOC)?:[];
         $cursor=empty($state['cursor_envelope'])?[]:$runtime['store']->cipher->open($state['cursor_envelope'],'mail:'.$owner.':'.$account.':sync');
         $mode=$cursor['mode']??'none';echo $provider.'_mode='.(in_array($mode,['none','poll','bootstrap','history'],true)?$mode:'other').PHP_EOL;

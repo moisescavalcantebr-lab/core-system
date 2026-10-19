@@ -1,6 +1,6 @@
 # Reconciliação local da Lixeira do Zoho
 
-Implementada em 19/10/2026, sem publicação em produção nesta etapa. Mantida a decisão de usar somente Lixeira e restauração na Central. A retenção e a exclusão definitiva continuam sob responsabilidade do provedor; nenhuma configuração de retenção foi alterada.
+Implementada localmente em 19/10/2026 e publicada posteriormente no mesmo dia pelo pacote limitado de organização. Mantida a decisão de usar somente Lixeira e restauração na Central. A retenção e a exclusão definitiva continuam sob responsabilidade do provedor; nenhuma configuração de retenção foi alterada.
 
 ## Funcionamento
 
@@ -18,7 +18,7 @@ Falha de rede, quota, autenticação ou resposta malformada interrompe o lote se
 
 É atualização manual e progressiva, sem agendamento novo. Uma caixa com muitas mensagens na Lixeira ou muitas pastas precisará de vários lotes. O inventário é limitado a mil pastas; inventário maior ou Lixeira ambígua não autoriza marcar ausências. Não é uma fotografia atômica da caixa: movimentos simultâneos no webmail podem exigir nova atualização. A reconciliação se restringe às mensagens já conhecidas localmente na Lixeira, sem prometer espelhamento integral de todas as alterações externas.
 
-Gmail mantém sua sincronização por histórico. Outlook permanece adiado. A integração de organização remota e esta melhoria ainda precisam de publicação controlada em produção, com backup, conferência dos arquivos e validação das conexões naquele ambiente. Os tokens locais não são copiados.
+Gmail mantém sua sincronização por histórico. Outlook permanece adiado. A publicação controlada em produção incluiu backup, conferência dos arquivos e lotes de metadados das duas conexões; ver [relatório de publicação](central-de-email-publicacao-organizacao.md). As ações de organização dependem de novo consentimento no servidor, solicitado ao proprietário. Os tokens locais não foram copiados.
 
 Validação: 514 verificações aprovadas na suíte piloto, incluindo 32 específicas desta reconciliação, com banco descartável e APIs simuladas; cobre retomada, limite de consultas, ausência confirmada, restauração, arquivo antigo, leitura, inventário alterado/ambíguo, prazo, erros de provedor, geração da conexão, cursor criptografado e descarte de página obsoleta. Nenhuma mensagem real foi modificada pelos testes.
 
