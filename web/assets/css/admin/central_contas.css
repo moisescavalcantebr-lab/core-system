@@ -128,8 +128,6 @@
 .mail-message-row.is-unread .mail-row-sender { position:relative; padding-left:12px; font-weight:700; }
 .mail-message-row.is-unread .mail-row-sender::before { content:''; position:absolute; left:0; top:5px; width:6px; height:6px; border-radius:50%; background:var(--primary-color,#2563eb); }
 .mail-message-entry:not(.is-flagged) .mail-message-row.is-unread:not(.is-selected) { background:color-mix(in srgb,var(--primary-color,#2563eb) 8%,transparent); }
-.mail-center .mail-delete-danger { color:var(--danger-color,#dc2626); border-color:var(--danger-color,#dc2626); }
-.mail-delete-permission { font-size:12px; color:var(--text-secondary); }
 @media(max-width:650px) { .mail-trash-menu[open] > form { left:0; right:auto; } }
 .mail-message-row time { font-size:11px; color:var(--text-secondary); text-align:right; }
 .mail-pagination { display:flex; gap:10px; justify-content:flex-end; padding:8px; }

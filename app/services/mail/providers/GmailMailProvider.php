@@ -58,13 +58,4 @@ final class GmailMailProvider implements MailProviderInterface, MailMutableProvi
         }
         try{return $this->message($token,$id);}catch(Throwable $e){throw new MailProviderException('unknown');}
     }
-
-    public function deleteMessagePermanently(string $token,string $id): void
-    {
-        $fresh=$this->message($token,$id);
-        if(!in_array('TRASH',$fresh['labelIds']??[],true))throw new DomainException('A mensagem não está na lixeira.');
-        $this->http->request('DELETE','https://gmail.googleapis.com/gmail/v1/users/me/messages/'.self::id($id),['Authorization: Bearer '.$token],null,true);
-        try{$this->message($token,$id);}catch(MailProviderException $e){if($e->kind==='missing')return;throw new MailProviderException('unknown');}catch(Throwable $e){throw new MailProviderException('unknown');}
-        throw new MailProviderException('unknown');
-    }
 }

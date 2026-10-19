@@ -1,5 +1,5 @@
 #requires -Version 7.0
-param([ValidateSet('Enable','Disable')][string]$Mode='Enable',[string]$PrivateDirectory='',[switch]$GmailPermanentDelete)
+param([ValidateSet('Enable','Disable')][string]$Mode='Enable',[string]$PrivateDirectory='')
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 $taskEnv=Join-Path $taskRoot 'env/env.production.php'
@@ -16,20 +16,16 @@ $taskState=$taskRaw|ConvertFrom-Json
 if($taskState.local -ne $true -or $taskState.hash -ne (Get-FileHash -LiteralPath $taskEnv -Algorithm SHA256).Hash.ToLowerInvariant()){throw 'O container não corresponde ao ENV HTTPS local deste workspace.'}
 $taskSource=[IO.File]::ReadAllText($taskEnv)
 $taskValue=if($Mode -eq 'Enable'){'true'}else{'false'}
-$taskKeys=@('remote_organization_enabled');if($GmailPermanentDelete){$taskKeys+='gmail_permanent_delete_enabled'}
-$taskUpdated=$taskSource
-foreach($taskKey in $taskKeys){
-    $taskOption=[regex]::new('([''"])'+[regex]::Escape($taskKey)+'\1\s*=>\s*(true|false)')
-    if($taskOption.Matches($taskUpdated).Count -gt 1){throw 'Opção duplicada no ENV.'}
-    if($taskOption.IsMatch($taskUpdated)){
-        $taskMatch=$taskOption.Match($taskUpdated);$taskValueGroup=$taskMatch.Groups[2]
-        $taskUpdated=$taskUpdated.Remove($taskValueGroup.Index,$taskValueGroup.Length).Insert($taskValueGroup.Index,$taskValue)
-    }else{
-        $taskSection=[regex]::new('([''"])mail_center\1\s*=>\s*(?:array\s*\(|\[)')
-        $taskMatches=$taskSection.Matches($taskUpdated)
-        if($taskMatches.Count -ne 1){throw 'Estrutura do ENV diferente da revisada. Nenhum arquivo alterado.'}
-        $taskUpdated=$taskUpdated.Insert($taskMatches[0].Index+$taskMatches[0].Length,"`n        '$taskKey' => $taskValue,")
-    }
+$taskOption=[regex]::new('([''"])remote_organization_enabled\1\s*=>\s*(true|false)')
+if($taskOption.Matches($taskSource).Count -gt 1){throw 'Opção duplicada no ENV.'}
+if($taskOption.IsMatch($taskSource)){
+    $taskMatch=$taskOption.Match($taskSource);$taskValueGroup=$taskMatch.Groups[2]
+    $taskUpdated=$taskSource.Remove($taskValueGroup.Index,$taskValueGroup.Length).Insert($taskValueGroup.Index,$taskValue)
+}else{
+    $taskSection=[regex]::new('([''"])mail_center\1\s*=>\s*(?:array\s*\(|\[)')
+    $taskMatches=$taskSection.Matches($taskSource)
+    if($taskMatches.Count -ne 1){throw 'Estrutura do ENV diferente da revisada. Nenhum arquivo alterado.'}
+    $taskUpdated=$taskSource.Insert($taskMatches[0].Index+$taskMatches[0].Length,"`n        'remote_organization_enabled' => $taskValue,")
 }
 if($taskUpdated -eq $taskSource){Write-Host "local_organization_mode=$Mode (já configurado)";exit 0}
 $taskBackupDirectory=Join-Path $taskPrivate 'local-config-backups'
@@ -40,11 +36,9 @@ try{
     [IO.File]::WriteAllText($taskEnv,$taskUpdated,[Text.UTF8Encoding]::new($false))
     & $taskDocker exec app_php php -l /var/www/html/env/env.production.php
     if($LASTEXITCODE -ne 0){throw 'Sintaxe inválida.'}
-    foreach($taskKey in $taskKeys){
-        $taskCheck='$c=require "/var/www/html/env/env.production.php";echo ($c["mail_center"]["__KEY__"]??null)===__VALUE__?"local_organization_check=PASS\n":"local_organization_check=FAIL\n";if(($c["mail_center"]["__KEY__"]??null)!==__VALUE__)exit(1);'
-        & $taskDocker exec app_php php -r $taskCheck.Replace('__VALUE__',$taskValue).Replace('__KEY__',$taskKey)
-        if($LASTEXITCODE -ne 0){throw 'Ativação local não confirmada.'}
-    }
+    $taskCheck='$c=require "/var/www/html/env/env.production.php";echo ($c["mail_center"]["remote_organization_enabled"]??null)===__VALUE__?"local_organization_check=PASS\n":"local_organization_check=FAIL\n";if(($c["mail_center"]["remote_organization_enabled"]??null)!==__VALUE__)exit(1);'
+    & $taskDocker exec app_php php -r $taskCheck.Replace('__VALUE__',$taskValue)
+    if($LASTEXITCODE -ne 0){throw 'Ativação local não confirmada.'}
 }catch{
     Copy-Item -LiteralPath $taskBackup -Destination $taskEnv -Force
     throw

@@ -15,28 +15,7 @@ final class MailRemoteMessageService
         if(!$this->enabled||!($this->api instanceof MailMutableProviderInterface))return false;
         $box=$this->store->account($account);$required=self::scopes($box['provider_code']);
         if(!$required)return false;
-        try{$granted=json_decode($this->store->connection($account)['scopes'],true,32,JSON_THROW_ON_ERROR);return is_array($granted)&&self::grantsOrganization($box['provider_code'],$granted);}catch(DomainException $e){return false;}
-    }
-
-    public static function grantsOrganization(string $provider,array $granted): bool
-    {
-        if(($provider==='gmail'&&in_array('https://mail.google.com/',$granted,true))||($provider==='zoho'&&in_array('ZohoMail.messages.ALL',$granted,true)))return true;
-        $required=self::scopes($provider);return $required&&!array_diff($required,$granted);
-    }
-
-    public function canDelete(int $account): bool
-    {
-        if(!$this->available($account))return false;
-        $box=$this->store->account($account);$granted=json_decode($this->store->connection($account)['scopes'],true,32,JSON_THROW_ON_ERROR);
-        return $box['provider_code']==='zoho'||($box['provider_code']==='gmail'&&in_array('https://mail.google.com/',$granted,true));
-    }
-
-    public function isInTrash(int $id): bool
-    {
-        $m=$this->store->message($id);$box=$this->store->account((int)$m['account_id']);
-        $s=$this->store->pdo->prepare('SELECT f.remote_id,f.name FROM core_mail_message_folders mf JOIN core_mail_folders f ON f.id=mf.folder_id AND f.account_id=mf.account_id AND f.owner_user_id=mf.owner_user_id WHERE mf.owner_user_id=? AND mf.account_id=? AND mf.message_id=?');$s->execute([$this->store->owner,$m['account_id'],$id]);
-        foreach($s->fetchAll(PDO::FETCH_ASSOC)as$f)if(mailCenterFolderKind($box['provider_code'],$f['remote_id'],$f['name'])==='trash')return true;
-        return false;
+        try{$granted=json_decode($this->store->connection($account)['scopes'],true,32,JSON_THROW_ON_ERROR);return is_array($granted)&&!array_diff($required,$granted);}catch(DomainException $e){return false;}
     }
 
     public static function destinationAllowed(string $provider,string $id,string $name): bool
@@ -51,14 +30,20 @@ final class MailRemoteMessageService
         return array_values(array_filter($this->store->folders($account),static fn($f)=>self::destinationAllowed($box['provider_code'],$f['remote_id'],$f['name'])));
     }
 
+    public function isInTrash(int $id): bool
+    {
+        $m=$this->store->message($id);$box=$this->store->account((int)$m['account_id']);
+        $s=$this->store->pdo->prepare('SELECT f.remote_id,f.name FROM core_mail_message_folders mf JOIN core_mail_folders f ON f.id=mf.folder_id AND f.account_id=mf.account_id AND f.owner_user_id=mf.owner_user_id WHERE mf.owner_user_id=? AND mf.account_id=? AND mf.message_id=?');$s->execute([$this->store->owner,$m['account_id'],$id]);
+        foreach($s->fetchAll(PDO::FETCH_ASSOC)as$f)if(mailCenterFolderKind($box['provider_code'],$f['remote_id'],$f['name'])==='trash')return true;
+        return false;
+    }
+
     public function apply(int $id,string $action,int $destination=0,int $source=0,bool $confirmed=false): void
     {
-        if(!in_array($action,['read','unread','move','trash','delete'],true)||$destination<0||$source<0)throw new InvalidArgumentException('Ação inválida.');
+        if(!in_array($action,['read','unread','move','trash'],true)||$destination<0||$source<0)throw new InvalidArgumentException('Ação inválida.');
         $message=$this->store->message($id);$account=(int)$message['account_id'];$box=$this->store->account($account);
         if(!$this->available($account))throw new DomainException('Atualize as permissões desta conta em Configurações antes de organizar mensagens.');
         if($action==='trash'&&!$confirmed)throw new DomainException('Confirme o envio da mensagem para a lixeira.');
-        if($action==='delete'&&!$confirmed)throw new DomainException('Confirme a exclusão definitiva. Esta ação não pode ser desfeita.');
-        if($action==='delete'&&!$this->canDelete($account))throw new DomainException('A exclusão definitiva exige autorização adicional desta conta.');
         if(($action==='move')!==($destination>0)||($action!=='move'&&$source))throw new InvalidArgumentException('Destino inválido.');
         $localFolders=$this->store->folders($account);$byId=array_column($localFolders,null,'id');
         if($destination&&(!isset($byId[$destination])||!self::destinationAllowed($box['provider_code'],$byId[$destination]['remote_id'],$byId[$destination]['name'])))throw new OutOfBoundsException('Pasta de destino indisponível nesta conta.');
@@ -83,16 +68,9 @@ final class MailRemoteMessageService
             if(($fresh['id']??null)!==$message['remote_id'])throw new MailProviderException('provider');
             if($origin!==null&&!in_array($origin,$fresh['labelIds']??[],true))throw new DomainException('A mensagem mudou de pasta. Atualize a caixa antes de mover.');
             // Never issue a second trash operation on an already trashed message.
-            $inTrash=false;
-            foreach($remoteById as$remoteId=>$f)if(mailCenterFolderKind($box['provider_code'],(string)$remoteId,(string)($f['name']??''))==='trash'&&in_array((string)$remoteId,$fresh['labelIds']??[],true))$inTrash=true;
-            if($inTrash&&$action==='trash')throw new DomainException('Esta mensagem já está na lixeira.');
-            if(!$inTrash&&$action==='delete')throw new DomainException('A exclusão definitiva só está disponível para mensagens na lixeira.');
+            foreach($remoteById as$remoteId=>$f)if(mailCenterFolderKind($box['provider_code'],(string)$remoteId,(string)($f['name']??''))==='trash'&&in_array((string)$remoteId,$fresh['labelIds']??[],true)&&$action==='trash')throw new DomainException('Esta mensagem já está na lixeira.');
             $this->store->transaction($account,function()use($account,$connection,$lease,$token,$message,$action,$dest,$origin,$box,$remoteById,&$attempted):void{
                 $this->assertContext($account,$connection,$lease);$attempted=true;
-                if($action==='delete'){
-                    $this->api->deleteMessagePermanently($token,$message['remote_id']);$this->assertContext($account,$connection,$lease);
-                    $this->store->missing($account,$message['remote_id']);$this->store->audit($account,'message.remote_deleted');return;
-                }
                 $updated=$this->api->updateMessage($token,$message['remote_id'],$action,$dest,$origin);
                 if(($updated['id']??null)!==$message['remote_id'])throw new MailProviderException('unknown');
                 $labels=$updated['labelIds']??null;if(!is_array($labels))throw new MailProviderException('unknown');
@@ -110,7 +88,7 @@ final class MailRemoteMessageService
             // Some actions have multiple remote steps; after attempting a write,
             // do not turn any later failure into a blindly retryable operation.
             $uncertain=$attempted;
-            $this->store->audit($account,$action==='delete'?'message.remote_deleted':'message.remote_updated',$uncertain?'unknown':'failure');
+            $this->store->audit($account,'message.remote_updated',$uncertain?'unknown':'failure');
             if($uncertain)throw new DomainException('A ação pode ter sido aplicada. Atualize a caixa e confira no provedor antes de repetir.');
             throw $e;
         }finally{

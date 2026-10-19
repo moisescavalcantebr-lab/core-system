@@ -15,5 +15,5 @@ try{
     $action=$_POST['operation']??null;if(!is_string($action))throw new InvalidArgumentException('Ação inválida.');
     $runtime=mailPilotRuntime($pdo,$config,$owner,$account);
     $runtime['organization']->apply($id,$action,mailCenterId($_POST['destination_id']??0,true),$action==='move'&&$returnAccount?(int)$folder:0,($_POST['confirmed']??'')==='1');
-    flash('success',$action==='delete'?'Mensagem excluída definitivamente.':'Mensagem atualizada no provedor.');header('Location: '.$location,true,303);exit;
+    flash('success','Mensagem atualizada no provedor.');header('Location: '.$location,true,303);exit;
 }catch(Throwable $e){mailPilotError($e,$location);}
