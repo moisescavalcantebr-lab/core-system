@@ -4,10 +4,12 @@ if(PHP_SAPI!=='cli'||count($argv)!==4||!in_array($argv[3],['--preflight','--afte
 try{
     [$script,$stage,$root,$mode]=$argv;
     $manifest=json_decode(file_get_contents($stage.'/organization-manifest.json'),true,16,JSON_THROW_ON_ERROR);
-    if(($manifest['schema']??0)!==1||count($manifest['files']??[])!==20)throw new RuntimeException();
+    $readerFix=($manifest['mode']??'organization')==='reader-fix';
+    if(($manifest['schema']??0)!==1||count($manifest['files']??[])!==($readerFix?2:20))throw new RuntimeException();
     $seen=[];
     foreach($manifest['files']as$file){
         $path=$file['path'];
+        if($readerFix&&!in_array($path,['web/assets/js/central_contas.js','app/actions/central_contas/message_update.php'],true))throw new RuntimeException();
         if(!preg_match('~^(?:app/services/mail/(?:providers/)?[A-Za-z]+\.php|app/helpers/mail_pilot\.php|app/actions/central_contas/message_update\.php|web/admin/central_contas/_[a-z_]+\.php|web/assets/(?:css/admin/central_contas\.css|js/central_contas\.js)|web/central-email/(?:privacidade|termos)\.html)$~D',$path)||isset($seen[$path]))throw new RuntimeException();
         $seen[$path]=true;
         foreach([$stage,$root]as$base){$part=$base;foreach(explode('/',$path)as$component){$part.='/'.$component;if(is_link($part))throw new RuntimeException();}}

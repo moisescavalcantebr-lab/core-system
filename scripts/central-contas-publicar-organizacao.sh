@@ -2,6 +2,9 @@
 set -euo pipefail
 umask 077
 [[ "${2:-}" == --publish-organization && "${1:-}" =~ ^[a-f0-9]{64}$ ]] || exit 1
+[[ -z "${3:-}" || "$3" == --reader-fix ]] || exit 1
+reader_fix=no
+[[ "${3:-}" != --reader-fix ]] || reader_fix=yes
 private=/opt/private-mail-center
 root=/opt/workspace
 config="$private/core-config.php"
@@ -35,8 +38,10 @@ tar -czf "$backup/code-before.tar.gz" -C "$root" -T "$backup/existing.txt"
 gzip -t "$backup/code-before.tar.gz"
 cp -a "$config" "$backup/config-before.php"
 before_secret=$(sha256sum "$private/secrets.json");before_secret=${before_secret%% *}
+if [[ "$reader_fix" == yes ]]; then cp -a "$backup/config-before.php" "$backup/config-after.php"; else
 new_config=$(docker exec app_php php -r '$c=require "/run/mail-center/core-config.php";if(($c["enabled"]??false)!==true||($c["oauth_log_redaction_verified"]??false)!==true)exit(1);$c["remote_organization_enabled"]=true;echo base64_encode("<?php\nreturn ".var_export($c,true).";\n");')
 printf '%s' "$new_config" | base64 -d >"$backup/config-after.php"
+fi
 docker exec -i app_php php -l <"$backup/config-after.php" >"$backup/config-lint.txt"
 armed=no
 completed=no
@@ -66,7 +71,7 @@ while IFS= read -r path; do
     mv -f -- "$root/$path.mail-organization-new" "$root/$path"
 done <"$backup/files.txt"
 # Preserve the inode of the individually bind-mounted private configuration.
-cat "$backup/config-after.php" >"$config"
+if [[ "$reader_fix" != yes ]]; then cat "$backup/config-after.php" >"$config"; fi
 check_files --after >"$backup/files-after.txt"
 docker exec app_php php /var/www/html/app/console/check_mail_center.php --organization >"$backup/schema.txt"
 docker exec app_php apache2ctl graceful >"$backup/reload.txt" 2>&1
@@ -84,5 +89,11 @@ echo 'database_migrations=no'
 echo 'application_image_unchanged=yes'
 echo 'container_recreation=no'
 # Sync failure is reported separately; it never triggers code rollback or retry.
-if ! cat "$stage/status.php" | docker exec -i --user www-data app_php php /dev/stdin --sync-limited; then echo 'metadata_validation=pending'; fi
+if [[ "$reader_fix" == yes ]]; then
+    cat "$stage/status.php" | docker exec -i --user www-data app_php php /dev/stdin --status-only
+    echo 'reader_fix_published=yes'
+    echo 'provider_calls=no'
+else
+    if ! cat "$stage/status.php" | docker exec -i --user www-data app_php php /dev/stdin --sync-limited; then echo 'metadata_validation=pending'; fi
+fi
 exit 0

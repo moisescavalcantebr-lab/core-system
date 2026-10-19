@@ -13,11 +13,31 @@
 })();
 
 // Delegation includes message controls loaded into the side-by-side reader.
-document.addEventListener('submit',event=>{
+document.addEventListener('submit',async event=>{
   const form=event.target;
   if(!(form instanceof HTMLFormElement)||!form.matches('[data-mail-remote-action]'))return;
   if(form.dataset.submitting==='yes'){event.preventDefault();return;}
   form.dataset.submitting='yes';form.setAttribute('aria-busy','true');
+  const operation=event.submitter?.name==='operation'?event.submitter.value:form.elements.namedItem('operation')?.value;
+  if(!['read','unread'].includes(operation))return;
+  event.preventDefault();
+  const body=new URLSearchParams(new FormData(form));body.set('operation',operation);
+  const id=Number(body.get('message_id'));const buttons=[...form.querySelectorAll('button')];buttons.forEach(button=>button.disabled=true);
+  let status=form.parentElement.querySelector('[data-mail-read-status]');
+  if(!status){status=document.createElement('span');status.dataset.mailReadStatus='';status.setAttribute('role','status');form.parentElement.append(status);}
+  status.textContent='Salvando…';
+  try{
+    const response=await fetch(form.action,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'},body});
+    if(!response.ok)throw new Error('Unavailable');const result=await response.json();
+    if(Number(result.id)!==id||![0,1].includes(result.is_unread))throw new Error('Unavailable');
+    document.querySelectorAll('[data-mail-message-entry]').forEach(entry=>{
+      if(Number(entry.dataset.messageId)!==id)return;const link=entry.querySelector('[data-mail-read]');if(!link)return;
+      link.classList.toggle('is-unread',result.is_unread===1);const subject=link.querySelector('.mail-row-subject')?.textContent||'';link.setAttribute('aria-label',(result.is_unread?'Não lida: ':'Lida: ')+subject);
+    });
+    status.textContent=result.is_unread?'Marcada como não lida.':'Marcada como lida.';
+    if(result.is_unread===0)form.remove();
+  }catch(error){status.textContent='Não foi possível confirmar a alteração. Atualize a página antes de tentar novamente.';}
+  finally{delete form.dataset.submitting;form.removeAttribute('aria-busy');buttons.forEach(button=>button.disabled=false);}
 });
 
 (() => {
