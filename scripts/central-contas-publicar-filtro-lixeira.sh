@@ -54,3 +54,5 @@ echo 'database_changes=no'
 echo 'oauth_permissions_changed=no'
 echo 'provider_calls=no'
 echo 'containers_restarted=no'
+# Stop before any CRLF terminator appended by the PowerShell stdin pipeline.
+exit 0

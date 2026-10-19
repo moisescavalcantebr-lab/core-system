@@ -4,7 +4,9 @@ Gmail e Zoho estão conectados em produção; sincronização limitada de metada
 
 ## Ajuste preparado localmente
 
-Listas individuais e unificadas, busca, favoritos, sinalizados, fixados e navegação para a próxima mensagem ocultam mensagens vinculadas à Lixeira. Mesmo uma mensagem com outro marcador permanece oculta nessas listas. Abrir explicitamente Lixeira continua mostrando essas mensagens. O filtro depende dos vínculos já sincronizados: alterações feitas no webmail aparecem após atualizar o lote correspondente. Não apaga metadados nem altera mensagens no provedor. Publicação deste ajuste ainda pendente.
+Listas individuais e unificadas, busca, favoritos, sinalizados, fixados e navegação para a próxima mensagem ocultam mensagens vinculadas à Lixeira. Mesmo uma mensagem com outro marcador permanece oculta nessas listas. Abrir explicitamente Lixeira continua mostrando essas mensagens. O filtro depende dos vínculos já sincronizados: alterações feitas no webmail aparecem após atualizar o lote correspondente. Não apaga metadados nem altera mensagens no provedor.
+
+Publicado em produção em 19/10/2026, com hash do código, saúde do Core e restrição de acesso anônimo aprovados no relatório `_deploy/mail-trash-filter-publication.txt`. Backup privado: `/opt/private-mail-center/releases/trash-filter-20261019T200110Z-RzI2wu5z`. Sem alterações no banco, permissões OAuth ou chamadas aos provedores. O terminal exibiu uma falha depois do sucesso: o pipeline PowerShell acrescentou uma linha CRLF interpretada como comando inválido pelo Bash. Reproduzido localmente (saída 127); corrigido com saída explícita ao final do script, sem repetir a publicação já concluída.
 
 Validação local: suíte piloto aprovada com 325 verificações, incluindo 27 novas verificações do filtro de lixeira, em banco descartável e provedores simulados. Nenhuma caixa real foi acessada pelos testes.
 
