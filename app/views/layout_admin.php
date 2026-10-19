@@ -26,6 +26,7 @@ foreach ($adminCssFiles as $adminCssFile) {
 <link rel="stylesheet" href="/web/assets/css/core_admin.css?v=<?= $adminCssVersion ?>">
 
 <link rel="stylesheet" href="<?= '/web/assets/css/themes/' . htmlspecialchars($theme) . '.css?v=' . time() ?>">
+<?php if(!empty($mailPrivatePage)&&isset($mailOwner)): ?><link rel="stylesheet" href="/web/assets/css/admin/central_contas.css?v=<?= (int)filemtime(PUBLIC_PATH.'/assets/css/admin/central_contas.css') ?>"><?php endif; ?>
 <!-- FAVICON -->
 <?php if (!empty($coreSettings['app_favicon'])): ?>
 <link rel="icon" href="/web/assets/uploads/<?= htmlspecialchars($coreSettings['app_favicon']) ?>">
@@ -33,7 +34,7 @@ foreach ($adminCssFiles as $adminCssFile) {
 
 </head>
 
-<body class="c-app">
+<body class="c-app<?= !empty($mailPrivatePage)&&isset($mailOwner)?' mail-core-mode':'' ?>">
 
 <!-- OVERLAY (MOBILE) -->
 <div class="c-sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -71,7 +72,12 @@ foreach ($adminCssFiles as $adminCssFile) {
             </div>
         <?php endif; ?>
 
-        <?= $content ?>
+        <?php if(!empty($mailPrivatePage)&&isset($mailOwner)&&in_array($mailTab??'',['messages','unified'],true)): ?>
+        <div class="mail-client">
+            <?php require __DIR__.'/partials/mail_folders.php'; ?>
+            <section class="mail-client-main"><?= $content ?></section>
+        </div>
+        <?php else: ?><?= $content ?><?php endif; ?>
     </main>
 
 </div>
@@ -82,6 +88,7 @@ foreach ($adminCssFiles as $adminCssFile) {
 <!-- JS (ADMIN) -->
 <script>
 function toggleSidebar() {
+    if(document.body.classList.contains('mail-core-mode')&&matchMedia('(min-width: 1024px)').matches){document.body.classList.toggle('mail-core-expanded');return;}
     const sidebar = document.querySelector('.c-sidebar');
     const overlay = document.querySelector('.c-sidebar-overlay');
 
@@ -138,6 +145,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<?php if (empty($mailPrivatePage)): ?>
+<script src="/web/assets/js/Sortable-1.15.0.min.js"></script>
+<?php else: ?><script src="/web/assets/js/central_contas.js?v=<?= (int)filemtime(PUBLIC_PATH.'/assets/js/central_contas.js') ?>" defer></script>
+<?php endif; ?>
 </body>
 </html>

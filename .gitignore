@@ -45,6 +45,7 @@ docker/**/*.pid
 
 # DEPLOY LOCAL
 /scripts/deploy.local.ps1
+/docker/docker-compose.mail-center.prod.yml
 /_deploy/
 /_backups/
 

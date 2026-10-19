@@ -64,6 +64,11 @@ class AuthService
 
     public function createSession(array $user): void
     {
+        if (session_status() !== PHP_SESSION_ACTIVE || !session_regenerate_id(true)) {
+            throw new RuntimeException('Não foi possível iniciar uma sessão segura.');
+        }
+        unset($_SESSION['_csrf'], $_SESSION['mail_center_last_activity']);
+        $_SESSION['core_authenticated_at'] = time();
         $_SESSION['core_user'] = [
             'id' => $user['id'],
             'name' => $user['name'],

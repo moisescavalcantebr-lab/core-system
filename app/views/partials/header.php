@@ -26,7 +26,7 @@ $userName = $coreUser['name'] ?? 'Usuário';
 
     <div class="c-header-left">
 
-        <button class="c-sidebar-toggle" onclick="toggleSidebar()">☰</button>
+        <button class="c-sidebar-toggle" aria-label="Alternar menu do Core" onclick="toggleSidebar()">☰</button>
 
         <?php if (!empty($coreSettings['app_logo'])): ?>
 

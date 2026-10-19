@@ -6,6 +6,7 @@ param(
     [string]$RemotePath = "",
     [string]$BatchMode = "",
     [switch]$PackageOnly,
+    [switch]$ApplyMailCenterMigrations,
     [switch]$SkipProtectedBasesGuard
 )
 
@@ -130,6 +131,14 @@ if ($BatchMode -notin @("yes", "no")) {
     throw "BatchMode invalido. Use 'yes' para exigir chave SSH ou 'no' para permitir senha."
 }
 
+if ($RemotePath -notmatch '^/[a-zA-Z0-9_./-]+$' -or $RemotePath -match '(^|/)\.\.(/|$)' -or $RemotePath.TrimEnd('/') -in @('', '/opt', '/var', '/var/www', '/home', '/root', '/usr', '/etc')) {
+    throw 'RemotePath invalido ou amplo demais para uma release.'
+}
+
+if (!$PackageOnly -and !$ApplyMailCenterMigrations) {
+    throw 'Prepare/revise primeiro com -PackageOnly. Publicacao exige backup/restauracao conferidos e -ApplyMailCenterMigrations explicito; nenhum comando remoto foi executado.'
+}
+
 if (!$PackageOnly -and !$SkipProtectedBasesGuard) {
     Write-Host "[guard] Validando bases publicadas antes do deploy..." -ForegroundColor Cyan
     $ProtectedBasesGuard = Join-Path $ScriptDir "servidor-validar-bases-protegidas.ps1"
@@ -197,6 +206,8 @@ $IncludeDirs = @(
 )
 
 $IncludeFiles = @(
+    "composer.json",
+    "composer.lock",
     ".htaccess",
     "index.php",
     "README.md"
@@ -323,6 +334,7 @@ foreach ($Dir in $BlockedRootDirs) {
 }
 
 $BlockedRelativePaths = @(
+    "docker\docker-compose.mail-center.prod.yml",
     "bases\futebol-amador",
     "scripts\deploy.local.ps1",
     "storage\paginas\pages",
@@ -338,7 +350,19 @@ foreach ($RelativePath in $BlockedRelativePaths) {
     }
 }
 
+if (Test-Path -LiteralPath (Join-Path $Stage 'app/services/mail/MailMessageService.php')) {
+    & (Join-Path $ScriptDir 'central-contas-preparar-release.ps1') -StagePath $Stage
+}
+
 $RequiredDeployFiles = @(
+    "vendor/autoload.php",
+    "composer.json",
+    "composer.lock",
+    "mail-release.json",
+    "app/database/mail_center_001_foundation.sql",
+    "app/database/mail_center_002_pilot.sql",
+    "app/database/mail_center_003_organization.sql",
+    "app/database/mail_center_004_reading.sql",
     "app\helpers\environment.php",
     "app\views\layout_admin.php",
     "app\views\partials\sidebar.php",
@@ -393,6 +417,7 @@ $ForbiddenPackagePrefixes = @(
 )
 
 $ForbiddenPackageFiles = @(
+    "docker/docker-compose.mail-center.prod.yml",
     "scripts/deploy.local.ps1",
     "backup.sql",
     "Docker MySQL.session.sql"
@@ -411,6 +436,7 @@ if ($ForbiddenEntries) {
 }
 
 New-DeployZip -SourceDir $Stage -DestinationZip $Zip
+Write-Host ("[package] SHA-256: " + (Get-FileHash -LiteralPath $Zip -Algorithm SHA256).Hash.ToLowerInvariant()) -ForegroundColor DarkCyan
 
 $Archive = [System.IO.Compression.ZipFile]::OpenRead($Zip)
 try {
@@ -427,6 +453,10 @@ if ($PackageOnly) {
     Write-Host "[package] Pacote de deploy preparado: $Zip" -ForegroundColor Green
     Write-Host "[package] Nenhum arquivo foi enviado ao servidor." -ForegroundColor Yellow
     return
+}
+
+if (!$ApplyMailCenterMigrations) {
+    throw 'Pacote pronto; publicacao da Central exige backup/restauracao conferidos, configuracao de producao revisada e execucao explicita com -ApplyMailCenterMigrations. Nenhum pacote foi enviado.'
 }
 
 Write-Host "[2/4] Enviando pacote para o servidor..." -ForegroundColor Cyan
@@ -463,10 +493,18 @@ if [ -d "$RemoteRelease/docker" ]; then
 fi
 echo "[docker] garantindo containers do servidor"
 cd "$RemotePath/docker"
+MailComposeFile=""
+if [ -f docker-compose.mail-center.prod.yml ]; then
+  MailComposeFile="-f docker-compose.mail-center.prod.yml"
+fi
+OriginComposeFile=""
+if [ -f /opt/private-mail-center/tls/docker-compose.origin.yml ]; then
+  OriginComposeFile="-f /opt/private-mail-center/tls/docker-compose.origin.yml"
+fi
 ComposeReady=0
 for i in `$(seq 1 3); do
   echo "[docker] compose tentativa `$i/3"
-  if docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build; then
+  if docker compose -f docker-compose.yml -f docker-compose.prod.yml `$MailComposeFile `$OriginComposeFile up -d --build; then
     ComposeReady=1
     break
   fi
@@ -510,7 +548,15 @@ if ! docker exec app_php test -f /tmp/workspace-release/app/actions/projects/syn
   docker exec app_php find /tmp/workspace-release -maxdepth 3 -type f | head -40
   exit 1
 fi
+
+echo "[mail] verificando release e runtime antes de substituir arquivos"
+docker exec app_php php /tmp/workspace-release/app/console/check_mail_release.php --root=/tmp/workspace-release
 echo "[host] aplicando release validada"
+if [ -d "$RemoteRelease/vendor" ]; then
+  rm -rf "$RemotePath/vendor"
+  cp -a "$RemoteRelease/vendor" "$RemotePath/vendor"
+fi
+cp -a "$RemoteRelease/composer.json" "$RemoteRelease/composer.lock" "$RemoteRelease/mail-release.json" "$RemotePath/"
 rm -rf /tmp/workspace-preserve-public-uploads
 if [ -d "$RemotePath/web/assets/uploads" ]; then
   mkdir -p /tmp/workspace-preserve-public-uploads
@@ -583,6 +629,7 @@ if [ -d "$RemotePath/web/assets/uploads" ]; then
   chmod -R u+rwX,g+rwX,o+rX "$RemotePath/web/assets/uploads"
 fi
 echo "[container] aplicando release validada"
+docker exec app_php sh -lc 'rm -rf /var/www/html/vendor && cp -a /tmp/workspace-release/vendor /var/www/html/vendor && cp -a /tmp/workspace-release/composer.json /tmp/workspace-release/composer.lock /tmp/workspace-release/mail-release.json /var/www/html/'
 docker exec app_php sh -lc 'rm -rf /tmp/workspace-preserve-public-uploads; if [ -d /var/www/html/web/assets/uploads ]; then mkdir -p /tmp/workspace-preserve-public-uploads && cp -a /var/www/html/web/assets/uploads /tmp/workspace-preserve-public-uploads/uploads; fi'
 docker exec app_php rm -rf /var/www/html/app /var/www/html/cron /var/www/html/docs /var/www/html/modules /var/www/html/scripts /var/www/html/web
 docker exec app_php sh -lc 'if [ -d /tmp/workspace-release/app ]; then cp -a /tmp/workspace-release/app /var/www/html/app; fi'
@@ -602,6 +649,10 @@ if ! docker exec app_php test -f /var/www/html/index.php; then
   exit 1
 fi
 echo "[identity] alinhando Marketing e Landing Pages"
+echo "[mail] aplicando migracoes aditivas 001 a 004; sem conectar caixas"
+docker exec app_php php /var/www/html/app/console/migrate_mail_center.php --organization
+docker exec app_php php /var/www/html/app/console/migrate_mail_center.php --organization --apply
+docker exec app_php php /var/www/html/app/console/check_mail_release.php --root=/var/www/html --installed
 docker exec app_php php /var/www/html/app/console/migrate_marketing_identity.php --apply
 echo "[identity] migrando Meu Trabalho e Leituras com preservacao de dados"
 docker exec app_php php /var/www/html/app/console/migrate_work_identity.php --apply

@@ -1,0 +1,7 @@
+<?php if(!isset($mailOwner,$account)){http_response_code(404);exit;}$connectionProvider=$account['provider_code'];$connectionReady=in_array($connectionProvider,['gmail','zoho','outlook'],true)&&mailPilotReady($pdo,$config,$connectionProvider); ?>
+<?php if($connectionReady&&(int)$account['is_active']): ?>
+<div class="mail-actions">
+<?php if($account['connection_status']==='connected'): ?><a class="c-btn-secondary" href="messages.php?account=<?= (int)$account['id'] ?>">Abrir caixa <?= mailCenterEscape($account['provider_name']) ?></a><?php else: ?><form method="post" action="/app/actions/central_contas/connect.php"><?= csrf_field() ?><input type="hidden" name="account_id" value="<?= (int)$account['id'] ?>"><button class="c-btn-secondary">Autorizar no <?= match($connectionProvider){'gmail'=>'Google','outlook'=>'Microsoft',default=>'Zoho'} ?></button></form><?php endif; ?>
+<?php if($account['connection_status']!=='not_connected'): ?><form method="post" action="/app/actions/central_contas/disconnect.php"><?= csrf_field() ?><input type="hidden" name="account_id" value="<?= (int)$account['id'] ?>"><label class="mail-confirm"><input type="checkbox" name="confirmed" value="1" required>Confirmo desconectar esta caixa</label><button class="c-btn-secondary">Desconectar</button></form><?php endif; ?>
+</div>
+<?php elseif(in_array($connectionProvider,['gmail','zoho','outlook'],true)): ?><p>Conexão aguardando configuração privada.</p><?php else: ?><p>Integração deste provedor em preparação.</p><?php endif; ?>

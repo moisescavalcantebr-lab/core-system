@@ -14,6 +14,7 @@ function coreSidebarIcon(string $key): string
         'pages' => '<path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v5h5"/><path d="M8 13h8"/><path d="M8 17h5"/>',
         'media' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 13l2.5-2.5L14 14l2-2 3 3"/><circle cx="8" cy="9" r="1"/>',
         'leads' => '<path d="M4 6h16v12H4Z"/><path d="m4 7 8 6 8-6"/>',
+        'central_contas' => '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 6 9 7 9-7"/>',
         'content_studio' => '<path d="M4 5h16v14H4Z"/><path d="M8 9h8"/><path d="M8 13h5"/><path d="M17 13l2 2-4 4h-2v-2Z"/>',
         'quick_links' => '<path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/>',
         'users' => '<path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
@@ -56,6 +57,10 @@ $menu = [
         ['label' => 'Configurações', 'url' => '/web/admin/settings/index.php', 'key' => 'settings'],
     ],
 ];
+
+if (isset($pdo, $config) && function_exists('mailCenterOwnerId') && mailCenterOwnerId($pdo, $config, $_SESSION) !== null) {
+    $menu['Principal'][] = ['label' => 'Central de E-mail', 'url' => '/web/admin/central_contas/unified.php', 'key' => 'central_contas'];
+}
 ?>
 
 <nav class="c-sidebar-nav">
@@ -65,7 +70,7 @@ $menu = [
 
             <?php foreach ($items as $item): ?>
                 <a
-                    href="<?= $item['url'] ?>"
+                    href="<?= $item['url'] ?>" aria-label="<?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?>" title="<?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?>"
                     class="c-sidebar-link <?= isActive($item['key']) ?>"
                 >
                     <?= coreSidebarIcon($item['key']) ?>

@@ -7,8 +7,6 @@ declare(strict_types=1);
 |--------------------------------------------------------------------------
 */
 
-session_start();
-
 header('Content-Type: text/html; charset=utf-8');
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +21,15 @@ if (!file_exists($envPath)) {
 }
 
 $config = require $envPath;
+
+require_once __DIR__ . '/../helpers/session.php';
+coreConfigureSession($config);
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+if (($config['app']['environment'] ?? '') === 'production') {
+    ini_set('display_errors', '0');
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +60,7 @@ require_once APP_PATH . '/helpers/url_helper.php';
 require_once APP_PATH . '/helpers/form_renderer.php';
 require_once APP_PATH . '/helpers/base_manifest.php';
 require_once APP_PATH . '/helpers/core_wallet.php';
+require_once APP_PATH . '/helpers/mail_center.php';
 
 /*
 |--------------------------------------------------------------------------

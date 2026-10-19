@@ -1,0 +1,7 @@
+# Copiar para docker-compose.mail-center.prod.yml SOMENTE no servidor preparado.
+# Não aplicar o override localhost no servidor.
+services:
+  app:
+    volumes:
+      - "/opt/private-mail-center/secrets.json:/run/mail-center/secrets.json:ro"
+      - "/opt/private-mail-center/attachments:/var/lib/mail-center/attachments"

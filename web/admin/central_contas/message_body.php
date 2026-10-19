@@ -1,0 +1,7 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/../../../app/bootstrap/bootstrap.php';require_once APP_PATH.'/helpers/mail_pilot.php';$owner=mailCenterRequireOwner($pdo,$config);
+try{$resourceAccount=mailCenterResourceAccount($pdo,$owner,'message',mailCenterId($_GET['id']??null));$runtime=mailPilotRuntime($pdo,$config,$owner,$resourceAccount);$message=$runtime['store']->message(mailCenterId($_GET['id']??null));$remote=$runtime['api']->message($runtime['oauth']->token((int)$message['account_id']),$message['remote_id'],true);if(($remote['id']??'')!==$message['remote_id'])throw new MailProviderException('provider');$parts=MailHtmlRenderer::parts($remote['payload']??[]);$html=MailHtmlRenderer::render($parts['html']);}
+catch(Throwable $error){http_response_code($error instanceof OutOfBoundsException?404:503);exit('Visualização indisponível. Use o texto da mensagem.');}
+header_remove('X-Frame-Options');header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'none'; script-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'; sandbox");
+?><!doctype html><html lang="pt-br"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>body{font:15px/1.6 Arial,sans-serif;color:#111827;background:#fff;padding:16px;overflow-wrap:anywhere}table{max-width:100%;border-collapse:collapse}td,th{padding:5px;border:1px solid #ddd}pre{white-space:pre-wrap}a{color:#1d4ed8}</style></head><body><?= $html ?></body></html>

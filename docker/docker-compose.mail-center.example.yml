@@ -1,0 +1,8 @@
+# Somente exemplo. Não é carregado pelo Compose/deploy atual.
+# MAIL_CENTER_PRIVATE_DIR deve apontar para pasta privada FORA do workspace.
+# O HTTPS deve ser provido por uma origem/proxy previamente aprovado.
+services:
+  app:
+    volumes:
+      - "${MAIL_CENTER_PRIVATE_DIR:?Defina uma pasta privada externa}/secrets.json:/run/mail-center/secrets.json:ro"
+      - "${MAIL_CENTER_PRIVATE_DIR:?Defina uma pasta privada externa}/attachments:/var/lib/mail-center/attachments"

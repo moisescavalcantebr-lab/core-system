@@ -1,0 +1,9 @@
+# Local only: no production DNS, proxy or additional service.
+services:
+  app:
+    ports:
+      - "127.0.0.1:8443:443"
+    volumes:
+      - "${MAIL_CENTER_PRIVATE_DIR:?Defina a pasta privada externa}/tls:/run/mail-center-tls:ro"
+      - "./php/mail-center-local-ssl.conf:/etc/apache2/sites-enabled/000-default.conf:ro"
+      - "${MAIL_CENTER_PRIVATE_DIR:?Defina a pasta privada externa}/attachments:/var/lib/mail-center/attachments"

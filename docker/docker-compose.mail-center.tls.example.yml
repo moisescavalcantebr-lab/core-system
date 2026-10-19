@@ -1,0 +1,10 @@
+# Template only. Merge with the server's private override AFTER certificate checks.
+# Does not redirect HTTP or change Cloudflare mode by itself.
+services:
+  app:
+    ports:
+      - "443:443"
+    volumes:
+      - "/opt/private-mail-center/apache/mail-center-origin-ssl.conf:/etc/apache2/sites-enabled/mail-center-origin-ssl.conf:ro"
+      - "/opt/private-mail-center/tls/fullchain.pem:/run/mail-center/tls/fullchain.pem:ro"
+      - "/opt/private-mail-center/tls/privkey.pem:/run/mail-center/tls/privkey.pem:ro"
