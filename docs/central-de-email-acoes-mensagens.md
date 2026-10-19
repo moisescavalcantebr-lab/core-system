@@ -10,6 +10,8 @@ Em 19/10/2026 a opção foi habilitada somente no ENV ignorado do Docker HTTPS l
 
 Ferramenta: `scripts/central-contas-organizacao-local.ps1 -Mode Enable`; para desabilitar apenas a opção, usar `-Mode Disable`. Não restaura automaticamente o ENV inteiro sobre eventuais alterações posteriores. O consentimento é feito pelo proprietário no navegador; a ativação de código não o substitui.
 
+Após o proprietário concluir as duas reconexões, a conferência local confirmou Gmail e Zoho conectados e autorizados para organização. Essa conferência leu somente estados e permissões locais, sem chamadas aos provedores ou alterações nas mensagens. Gmail tem um destino disponível no cache e Zoho sete; isso não comprova movimentação real. A validação de lida/não lida, lixeira e restauração aguarda a identificação das mensagens de teste pelo proprietário. Não foi realizado envio de e-mail nem foram escolhidas mensagens comuns para alteração.
+
 Quando habilitado, contas conectadas sem os novos escopos exibem em Configurações **Autorizar organização de mensagens**. Leitura e envio existentes continuam disponíveis; os botões de organização só aparecem após conferir as permissões efetivamente registradas na conexão. A renovação de consentimento não copia tokens entre ambientes.
 
 1. Google Cloud → Google Auth Platform → Acesso a dados: acrescentar `https://www.googleapis.com/auth/gmail.modify`, mantendo os escopos já usados. Revisar consentimento e condição de verificação para uso pessoal. Não solicitar `https://mail.google.com/`.
