@@ -29,6 +29,7 @@ $cases['message-next']=['message.php',['id'=>(int)$navRows[0]['id']]];
 $cases['preview']=['message.php',['id'=>$message['id'],'preview'=>'1']];
 $cases['preview-unified']=['message.php',['id'=>$message['id'],'preview'=>'1','source'=>'unified']];
 $cases['inbox-full']=['messages.php',['account'=>$account]];
+$viewReadId=(int)$navRows[1]['id'];$viewOriginalUnread=(int)$store->message($viewReadId)['is_unread'];$pdo->prepare('UPDATE core_mail_messages SET is_unread=0 WHERE id=? AND owner_user_id=1')->execute([$viewReadId]);
 foreach($cases as$name=>$case){
     if(in_array($name,['unified','inbox-full'],true))(new MailLocalOrganizationService($pdo,1))->savePreferences('#f59e0b','full');
     $code='$_SERVER["REQUEST_METHOD"]="GET";$_SERVER["REQUEST_URI"]="/web/admin/central_contas/messages.php";$_GET='.var_export($case[1],true).';$GLOBALS["fixtureReady"]='.var_export($case[2]??true,true).';require '.var_export($viewRoot.'/web/admin/central_contas/'.$case[0],true).';';
@@ -44,5 +45,6 @@ foreach($cases as$name=>$case){
     if($name==='preferences')pilotExpect(str_contains($html,'Voltar para Central de E-Mail')||str_contains($html,'Voltar para Central de E-mail'),'Configurações sem retorno à Central');
     if(!is_dir($root.'/_deploy'))mkdir($root.'/_deploy',0700,true);file_put_contents($root.'/_deploy/mail-pilot-'.$name.'.html',$html);
 }
+$pdo->prepare('UPDATE core_mail_messages SET is_unread=? WHERE id=? AND owner_user_id=1')->execute([$viewOriginalUnread,$viewReadId]);
 
 

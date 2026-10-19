@@ -7,7 +7,7 @@ final class RemoteFixtureOAuth extends MailOAuthService
 
 final class RemoteFixtureHttp extends MailHttpClient
 {
-    public array $calls=[];public array $writes=[];public array $labels=[];public bool $unread=true;public string $folder='10';public ?string $failure=null;public bool $missingDestination=false;public ?Closure $afterWrite=null;public bool $refreshArmed=false;
+    public array $calls=[];public array $writes=[];public array $labels=[];public bool $unread=true;public string $folder='10';public ?string $failure=null;public bool $missingDestination=false;public ?Closure $afterWrite=null;public bool $refreshArmed=false;public bool $deleted=false;
     public function __construct(public string $provider) {$this->labels=['INBOX','Label_keep','UNREAD'];}
     public function id():string{return $this->provider==='gmail'?'m_fixture':'1709876190693100009';}
     public function request(string $method,string $url,array $headers=[],?string $body=null,bool $sending=false):array
@@ -19,13 +19,15 @@ final class RemoteFixtureHttp extends MailHttpClient
             if($this->failure==='quota')throw new MailProviderException('quota',120);
             if($this->failure==='ignored')return $this->provider==='gmail'?['id'=>$this->id()]:['status'=>['code'=>200]];
             if($this->provider==='gmail'){
-                if(str_ends_with($path,'/trash')){$this->labels=array_values(array_unique([...$this->labels,'TRASH']));}
+                if($method==='DELETE'&&str_ends_with($path,'/messages/'.$this->id())){if(!in_array('TRASH',$this->labels,true))throw new RuntimeException('Unsafe permanent Gmail deletion');$this->deleted=true;}
+                elseif(str_ends_with($path,'/trash')){$this->labels=array_values(array_unique([...$this->labels,'TRASH']));}
                 elseif(str_ends_with($path,'/untrash'))$this->labels=array_values(array_diff($this->labels,['TRASH']));
                 elseif(str_ends_with($path,'/modify'))$this->labels=array_values(array_unique([...array_diff($this->labels,$data['removeLabelIds']),...$data['addLabelIds']]));
                 else throw new RuntimeException('Unexpected Gmail write');
             }else{
                 if($method==='DELETE'){
-                    if(!str_ends_with($url,'?expunge=false')||$this->folder==='30')throw new RuntimeException('Unsafe trash endpoint');$this->folder='30';
+                    if(str_ends_with($url,'?expunge=true')){if($this->folder!=='30')throw new RuntimeException('Unsafe permanent Zoho deletion');$this->deleted=true;}
+                    else{if(!str_ends_with($url,'?expunge=false')||$this->folder==='30')throw new RuntimeException('Unsafe trash endpoint');$this->folder='30';}
                 }elseif($method==='PUT'&&str_ends_with($path,'/updatemessage')){
                     if(($data['messageId']??null)!==[$this->id()])throw new RuntimeException('Message ID precision lost');
                     match($data['mode']){'markAsRead'=>$this->unread=false,'markAsUnread'=>$this->unread=true,'moveMessage'=>$this->folder=$data['destfolderId'],default=>throw new RuntimeException('Unexpected mode')};
@@ -40,12 +42,12 @@ final class RemoteFixtureHttp extends MailHttpClient
         if($this->refreshArmed)throw new MailProviderException('network');
         if($this->provider==='gmail'){
             if(str_ends_with($path,'/labels'))return ['labels'=>array_values(array_filter([['id'=>'INBOX','name'=>'Inbox'],['id'=>'TRASH','name'=>'Trash'],['id'=>'Label_keep','name'=>'Keep'],['id'=>'Label_target','name'=>'Target']],fn($f)=>!$this->missingDestination||$f['id']!=='Label_target'))];
-            if(str_ends_with($path,'/messages/'.$this->id()))return ['id'=>$this->id(),'labelIds'=>$this->labels,'internalDate'=>(string)(time()*1000),'payload'=>['headers'=>[['name'=>'Subject','value'=>'Synthetic organization fixture']]]];
+            if(str_ends_with($path,'/messages/'.$this->id())){if($this->deleted)throw new MailProviderException('missing');return ['id'=>$this->id(),'labelIds'=>$this->labels,'internalDate'=>(string)(time()*1000),'payload'=>['headers'=>[['name'=>'Subject','value'=>'Synthetic organization fixture']]]];}
         }else{
             if($path==='/api/accounts')return ['status'=>['code'=>200],'data'=>[['type'=>'ZOHO_ACCOUNT','enabled'=>true,'accountId'=>'900000000000001','primaryEmailAddress'=>'remote@example.test']]];
             if(str_ends_with($path,'/folders'))return ['status'=>['code'=>200],'data'=>array_values(array_filter([['folderId'=>'10','folderName'=>'Inbox','folderType'=>'Inbox'],['folderId'=>'20','folderName'=>'Target','folderType'=>'Custom'],['folderId'=>'30','folderName'=>'Trash','folderType'=>'Trash']],fn($f)=>!$this->missingDestination||$f['folderId']!=='20'))];
             if(preg_match('~/folders/(\d+)/messages/'.$this->id().'/details$~',$path,$m)){
-                if($m[1]!==$this->folder)throw new MailProviderException('missing');
+                if($this->deleted||$m[1]!==$this->folder)throw new MailProviderException('missing');
                 return ['status'=>['code'=>200],'data'=>['messageId'=>$this->id(),'folderId'=>$this->folder,'receivedTime'=>(string)(time()*1000),'status'=>$this->unread?'0':'1','subject'=>'Synthetic organization fixture']];
             }
         }
@@ -101,9 +103,9 @@ foreach(['gmail','zoho']as$provider){
     $pdo->prepare('UPDATE core_mail_sync_states SET retry_after=NULL,failure_code=NULL WHERE account_id=?')->execute([$remoteAccount]);
     $pdo->prepare('UPDATE core_mail_messages SET is_unread=1 WHERE id=?')->execute([$remoteId]);
     require_once $root.'/app/helpers/csrf.php';
-    $renderControls=static function(bool $enabled)use($remoteService,$remoteStore,$remoteId,$remoteAccount,$root):string{
+    $renderControls=static function(bool $enabled,string $viewFolder='inbox')use($remoteService,$remoteStore,$remoteId,$remoteAccount,$root):string{
         $mailOwner=1;$message=$remoteStore->message($remoteId);$account=$remoteStore->account($remoteAccount);$runtime=['organization'=>$remoteService];$config=['mail_center'=>['remote_organization_enabled'=>$enabled]];$readingFolder=0;$readingMark='all';
-        $_SESSION['_csrf']='synthetic-csrf';$_GET=['source'=>'unified','list_folder'=>'inbox'];ob_start();require $root.'/web/admin/central_contas/_message_organization.php';return ob_get_clean();
+        $_SESSION['_csrf']='synthetic-csrf';$_GET=['source'=>'unified','list_folder'=>$viewFolder];ob_start();require $root.'/web/admin/central_contas/_message_organization.php';return ob_get_clean();
     };
     pilotExpect($renderControls(false)==='','Disabled feature exposed controls');$controls=$renderControls(true);
     pilotExpect(substr_count($controls,'data-mail-remote-action')===3&&str_contains($controls,'Marcar como lida')&&str_contains($controls,'value="inbox"'),'Controls lost actions or unified context');
@@ -111,6 +113,7 @@ foreach(['gmail','zoho']as$provider){
     if($provider==='gmail'){
         $html=file_get_contents($root.'/_deploy/mail-pilot-preview.html');$html=str_replace('<p class="mail-address">',$controls.'<p class="mail-address">',$html);file_put_contents($root.'/_deploy/mail-remote-preview.html',$html);
     }
+    require __DIR__.'/mail_center_permanent_delete_test.php';
     $otherRemote=new MailRemoteMessageService(new MailMessageService($pdo,2,$cipher),$remoteOauth,$remoteApi,true);pilotReject(fn()=>$otherRemote->apply($remoteId,'read'),'Remote update crossed owner');
     foreach($remoteHttp->writes as$write)pilotExpect($write[3]===true,'Write timeout could be treated as safely retryable');
 }
@@ -128,6 +131,9 @@ foreach(['gmail','zoho']as$scopeProvider){
     $scopeSettings=['provider'=>$scopeProvider,'client_id'=>'synthetic','client_secret'=>'synthetic-secret','pilot_email'=>$scopeProvider==='gmail'?'scope-fixture@gmail.com':'scope@example.test','region'=>'us','redirect_uri'=>'https://core.example.test/callback','remote_organization_enabled'=>true];
     $scopeOauth=new MailOAuthService(new MailMessageService($pdo,1,$cipher,$scopeAccount),$api,$scopeSettings,new PilotHttp());$scopeSession=[];$scopeUrl=$scopeOauth->begin($scopeAccount,$scopeSession);parse_str(parse_url($scopeUrl,PHP_URL_QUERY),$scopeQuery);
     $scopeGranted=preg_split('/[\s,]+/',$scopeQuery['scope']);pilotExpect(!array_diff(MailRemoteMessageService::scopes($scopeProvider),$scopeGranted),'Opt-in authorization omitted organization scopes');
+    if($scopeProvider==='gmail'){
+        $fullOauth=new MailOAuthService(new MailMessageService($pdo,1,$cipher,$scopeAccount),$api,[...$scopeSettings,'gmail_permanent_delete_enabled'=>true],new PilotHttp());$fullSession=[];parse_str(parse_url($fullOauth->begin($scopeAccount,$fullSession),PHP_URL_QUERY),$fullQuery);pilotExpect($fullQuery['scope']==='https://mail.google.com/','Permanent Gmail permission not explicitly isolated to opt-in');
+    }
 }
 $remoteAudit=json_encode($pdo->query("SELECT action,result FROM core_mail_audit_events WHERE action='message.remote_updated'")->fetchAll(PDO::FETCH_ASSOC));
 pilotExpect(str_contains($remoteAudit,'unknown')&&str_contains($remoteAudit,'success')&&!str_contains($remoteAudit,'synthetic-organization-token'),'Remote audit missing result or leaking token');

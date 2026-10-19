@@ -249,6 +249,19 @@ final class ZohoMailProvider implements MailProviderInterface, MailMutableProvid
         try{return $this->message($token,$id);}catch(Throwable $e){throw new MailProviderException('unknown');}
     }
 
+    public function deleteMessagePermanently(string $token,string $id): void
+    {
+        self::id($id);$this->folders($token);$folder=$this->folder($id);$inTrash=false;
+        foreach($this->folderRows as$f)if((string)($f['folderId']??'')===$folder&&strtolower((string)($f['folderType']??''))==='trash')$inTrash=true;
+        if(!$inTrash)throw new DomainException('A mensagem não está na lixeira.');
+        unset($this->messages[$id]);$this->message($token,$id);
+        $result=$this->http->request('DELETE',$this->base.'/api/accounts'.$this->account($token).'/folders/'.$folder.'/messages/'.$id.'?expunge=true',['Authorization: Zoho-oauthtoken '.$token,'Content-Type: application/json'],null,true);
+        if((int)($result['status']['code']??0)!==200)throw new MailProviderException('unknown');
+        unset($this->messages[$id]);
+        try{$this->message($token,$id);}catch(MailProviderException $e){if($e->kind==='missing')return;throw new MailProviderException('unknown');}catch(Throwable $e){throw new MailProviderException('unknown');}
+        throw new MailProviderException('unknown');
+    }
+
     /** Only MailSendService supplies this immutable, verified snapshot. */
     public function sendSnapshot(string $token, array $snapshot): array
     {

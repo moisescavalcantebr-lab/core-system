@@ -24,6 +24,7 @@ function mailPilotRuntime(PDO $pdo,array $config,int $owner,int $account=0): arr
     if(PHP_SAPI!=='cli')MailPilotConfig::requireHttps($config,$_SERVER);
     $settings=MailPilotConfig::forProvider($private,$config,$provider);
     $settings['remote_organization_enabled']=($config['mail_center']['remote_organization_enabled']??false)===true;
+    $settings['gmail_permanent_delete_enabled']=($config['mail_center']['gmail_permanent_delete_enabled']??false)===true;
     if($box&&in_array($provider,['zoho','outlook'],true)&&strtolower($box['email'])!==$settings['pilot_email'])throw new DomainException('Esta caixa ainda não foi autorizada na configuração privada.');
     $lookup=static function(string $remote)use($pdo,$owner,$account):?string{$s=$pdo->prepare('SELECT f.remote_id FROM core_mail_message_folders mf JOIN core_mail_messages m ON m.id=mf.message_id AND m.account_id=mf.account_id AND m.owner_user_id=mf.owner_user_id JOIN core_mail_folders f ON f.id=mf.folder_id AND f.account_id=mf.account_id AND f.owner_user_id=mf.owner_user_id WHERE m.account_id=? AND m.owner_user_id=? AND m.remote_id=? LIMIT 1');$s->execute([$account,$owner,$remote]);$value=$s->fetchColumn();return $value===false?null:(string)$value;};
     $http=new MailHttpClient();$api=MailProviderRegistry::forCode($provider,$http,$settings,$lookup);

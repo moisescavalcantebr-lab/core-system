@@ -11,6 +11,7 @@ class MailOAuthService
     private function isOutlook(): bool { return ($this->google['provider']??'gmail')==='outlook'; }
     private function scopes(): array
     {
+        if(!$this->isZoho()&&!$this->isOutlook()&&($this->google['remote_organization_enabled']??false)===true&&($this->google['gmail_permanent_delete_enabled']??false)===true)return ['https://mail.google.com/'];
         $base=$this->isOutlook()?MailOutlookConfig::SCOPES:($this->isZoho()?MailZohoConfig::SCOPES:self::SCOPES);
         return ($this->google['remote_organization_enabled']??false)===true?array_values(array_unique(array_merge($base,MailRemoteMessageService::scopes($this->google['provider']??'gmail')))):$base;
     }
