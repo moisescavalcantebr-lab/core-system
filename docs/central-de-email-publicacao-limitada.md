@@ -2,6 +2,10 @@
 
 Preparado em 19/10/2026. Este plano instala o código com a Central desabilitada; não conecta caixas e não envia mensagens.
 
+**Executado após autorização explícita do proprietário em 19/10/2026.** Código instalado, migrações 001–004 conferidas, mounts privados e wrapper de ENV aplicados, imagem preservada. Recriado somente app; Central permanece desabilitada e sem conexões OAuth reais no servidor. Backup da instalação: `/opt/private-mail-center/releases/install-20261019T190924Z-fiA0zmtu`. Reversão não precisou ser executada.
+
+Conferência externa posterior: `/web/admin/login.php` 200 com cookie Secure/HttpOnly/SameSite=Lax, Central desabilitada 404, ENV privado 403, manifest do vendor 403 e página de Branding 200. Nenhuma migração de Marketing/Meu Trabalho foi executada pelo procedimento. Relatório local `_deploy/mail-core-installation.txt`.
+
 ## Pacote conferido
 
 - Repositório confirmado pelo proprietário como privado: `moisescavalcantebr-lab/core-system`.

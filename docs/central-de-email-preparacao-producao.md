@@ -86,6 +86,8 @@ O cookie emitido pelo Core atualmente instalado não apresentou Secure, HttpOnly
 
 ## Sequência restante
 
+**Atualização de 19/10/2026 após autorização de publicação:** instalação limitada concluída no servidor, com Central desabilitada. Migrações 001–004 aplicadas/conferidas, segredos/configuração/base do ENV montados privadamente e política de sessão validada na rota administrativa real. Conferência externa aprovou login 200 e Secure/HttpOnly/SameSite=Lax, Central bloqueada 404 e arquivos ENV/vendor protegidos 403. Backup: `/opt/private-mail-center/releases/install-20261019T190924Z-fiA0zmtu`. A imagem foi preservada e só app foi recriado, sem executar migrações de outros módulos. O status abaixo descreve a preparação anterior; a próxima etapa efetiva é concluir a conferência dos logs CDN/WAF, habilitar somente para o proprietário e realizar os consentimentos/testes reais, mediante autorização dessa etapa.
+
 A revisão do deploy geral identificou efeitos em outros módulos. Foi preparado um [plano de publicação limitada](central-de-email-publicacao-limitada.md), com pacote exclusivo da Central e comparação dos seis arquivos compartilhados. Prévia no servidor aprovada: 956 arquivos íntegros, nenhum conflito e runtime compatível, sem alterar aplicação/banco. Git registrado e branch enviada ao repositório que o proprietário confirmou como privado e autorizou. Usar esse plano para a instalação inicial desabilitada; não executar o deploy geral supondo equivalência de escopo.
 
 1. **Concluído:** ensaio de restauração e migrações sobre a cópia isolada do banco.
