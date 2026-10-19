@@ -67,6 +67,7 @@ try{
     $audit=json_encode($pdo->query('SELECT * FROM core_mail_audit_events')->fetchAll(PDO::FETCH_ASSOC));pilotExpect(!str_contains($audit,'synthetic-access')&&!str_contains($audit,$payload['body'])&&!str_contains($audit,'recipient@example.test'),'Auditoria expôs conteúdo');pilotExpect($oauth->disconnect($account),'Revogação simulada falhou');pilotReject(fn()=>$oauth->token($account),'Token acessível após desconexão');pilotExpect($pdo->query('SELECT token_envelope FROM core_mail_connections')->fetchColumn()===null,'Token persistiu após desconectar');
     require __DIR__.'/mail_center_zoho_test.php';
     require __DIR__.'/mail_center_outlook_test.php';
+    require __DIR__.'/mail_center_trash_test.php';
     echo 'PASS: '.$checks.' verificações do piloto — OAuth/PKCE, AEAD, isolamento, sync, MIME, anexos, idempotência e resultado incerto; provedores simulados, sem caixas reais.'.PHP_EOL;
 }finally{
     if(preg_match('/^test_mail_pilot_[a-f0-9]{12}$/D',$database))$pdo->exec('DROP DATABASE `'.$database.'`');

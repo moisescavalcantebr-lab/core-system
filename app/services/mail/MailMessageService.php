@@ -38,11 +38,13 @@ final class MailMessageService
     }
     public function listing(int $account, string $search = '', int $page = 1, int $folder = 0, string $mark = 'all'): array
     {
-        $this->account($account);if(mb_strlen($search)>200||$page<1||$page>10000)throw new InvalidArgumentException('Filtro inválido.');
+        $this->account($account);if(mb_strlen($search)>200||$page<1||$page>10000||$folder<0)throw new InvalidArgumentException('Filtro inválido.');
         $localColumn=mailCenterMarkColumn($mark);
+        $trash=$this->standardFolderIds('trash',$account);
         $sql='SELECT m.*,COALESCE(lm.is_favorite,0) AS is_favorite,COALESCE(lm.is_flagged,0) AS is_flagged,COALESCE(lm.is_pinned,0) AS is_pinned,mc.color AS account_color,mc.name AS account_function FROM core_mail_messages m JOIN core_mail_accounts a ON a.id=m.account_id AND a.owner_user_id=m.owner_user_id LEFT JOIN core_mail_categories mc ON mc.id=a.category_id AND mc.owner_user_id=a.owner_user_id LEFT JOIN core_mail_message_marks lm ON lm.message_id=m.id AND lm.account_id=m.account_id AND lm.owner_user_id=m.owner_user_id WHERE m.account_id=? AND m.owner_user_id=? AND m.remote_missing=0';$args=[$account,$this->owner];
         if($search!==''){$sql.=' AND (m.subject LIKE ? OR m.sender LIKE ?)';$term='%'.strtr($search,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';$sql=str_replace('LIKE ?','LIKE ? ESCAPE \'!\'',$sql);array_push($args,$term,$term);}
         if($folder){$sql.=' AND EXISTS (SELECT 1 FROM core_mail_message_folders mf WHERE mf.message_id=m.id AND mf.folder_id=? AND mf.owner_user_id=m.owner_user_id)';$args[]=$folder;}
+        if(!$folder||!in_array($folder,$trash,true))$sql.=self::excludeTrash($trash);
         if($localColumn!==null)$sql.=' AND lm.'.$localColumn.'=1';
         $sql.=' ORDER BY COALESCE(lm.is_pinned,0) DESC,m.received_at DESC,m.id DESC LIMIT 26 OFFSET '.(($page-1)*25);$s=$this->pdo->prepare($sql);$s->execute($args);$rows=$s->fetchAll(PDO::FETCH_ASSOC);return ['rows'=>array_slice($rows,0,25),'more'=>count($rows)>25];
     }
@@ -59,6 +61,8 @@ final class MailMessageService
         $args=[$account,$this->owner,$pinned,$pinned,$current['received_at'],$current['received_at'],$id];
         if($search!==''){$sql.=" AND (m.subject LIKE ? ESCAPE '!' OR m.sender LIKE ? ESCAPE '!')";$term='%'.strtr($search,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';array_push($args,$term,$term);}
         if($folder){$sql.=' AND EXISTS(SELECT 1 FROM core_mail_message_folders mf WHERE mf.message_id=m.id AND mf.account_id=m.account_id AND mf.owner_user_id=m.owner_user_id AND mf.folder_id=?)';$args[]=$folder;}
+        $trash=$this->standardFolderIds('trash',$account);
+        if(!$folder||!in_array($folder,$trash,true))$sql.=self::excludeTrash($trash);
         if($column!==null)$sql.=' AND lm.'.$column.'=1';
         $sql.=' ORDER BY COALESCE(lm.is_pinned,0) DESC,m.received_at DESC,m.id DESC LIMIT 1';
         $s=$this->pdo->prepare($sql);$s->execute($args);$next=$s->fetchColumn();return $next===false?null:(int)$next;
@@ -92,6 +96,22 @@ final class MailMessageService
 
     private static function standardFolder(string $provider,string $remote,string $name): ?string
     {return mailCenterFolderKind($provider,$remote,$name);}
+
+    private function standardFolderIds(string $kind,?int $account=null): array
+    {
+        $sql='SELECT f.id,f.remote_id,f.name,p.code FROM core_mail_folders f JOIN core_mail_accounts a ON a.id=f.account_id AND a.owner_user_id=f.owner_user_id JOIN core_mail_providers p ON p.id=a.provider_id WHERE f.owner_user_id=?';$args=[$this->owner];
+        if($account!==null){$sql.=' AND f.account_id=?';$args[]=$account;}
+        $s=$this->pdo->prepare($sql);$s->execute($args);$ids=[];
+        foreach($s->fetchAll(PDO::FETCH_ASSOC)as$row)if(self::standardFolder($row['code'],$row['remote_id'],$row['name'])===$kind)$ids[]=(int)$row['id'];
+        return $ids;
+    }
+
+    private static function excludeTrash(array $ids): string
+    {
+        if(!$ids)return '';
+        // IDs come from owner-scoped database rows, never from request input.
+        return ' AND NOT EXISTS (SELECT 1 FROM core_mail_message_folders mt WHERE mt.message_id=m.id AND mt.account_id=m.account_id AND mt.owner_user_id=m.owner_user_id AND mt.folder_id IN ('.implode(',',array_map('intval',$ids)).'))';
+    }
     public function unifiedListing(string $search='', int $page=1, string $folder='all', string $mark='all'): array
     {
         if($this->boundAccount!==null)throw new DomainException('Use o contexto unificado para esta consulta.');
@@ -101,11 +121,11 @@ final class MailMessageService
         $sql="SELECT m.*,COALESCE(lm.is_favorite,0) AS is_favorite,COALESCE(lm.is_flagged,0) AS is_flagged,COALESCE(lm.is_pinned,0) AS is_pinned,a.email AS account_email,a.label AS account_label,p.name AS provider_name,mc.color AS account_color,mc.name AS account_function FROM core_mail_messages m JOIN core_mail_accounts a ON a.id=m.account_id AND a.owner_user_id=m.owner_user_id JOIN core_mail_providers p ON p.id=a.provider_id JOIN core_mail_connections c ON c.account_id=a.id AND c.owner_user_id=a.owner_user_id LEFT JOIN core_mail_categories mc ON mc.id=a.category_id AND mc.owner_user_id=a.owner_user_id LEFT JOIN core_mail_message_marks lm ON lm.message_id=m.id AND lm.account_id=m.account_id AND lm.owner_user_id=m.owner_user_id WHERE m.owner_user_id=? AND a.is_active=1 AND a.connection_status='connected' AND c.status='connected' AND c.token_envelope IS NOT NULL AND m.remote_missing=0 AND p.code IN ('gmail','zoho','outlook')";$args=[$this->owner];
         if($search!==''){$sql.=" AND (m.subject LIKE ? ESCAPE '!' OR m.sender LIKE ? ESCAPE '!' OR a.email LIKE ? ESCAPE '!')";$term='%'.strtr($search,['!'=>'!!','%'=>'!%','_'=>'!_']).'%';array_push($args,$term,$term,$term);}
         if($folder!=='all'){
-            $s=$this->pdo->prepare('SELECT f.id,f.remote_id,f.name,p.code FROM core_mail_folders f JOIN core_mail_accounts a ON a.id=f.account_id AND a.owner_user_id=f.owner_user_id JOIN core_mail_providers p ON p.id=a.provider_id WHERE f.owner_user_id=?');$s->execute([$this->owner]);$ids=[];
-            foreach($s->fetchAll(PDO::FETCH_ASSOC)as$row)if(self::standardFolder($row['code'],$row['remote_id'],$row['name'])===$folder)$ids[]=(int)$row['id'];
+            $ids=$this->standardFolderIds($folder);
             if(!$ids)$sql.=' AND 1=0';
             else{$sql.=' AND EXISTS (SELECT 1 FROM core_mail_message_folders mf WHERE mf.message_id=m.id AND mf.owner_user_id=m.owner_user_id AND mf.account_id=m.account_id AND mf.folder_id IN ('.implode(',',array_fill(0,count($ids),'?')).'))';array_push($args,...$ids);}
         }
+        if($folder!=='trash')$sql.=self::excludeTrash($this->standardFolderIds('trash'));
         if($localColumn!==null)$sql.=' AND lm.'.$localColumn.'=1';
         $sql.=' ORDER BY COALESCE(lm.is_pinned,0) DESC,m.received_at DESC,m.id DESC LIMIT 26 OFFSET '.(($page-1)*25);$s=$this->pdo->prepare($sql);$s->execute($args);$rows=$s->fetchAll(PDO::FETCH_ASSOC);
         return ['rows'=>array_slice($rows,0,25),'more'=>count($rows)>25];
