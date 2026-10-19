@@ -135,7 +135,7 @@ final class ZohoMailProvider implements MailProviderInterface, MailMutableProvid
     {
         $this->folderRows=$this->request($accessToken,$this->account($accessToken).'/folders');
         $labels=[];
-        foreach ($this->folderRows as $row) $labels[]=['id'=>self::id((string)($row['folderId']??'')),'name'=>(string)($row['folderName']??'Pasta')];
+        foreach ($this->folderRows as $row) $labels[]=['id'=>self::id((string)($row['folderId']??'')),'name'=>(string)($row['folderName']??'Pasta'),'type'=>(string)($row['folderType']??'')];
         return ['labels'=>$labels];
     }
 
@@ -185,6 +185,17 @@ final class ZohoMailProvider implements MailProviderInterface, MailMutableProvid
         $folder=$this->folderOverrides[$id]??$this->messages[$id]['folderId']??($this->folderLookup!==null?($this->folderLookup)($id):null);
         if (!is_string($folder)&&!is_int($folder)) throw new MailProviderException('missing');
         return self::id((string)$folder);
+    }
+
+    /** Fresh metadata only: bypass cached folder membership, including archived mail. */
+    public function messageInFolder(string $accessToken, string $id, string $folder): array
+    {
+        $id=self::id($id);$folder=self::id($folder);
+        // A polling page may have cached this row before the remote change.
+        unset($this->messages[$id]);
+        $row=$this->request($accessToken,$this->account($accessToken).'/folders/'.$folder.'/messages/'.$id.'/details');
+        if((string)($row['messageId']??'')!==$id||(string)($row['folderId']??'')!==$folder)throw new MailProviderException('provider');
+        return $this->normalized($row);
     }
 
     public function message(string $accessToken, string $id, bool $full = false): array

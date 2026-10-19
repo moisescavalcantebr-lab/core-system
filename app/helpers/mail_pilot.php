@@ -5,7 +5,7 @@ function mailPilotLoadCode(): void
 {
     if(!is_file(ROOT_PATH.'/vendor/autoload.php'))throw new DomainException('As dependências do piloto ainda não estão disponíveis.');
     require_once ROOT_PATH.'/vendor/autoload.php';
-    foreach(['MailProviderException','MailTokenCipher','MailZohoConfig','MailOutlookConfig','MailPilotConfig','MailHttpClient','MailProviderInterface','MailMutableProviderInterface','providers/GmailMailProvider','providers/ZohoMailProvider','providers/OutlookMailProvider','MailProviderRegistry','MailMessageService','MailLocalOrganizationService','MailOAuthService','MailRemoteMessageService','MailSyncService','MailSyncAllService','MailHtmlRenderer','MailAttachmentService','MailSendService']as$file)require_once APP_PATH.'/services/mail/'.$file.'.php';
+    foreach(['MailProviderException','MailTokenCipher','MailZohoConfig','MailOutlookConfig','MailPilotConfig','MailHttpClient','MailProviderInterface','MailMutableProviderInterface','providers/GmailMailProvider','providers/ZohoMailProvider','providers/OutlookMailProvider','MailProviderRegistry','MailMessageService','MailLocalOrganizationService','MailOAuthService','MailRemoteMessageService','MailTrashReconciler','MailSyncService','MailSyncAllService','MailHtmlRenderer','MailAttachmentService','MailSendService']as$file)require_once APP_PATH.'/services/mail/'.$file.'.php';
 }
 function mailPilotReady(PDO $pdo,array $config,string $provider='gmail'): bool
 {

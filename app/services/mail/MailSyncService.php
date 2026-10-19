@@ -52,6 +52,9 @@ final class MailSyncService
                 $cursor['queue']=array_values(array_unique(array_merge($priority,$cursor['queue'])));
             }
             $processed=0;$deadline=microtime(true)+18;
+            if($this->api instanceof ZohoMailProvider){
+                $cursor['trash_reconcile']=(new MailTrashReconciler($this->store,$this->api))->run($account,$token,$labels,$cursor['trash_reconcile']??[],(int)$connection['generation'],$deadline);
+            }
             while($cursor['queue']&&$processed<10&&microtime(true)<$deadline){
                 $remote=$cursor['queue'][0];
                 try{$message=$this->api->message($token,$remote);$date=(int)floor((float)($message['internalDate']??0)/1000);
