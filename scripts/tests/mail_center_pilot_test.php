@@ -68,6 +68,7 @@ try{
     require __DIR__.'/mail_center_zoho_test.php';
     require __DIR__.'/mail_center_outlook_test.php';
     require __DIR__.'/mail_center_trash_test.php';
+    require __DIR__.'/mail_center_remote_messages_test.php';
     echo 'PASS: '.$checks.' verificações do piloto — OAuth/PKCE, AEAD, isolamento, sync, MIME, anexos, idempotência e resultado incerto; provedores simulados, sem caixas reais.'.PHP_EOL;
 }finally{
     if(preg_match('/^test_mail_pilot_[a-f0-9]{12}$/D',$database))$pdo->exec('DROP DATABASE `'.$database.'`');

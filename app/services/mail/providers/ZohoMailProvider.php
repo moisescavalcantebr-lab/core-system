@@ -2,12 +2,13 @@
 declare(strict_types=1);
 
 /** Adapts Zoho's account/folder API to the mailbox metadata used by the Core. */
-final class ZohoMailProvider implements MailProviderInterface
+final class ZohoMailProvider implements MailProviderInterface, MailMutableProviderInterface
 {
     private ?string $accountId = null;
     private array $messages = [];
     private array $folderRows = [];
     private array $ownAddresses = [];
+    private array $folderOverrides = [];
     private string $base;
 
     public function __construct(private MailHttpClient $http, string $region, private string $email, private ?Closure $folderLookup = null)
@@ -18,7 +19,7 @@ final class ZohoMailProvider implements MailProviderInterface
 
     public function capabilities(): array
     {
-        return ['read'=>true, 'send'=>true, 'search'=>true, 'attachments'=>true, 'remote_modify'=>false, 'sync'=>'poll'];
+        return ['read'=>true, 'send'=>true, 'search'=>true, 'attachments'=>true, 'remote_modify'=>true, 'sync'=>'poll'];
     }
 
     private static function id(string $id): string
@@ -181,7 +182,7 @@ final class ZohoMailProvider implements MailProviderInterface
     private function folder(string $id): string
     {
         self::id($id);
-        $folder=$this->messages[$id]['folderId']??($this->folderLookup!==null?($this->folderLookup)($id):null);
+        $folder=$this->folderOverrides[$id]??$this->messages[$id]['folderId']??($this->folderLookup!==null?($this->folderLookup)($id):null);
         if (!is_string($folder)&&!is_int($folder)) throw new MailProviderException('missing');
         return self::id((string)$folder);
     }
@@ -225,6 +226,28 @@ final class ZohoMailProvider implements MailProviderInterface
 
     public function send(string $accessToken, string $raw, ?string $threadId = null): array
     { throw new DomainException('O Zoho exige composição estruturada, sem conversão implícita de MIME.'); }
+
+    public function updateMessage(string $token,string $id,string $action,?string $destination=null,?string $source=null): array
+    {
+        self::id($id);$account=$this->account($token);$headers=['Authorization: Zoho-oauthtoken '.$token,'Content-Type: application/json'];
+        if(!in_array($action,['read','unread','move','trash'],true))throw new InvalidArgumentException('Ação inválida.');
+        if($action==='trash'){
+            if(!$this->folderRows)$this->folders($token);$trash=[];
+            foreach($this->folderRows as$f)if(strtolower((string)($f['folderType']??''))==='trash')$trash[]=self::id((string)$f['folderId']);
+            if(count($trash)!==1)throw new DomainException('A pasta Lixeira não foi identificada no Zoho. Atualize a caixa.');
+            if($this->folder($id)===$trash[0])throw new DomainException('Esta mensagem já está na lixeira.');
+            $result=$this->http->request('DELETE',$this->base.'/api/accounts'.$account.'/folders/'.$this->folder($id).'/messages/'.$id.'?expunge=false',$headers,null,true);$destination=$trash[0];
+        }else{
+            $body=['mode'=>match($action){'read'=>'markAsRead','unread'=>'markAsUnread',default=>'moveMessage'},'messageId'=>[$id]];
+            if($action==='move'){$body['destfolderId']=self::id($destination??'');$body['isArchive']=true;}
+            $result=$this->http->request('PUT',$this->base.'/api/accounts'.$account.'/updatemessage',$headers,json_encode($body,JSON_THROW_ON_ERROR),true);
+        }
+        // Update responses may acknowledge success without a data object.
+        if((int)($result['status']['code']??0)!==200)throw new MailProviderException('unknown');
+        if($destination!==null)$this->folderOverrides[$id]=$destination;
+        unset($this->messages[$id]);
+        try{return $this->message($token,$id);}catch(Throwable $e){throw new MailProviderException('unknown');}
+    }
 
     /** Only MailSendService supplies this immutable, verified snapshot. */
     public function sendSnapshot(string $token, array $snapshot): array

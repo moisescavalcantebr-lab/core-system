@@ -12,6 +12,14 @@
   confirm.addEventListener('submit', () => { confirm.querySelector('button[type=submit]').disabled = true; });
 })();
 
+// Delegation includes message controls loaded into the side-by-side reader.
+document.addEventListener('submit',event=>{
+  const form=event.target;
+  if(!(form instanceof HTMLFormElement)||!form.matches('[data-mail-remote-action]'))return;
+  if(form.dataset.submitting==='yes'){event.preventDefault();return;}
+  form.dataset.submitting='yes';form.setAttribute('aria-busy','true');
+});
+
 (() => {
   const reader = document.querySelector('[data-mail-reader]');
   if (!reader || document.querySelector('[data-mail-reading-mode]')?.dataset.mailReadingMode==='full') return;

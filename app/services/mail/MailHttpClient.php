@@ -13,7 +13,7 @@ class MailHttpClient
     {
         $parts=parse_url($url);
         if(($parts['scheme']??'')!=='https'||!in_array($parts['host']??'',['gmail.googleapis.com','oauth2.googleapis.com','mail.zoho.com','mail.zoho.eu','accounts.zoho.com','accounts.zoho.eu','graph.microsoft.com'],true)
-            ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment'])||(isset($parts['port'])&&$parts['port']!==443)||!in_array($method,['GET','POST'],true))throw new InvalidArgumentException('Destino de integração não permitido.');
+            ||isset($parts['user'])||isset($parts['pass'])||isset($parts['fragment'])||(isset($parts['port'])&&$parts['port']!==443)||!in_array($method,['GET','POST','PUT','DELETE'],true))throw new InvalidArgumentException('Destino de integração não permitido.');
         $ch=curl_init($url);$response='';$retry=0;
         curl_setopt_array($ch,[CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_HTTPHEADER=>$headers,CURLOPT_FOLLOWLOCATION=>false,CURLOPT_CONNECTTIMEOUT=>5,CURLOPT_TIMEOUT=>$sending?25:10,CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,
             CURLOPT_WRITEFUNCTION=>static function($handle,string $chunk)use(&$response,$limit):int{if(strlen($response)+strlen($chunk)>$limit)return 0;$response.=$chunk;return strlen($chunk);},

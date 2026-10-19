@@ -9,7 +9,11 @@ class MailOAuthService
     public function __construct(private MailMessageService $store, private MailProviderInterface $api, private array $google, private MailHttpClient $http, private ?Closure $providerFactory = null) {}
     private function isZoho(): bool { return ($this->google['provider']??'gmail')==='zoho'; }
     private function isOutlook(): bool { return ($this->google['provider']??'gmail')==='outlook'; }
-    private function scopes(): array { return $this->isOutlook()?MailOutlookConfig::SCOPES:($this->isZoho()?MailZohoConfig::SCOPES:self::SCOPES); }
+    private function scopes(): array
+    {
+        $base=$this->isOutlook()?MailOutlookConfig::SCOPES:($this->isZoho()?MailZohoConfig::SCOPES:self::SCOPES);
+        return ($this->google['remote_organization_enabled']??false)===true?array_values(array_unique(array_merge($base,MailRemoteMessageService::scopes($this->google['provider']??'gmail')))):$base;
+    }
     private function endpoint(string $operation): string
     {
         if($this->isZoho())return MailZohoConfig::endpoints($this->google['region'])['accounts'].'/oauth/v2/'.$operation;

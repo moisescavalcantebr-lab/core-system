@@ -1,10 +1,10 @@
 <?php
 declare(strict_types=1);
 
-final class GmailMailProvider implements MailProviderInterface
+final class GmailMailProvider implements MailProviderInterface, MailMutableProviderInterface
 {
     public function __construct(private MailHttpClient $http) {}
-    public function capabilities(): array { return ['read'=>true,'send'=>true,'search'=>true,'attachments'=>true,'remote_modify'=>false]; }
+    public function capabilities(): array { return ['read'=>true,'send'=>true,'search'=>true,'attachments'=>true,'remote_modify'=>true]; }
     private static function id(string $value): string
     {
         if (!preg_match('/^[a-zA-Z0-9_-]{1,512}$/D',$value)) { throw new InvalidArgumentException('Identificador remoto inválido.'); }
@@ -34,5 +34,28 @@ final class GmailMailProvider implements MailProviderInterface
         $body=['raw'=>rtrim(strtr(base64_encode($raw),'+/','-_'),'=')];
         if ($threadId !== null) { self::id($threadId); $body['threadId']=$threadId; }
         return $this->http->request('POST','https://gmail.googleapis.com/gmail/v1/users/me/messages/send',['Authorization: Bearer '.$accessToken,'Content-Type: application/json'],json_encode($body,JSON_THROW_ON_ERROR),true);
+    }
+
+    public function updateMessage(string $token,string $id,string $action,?string $destination=null,?string $source=null): array
+    {
+        $path='messages/'.self::id($id);$headers=['Authorization: Bearer '.$token,'Content-Type: application/json'];
+        if(!in_array($action,['read','unread','move','trash'],true))throw new InvalidArgumentException('Ação inválida.');
+        if($action==='trash')$this->http->request('POST','https://gmail.googleapis.com/gmail/v1/users/me/'.$path.'/trash',$headers,null,true);
+        else{
+            $add=[];$remove=[];
+            if($action==='read')$remove=['UNREAD'];elseif($action==='unread')$add=['UNREAD'];
+            else{
+                if($destination===null||!($destination==='INBOX'||str_starts_with($destination,'Label_')))throw new InvalidArgumentException('Destino Gmail inválido.');
+                self::id($destination);if($source!==null)self::id($source);
+                $current=$this->message($token,$id);
+                if(in_array('TRASH',$current['labelIds']??[],true))$this->http->request('POST','https://gmail.googleapis.com/gmail/v1/users/me/'.$path.'/untrash',$headers,null,true);
+                $add=[$destination];
+                // In all-mail views, moving removes Inbox only; other labels remain.
+                $origin=$source==='TRASH'?'INBOX':($source??(in_array('SPAM',$current['labelIds']??[],true)?'SPAM':'INBOX'));
+                if($origin!==$destination&&(in_array($origin,['INBOX','SPAM'],true)||str_starts_with($origin,'Label_')))$remove=[$origin];
+            }
+            $this->http->request('POST','https://gmail.googleapis.com/gmail/v1/users/me/'.$path.'/modify',$headers,json_encode(['addLabelIds'=>$add,'removeLabelIds'=>$remove],JSON_THROW_ON_ERROR),true);
+        }
+        try{return $this->message($token,$id);}catch(Throwable $e){throw new MailProviderException('unknown');}
     }
 }
