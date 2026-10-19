@@ -108,6 +108,9 @@ foreach(['gmail','zoho']as$provider){
     pilotExpect($renderControls(false)==='','Disabled feature exposed controls');$controls=$renderControls(true);
     pilotExpect(substr_count($controls,'data-mail-remote-action')===3&&str_contains($controls,'Marcar como lida')&&str_contains($controls,'value="inbox"'),'Controls lost actions or unified context');
     pilotExpect(str_contains($controls,'name="confirmed" value="1" required')&&!str_contains($controls,'synthetic-organization-token'),'Trash lacks confirmation or control leaks token');
+    $pdo->prepare('UPDATE core_mail_messages SET is_unread=0 WHERE id=?')->execute([$remoteId]);$readControls=$renderControls(true);
+    pilotExpect(!str_contains($readControls,'Marcar como não lida')&&!str_contains($readControls,'value="unread"')&&!str_contains($readControls,'Marcar como lida')&&str_contains($readControls,'Mover'),'Read message retained read/unread toggle or lost move');
+    $pdo->prepare('UPDATE core_mail_messages SET is_unread=1 WHERE id=?')->execute([$remoteId]);
     if($provider==='gmail'){
         $html=file_get_contents($root.'/_deploy/mail-pilot-preview.html');$html=str_replace('<p class="mail-address">',$controls.'<p class="mail-address">',$html);file_put_contents($root.'/_deploy/mail-remote-preview.html',$html);
     }

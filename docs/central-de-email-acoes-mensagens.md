@@ -16,6 +16,8 @@ Decisão posterior de 19/10/2026: manter apenas envio para Lixeira e restauraç�
 
 O destaque de leitura foi mantido: não lidas têm ponto colorido, remetente/assunto em negrito e fundo discreto; lidas usam texto normal. A identificação acessível informa Lida/Não lida e o destaque de sinalização preserva a cor configurada.
 
+Ajuste posterior solicitado pelo proprietário: mensagens já lidas não exibem botão para marcar como não lida. Somente mensagens não lidas oferecem **Marcar como lida**; mover e Lixeira/restauração continuam disponíveis conforme o contexto e as permissões.
+
 Retenção no provedor: Gmail limpa a lixeira após 30 dias. Zoho permite ajustar **Configurações → Sistema → Intervalo de limpeza de lixo**; sua documentação descreve o padrão de 30 dias com base na data de recebimento da mensagem, não garante 30 dias desde a ida para a lixeira. Essas configurações não foram alteradas pelo agente. A Central continua com atualização manual em lotes. A reconciliação local da Lixeira do Zoho foi acrescentada posteriormente: verifica metadados, procura mensagens restauradas nas outras pastas e só oculta ausências confirmadas em todas elas. O processo é limitado e retomável, sem exclusão remota nem promessa de espelhamento automático integral. Ver [reconciliação da Lixeira](central-de-email-reconciliacao-lixeira.md).
 
 Fontes: [Gmail](https://support.google.com/mail/answer/7401), [Zoho](https://www.zoho.com/mail/help/deleting-mail.html).
