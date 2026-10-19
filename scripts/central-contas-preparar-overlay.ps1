@@ -1,5 +1,5 @@
 #requires -Version 7.0
-param()
+param([string]$BaselineRef='e5621d0')
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 $taskStage=Join-Path $taskRoot ('_deploy/mail-core-overlay-'+[Guid]::NewGuid().ToString('N'))
@@ -20,11 +20,13 @@ $taskEntries=@(Get-ChildItem -LiteralPath $taskStage -Recurse -File | ForEach-Ob
 $taskBaselines=@{}
 foreach($taskFile in $taskShared){
     $taskInfo=[Diagnostics.ProcessStartInfo]::new('git.exe');$taskInfo.WorkingDirectory=$taskRoot;$taskInfo.UseShellExecute=$false;$taskInfo.RedirectStandardOutput=$true
-    [void]$taskInfo.ArgumentList.Add('show');[void]$taskInfo.ArgumentList.Add("HEAD:$taskFile")
+    [void]$taskInfo.ArgumentList.Add('show');[void]$taskInfo.ArgumentList.Add("${BaselineRef}:$taskFile")
     $taskProcess=[Diagnostics.Process]::Start($taskInfo);$taskBuffer=[IO.MemoryStream]::new()
     try{$taskProcess.StandardOutput.BaseStream.CopyTo($taskBuffer);$taskProcess.WaitForExit();if($taskProcess.ExitCode -ne 0){throw 'Baseline Git não encontrada.'};$taskBytes=[Text.Encoding]::UTF8.GetBytes([Text.Encoding]::UTF8.GetString($taskBuffer.ToArray()).Replace("`r`n","`n"));$taskBaselines[$taskFile]=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($taskBytes)).ToLowerInvariant()}finally{$taskProcess.Dispose();$taskBuffer.Dispose()}
 }
-$taskManifest=@{schema=1;mode='mail-center-only-disabled';shared_baselines=$taskBaselines;files=$taskEntries}
+$taskBaselineCommit=git -C $taskRoot rev-parse $BaselineRef
+if($LASTEXITCODE -ne 0){throw 'Referência da baseline inválida.'}
+$taskManifest=@{schema=1;mode='mail-center-only-disabled';baseline_commit=$taskBaselineCommit;shared_baselines=$taskBaselines;files=$taskEntries}
 [IO.File]::WriteAllText((Join-Path $taskStage 'mail-overlay.json'),($taskManifest | ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
 $taskArchive=Join-Path $taskRoot '_deploy/mail-core-overlay.tar'
 & tar.exe -cf $taskArchive -C $taskStage .
