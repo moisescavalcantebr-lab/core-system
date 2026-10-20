@@ -19,6 +19,8 @@ Apresentação em `modules/meu_time/web/admin/meu_time/appearance.php`, incluíd
 
 Alterações salvas na branch local `codex/futebol-gratis`. Não havia projeto Futebol instalado no Docker local a sincronizar. Não foi feita publicação no servidor nesta etapa; para atualizar uma instalação existente, publicar os arquivos e sincronizar a base/projeto, incluindo ambos index.php e appearance.php.
 
+Publicação concluída em 19/10/2026 (20/10 às 01:16 UTC), pelo publicador limitado `scripts/futebol-publicar.ps1`: catálogo, base e um projeto Futebol instalado atualizados. Baselines, sintaxe PHP, hashes finais e saúde do Core aprovados. Banco de dados e configurações dos projetos preservados. Backup privado: `/opt/private-futebol/release-20261020T011650Z-1SWZQt30`. Relatório local: `_deploy/futebol-publication.txt`.
+
 ## Validação
 
 `team_formations_test.php`: banco descartável, regras Grátis/Start, configurações e dados preservados, nomes, vagas, alteração opcional da posição principal e cenários com trinta disponíveis e dois campos completos. `football_modules_test.php`: paridade entre catálogo/cópias e preservação dos schemas/dados existentes.
