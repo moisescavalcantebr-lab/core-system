@@ -10,7 +10,7 @@ requireProjectRole(['ADMIN', 'FINANCE']);
 financeEnsureEntryMetaSchema($pdo);
 financeEnsureCategoryAddonSchema($pdo);
 
-$title = 'Financeiro';
+$title = financeTeamEnabled()?'Financeiro do Time':'Financeiro';
 $usesParticipants = financeUsesParticipants($pdo);
 $simpleAdminMode = financeSimpleAdminMode($pdo);
 $showParticipantFinance = $usesParticipants && !$simpleAdminMode;
@@ -253,11 +253,12 @@ ob_start();
 
     <div class="c-page-header">
         <div>
-            <h1 class="c-page-title">Financeiro</h1>
+            <h1 class="c-page-title"><?= htmlspecialchars($title) ?></h1>
             <p class="c-page-subtitle"><?= $showParticipantFinance ? 'Entradas, saidas, pendencias e saldo por ' . htmlspecialchars(strtolower($financeUserLabel)) : 'Caixa simples do time: entradas, saidas e pendencias' ?></p>
         </div>
 
         <div class="c-page-actions">
+            <?php if(financeTeamEnabled()): ?><a href="<?= PROJECT_URL ?>/admin/financeiro/time_elenco.php" class="c-btn-secondary">Elenco e historico</a><?php endif; ?>
             <?php if ($showParticipantFinance): ?>
                 <a href="<?= PROJECT_URL ?>/admin/financeiro/settings.php" class="c-btn-secondary">
                     Configurações

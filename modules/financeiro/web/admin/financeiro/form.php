@@ -1,3 +1,4 @@
+<?php $teamForm=financeTeamEnabled() && (empty($entry['id']) || financeTeamTracked($pdo,(int)$entry['id'])); ?>
 <div class="c-page">
 
     <div class="c-page-header">
@@ -37,11 +38,12 @@
 
                 <div class="c-form-group" id="financeTypeGroup">
                     <label>Tipo</label>
-                    <select name="type" class="c-input" id="financeType">
+                    <select name="type" class="c-input" id="financeType" <?= $teamForm?'required':'' ?>>
                         <?php
                         $usesParticipants = isset($usesParticipants) ? (bool)$usesParticipants : financeUsesParticipants($pdo);
                         $entryMode = ($entry['source'] ?? '') === 'balance_deposit' ? 'balance_deposit' : ($entry['type'] ?? 'income');
                         ?>
+                        <?php if($teamForm): ?><option value="">Selecione</option><?php endif; ?>
                         <option value="income" <?= $entryMode === 'income' ? 'selected' : '' ?>>Entrada</option>
                         <option value="expense" <?= ($entry['type'] ?? '') === 'expense' ? 'selected' : '' ?>>Saida</option>
                     </select>
@@ -56,11 +58,13 @@
             <?php endif; ?>
 
             <div class="c-form-group" id="financeTitleGroup">
-                <label>Titulo</label>
+                <label><?= $teamForm?'Finalidade':'Titulo' ?></label>
                 <input type="text" name="title" class="c-input" value="<?= htmlspecialchars((string)$entry['title']) ?>" required>
             </div>
 
-            <?php if ($usesParticipants): ?>
+            <?php if ($teamForm): ?>
+                <?php require __DIR__.'/time_party_form.php'; ?>
+            <?php elseif ($usesParticipants): ?>
                 <div class="c-card" style="margin:16px 0;">
                     <h3 id="financePartyTitle">Parte relacionada</h3>
 
@@ -114,8 +118,8 @@
                     <label>Status</label>
                     <select name="status" class="c-input" id="financeStatus">
                         <option value="pending" <?= ($entry['status'] ?? '') === 'pending' ? 'selected' : '' ?>>Pendente</option>
-                        <option value="paid" <?= ($entry['status'] ?? '') === 'paid' ? 'selected' : '' ?>>Pago</option>
-                        <option value="canceled" <?= ($entry['status'] ?? '') === 'canceled' ? 'selected' : '' ?>>Cancelado</option>
+                        <option value="paid" <?= ($entry['status'] ?? '') === 'paid' ? 'selected' : '' ?>><?= $teamForm?'Confirmado':'Pago' ?></option>
+                        <?php if(!$teamForm): ?><option value="canceled" <?= ($entry['status'] ?? '') === 'canceled' ? 'selected' : '' ?>>Cancelado</option><?php endif; ?>
                     </select>
                 </div>
 
@@ -196,7 +200,7 @@
 
         </form>
 
-        <?php if (!empty($entry['id'])): ?>
+        <?php if (!empty($entry['id']) && !$teamForm): ?>
             <form action="<?= PROJECT_URL ?>/admin/financeiro/delete.php?id=<?= (int)$entry['id'] ?>" method="POST" class="c-card" onsubmit="return confirm('Excluir este lancamento?');">
                 <?= csrf_field(); ?>
                 <button type="submit" class="c-btn-secondary">

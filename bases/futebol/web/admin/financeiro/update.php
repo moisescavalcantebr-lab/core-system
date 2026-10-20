@@ -31,12 +31,20 @@ if ($id <= 0 || ($title === '' && !$isBalanceDeposit)) {
 }
 
 $title = $isBalanceDeposit ? 'Adicao de saldo' : $title;
-$stmt = $pdo->prepare("SELECT source, receipt_path FROM finance_entries WHERE id = ? LIMIT 1");
+try{
+if(financeTeamEnabled())$pdo->beginTransaction();
+$stmt = $pdo->prepare("SELECT * FROM finance_entries WHERE id = ? LIMIT 1".(financeTeamEnabled()?' FOR UPDATE':''));
 $stmt->execute([$id]);
 $existingEntry = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$existingEntry) {
     exit('Lancamento nao encontrado.');
+}
+$teamParty=null;
+$teamTracked=financeTeamEnabled()&&financeTeamTracked($pdo,$id);
+if($teamTracked){
+    try{financeTeamGuardEditable($pdo,$existingEntry);financeTeamValidate($_POST);$teamParty=financeTeamParty($pdo,$_POST,$existingEntry);}
+    catch(DomainException $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(422);exit($e->getMessage());}
 }
 
 $status = in_array($_POST['status'] ?? '', ['pending', 'paid', 'canceled'], true) ? $_POST['status'] : 'pending';
@@ -83,6 +91,7 @@ $paymentMethod = array_key_exists((string)($_POST['payment_method'] ?? ''), fina
     ? (string)$_POST['payment_method']
     : null;
 $receiptPath = $existingEntry['receipt_path'] ?? null;
+if($teamParty){$partyType=$teamParty['party_type'];$partyModule=$teamParty['party_module'];$partyId=$teamParty['party_id'];$partyName=$teamParty['party_name'];}
 $amount = (float)($_POST['amount'] ?? 0);
 
 if ($amount <= 0) {
@@ -151,7 +160,12 @@ $stmt->execute([
 ]);
 
 financeSyncEntryTags($pdo, $id, (string)($_POST['tags'] ?? ''));
+if(financeTeamEnabled()){
+    if($teamTracked)financeTeamAudit($pdo,$id,$status==='paid'?'confirmed':'updated',(int)$currentUser['id'],$existingEntry);
+    $pdo->commit();
+}
 
+}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(500);exit('Nao foi possivel atualizar o lancamento.');}
 header('Location: ' . PROJECT_URL . '/admin/financeiro/index.php');
 exit;
 

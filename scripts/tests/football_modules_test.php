@@ -16,7 +16,8 @@ try {
         $schema=$manifest['database']['schema'] ?? '';
         if ($schema!=='') $pdo->exec((string)file_get_contents(dirname($path).'/'.$schema));
     }
-    footballCheck(count($modules)===8&&isset($modules['classificacao'])&&!isset($modules['placar_ao_vivo']),'Lista de modulos mudou');
+    footballCheck(count($modules)===9&&isset($modules['classificacao'],$modules['financeiro_futebol'])&&!isset($modules['placar_ao_vivo']),'Lista de modulos mudou');
+    footballCheck($modules['financeiro_futebol']['kind']==='addon'&&$modules['financeiro_futebol']['attach_to']===['financeiro','jogadores'],'Vinculos do financeiro do time incorretos');
     footballCheck(($modules['treino']['menu'] ?? null)===null&&$modules['treino']['status']==='deprecated','Treino antigo permanece ativo');
     footballCheck($modules['participantes']['participant_access']==='optional','Politica de Futebol perdida');
     foreach ($modules as $slug=>$manifest) {

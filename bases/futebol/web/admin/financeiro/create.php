@@ -33,6 +33,10 @@ $entry = [
     'receipt_path' => '',
     'tags' => '',
 ];
+if (financeTeamEnabled()) {
+    $isBalanceMode=false;
+    $entry['type']='';$entry['party_type']='';$entry['source']='manual';
+}
 
 $categories = financeCategoryOptions($pdo, $advancedCategories);
 $projectUsers = $usesParticipants

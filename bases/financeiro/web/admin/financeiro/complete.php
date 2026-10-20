@@ -18,6 +18,9 @@ csrf_verify();
 
 $id = (int)($_POST['id'] ?? 0);
 $currentUser = projectUser();
+if(financeTeamEnabled()&&$id>0&&financeTeamTracked($pdo,$id)){
+    redirect(PROJECT_URL.'/admin/financeiro/edit.php?id='.$id);exit;
+}
 
 if ($id <= 0) {
     flash('error', 'Lancamento invalido.');

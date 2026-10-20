@@ -25,6 +25,9 @@ if (!$entry) {
 }
 
 $title = 'Editar Lancamento';
+if(financeTeamEnabled()&&financeTeamTracked($pdo,$id)&&$entry['status']!=='pending'){
+    redirect(PROJECT_URL.'/admin/financeiro/time_elenco.php?entry_id='.$id);exit;
+}
 $entry['tags'] = $advancedCategories ? implode(', ', financeTagNames($pdo, (int)$entry['id'])) : '';
 $categories = financeCategoryOptions($pdo, $advancedCategories);
 $projectUsers = $usesParticipants

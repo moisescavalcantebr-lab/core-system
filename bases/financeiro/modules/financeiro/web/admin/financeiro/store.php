@@ -31,6 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 csrf_verify();
 
 $currentUser = projectUser();
+$teamParty=null;
+if(financeTeamEnabled()){
+    try{financeTeamValidate($_POST);$teamParty=financeTeamParty($pdo,$_POST);}
+    catch(DomainException $e){http_response_code(422);exit($e->getMessage());}
+}
 $title = trim((string)($_POST['title'] ?? ''));
 $requestedType = (string)($_POST['type'] ?? 'income');
 $simpleAdminMode = financeSimpleAdminMode($pdo);
@@ -91,10 +96,16 @@ $paymentMethod = array_key_exists((string)($_POST['payment_method'] ?? ''), fina
     ? (string)$_POST['payment_method']
     : null;
 $receiptPath = null;
+if($teamParty){$partyType=$teamParty['party_type'];$partyModule=$teamParty['party_module'];$partyId=$teamParty['party_id'];$partyName=$teamParty['party_name'];}
 $amount = (float)($_POST['amount'] ?? 0);
 
 if ($amount <= 0) {
     exit('Valor invalido.');
+}
+if($teamParty){
+    $seriesCount=$categoryFormModel==='installment'?max(1,min(120,(int)($_POST['installments_total']??1))):($categoryFormModel==='recurring'?max(1,min(120,(int)($_POST['recurrence_count']??1))):1);
+    if($seriesCount>1&&$status!=='pending'){http_response_code(422);exit('Crie a serie como pendente e confirme cada recebimento ou pagamento.');}
+    if($categoryFormModel==='installment'&&(int)round($amount*100)<$seriesCount){http_response_code(422);exit('Cada parcela precisa ter pelo menos um centavo.');}
 }
 
 if ($isBalanceDeposit) {
@@ -115,6 +126,9 @@ try {
     exit($e->getMessage());
 }
 
+if(financeTeamEnabled())$pdo->beginTransaction();
+$teamCreatedIds=[];
+try{
 $stmt = $pdo->prepare("
     INSERT INTO finance_entries (category_id, type, title, description, amount, party_type, party_module, party_id, party_name, due_date, paid_at, status, source, payment_method, receipt_path, created_by_user_id, updated_by_user_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -141,6 +155,7 @@ $stmt->execute([
 ]);
 
 $entryId = (int)$pdo->lastInsertId();
+$teamCreatedIds[]=$entryId;
 financeSyncEntryTags($pdo, $entryId, (string)($_POST['tags'] ?? ''));
 
 $tags = (string)($_POST['tags'] ?? '');
@@ -152,6 +167,7 @@ if (!$isBalanceDeposit && $categoryFormModel === 'installment') {
     $installmentsTotal = max(1, min(120, (int)($_POST['installments_total'] ?? 1)));
 
     if ($installmentsTotal > 1) {
+        $teamCreatedIds=[];
         $pdo->prepare("DELETE FROM finance_entry_tags WHERE entry_id = ?")->execute([$entryId]);
         $pdo->prepare("DELETE FROM finance_entries WHERE id = ?")->execute([$entryId]);
 
@@ -182,13 +198,15 @@ if (!$isBalanceDeposit && $categoryFormModel === 'installment') {
                 $updatedBy,
             ]);
 
-            financeSyncEntryTags($pdo, (int)$pdo->lastInsertId(), $tags);
+            $teamNewId=(int)$pdo->lastInsertId();$teamCreatedIds[]=$teamNewId;
+            financeSyncEntryTags($pdo, $teamNewId, $tags);
         }
     }
 } elseif (!$isBalanceDeposit && $categoryFormModel === 'recurring') {
     $recurrenceCount = max(1, min(120, (int)($_POST['recurrence_count'] ?? 1)));
 
     if ($recurrenceCount > 1) {
+        $teamCreatedIds=[];
         $pdo->prepare("DELETE FROM finance_entry_tags WHERE entry_id = ?")->execute([$entryId]);
         $pdo->prepare("DELETE FROM finance_entries WHERE id = ?")->execute([$entryId]);
 
@@ -216,11 +234,14 @@ if (!$isBalanceDeposit && $categoryFormModel === 'installment') {
                 $updatedBy,
             ]);
 
-            financeSyncEntryTags($pdo, (int)$pdo->lastInsertId(), $tags);
+            $teamNewId=(int)$pdo->lastInsertId();$teamCreatedIds[]=$teamNewId;
+            financeSyncEntryTags($pdo, $teamNewId, $tags);
         }
     }
 }
 
+if(financeTeamEnabled())financeTeamFinish($pdo,$teamCreatedIds,(int)$currentUser['id']);
+}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(500);exit('Nao foi possivel salvar o lancamento.');}
 header('Location: ' . PROJECT_URL . '/admin/financeiro/index.php');
 exit;
 

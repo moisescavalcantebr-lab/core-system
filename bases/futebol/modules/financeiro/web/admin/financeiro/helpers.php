@@ -1,5 +1,11 @@
 <?php
 
+function financeTeamEnabled(): bool
+{
+    return defined('PROJECT_PATH') && is_file(PROJECT_PATH.'/modules/financeiro_futebol/module.json') && is_file(__DIR__.'/time_helpers.php');
+}
+if (financeTeamEnabled()) require_once __DIR__.'/time_helpers.php';
+
 function financeMoney(float $value): string
 {
     return 'R$ ' . number_format($value, 2, ',', '.');
@@ -7,6 +13,7 @@ function financeMoney(float $value): string
 
 function financeEnsureEntryMetaSchema(PDO $pdo): void
 {
+    if (financeTeamEnabled()) financeTeamEnsureSchema($pdo);
     $columns = $pdo->query("SHOW COLUMNS FROM finance_entries")->fetchAll(PDO::FETCH_COLUMN);
 
     if (!in_array('payment_method', $columns, true)) {
@@ -54,6 +61,10 @@ function financeEnsureEntryMetaSchema(PDO $pdo): void
 
 function financeEnsureCategoryAddonSchema(PDO $pdo): void
 {
+    static $ready=null;
+    $ready ??= new WeakMap();
+    if(isset($ready[$pdo]))return;
+    if($pdo->inTransaction())throw new LogicException('Prepare o schema antes da transacao financeira.');
     $categoryColumns = $pdo->query("SHOW COLUMNS FROM finance_categories")->fetchAll(PDO::FETCH_COLUMN);
     $addedFormModelColumn = false;
 
@@ -115,6 +126,7 @@ function financeEnsureCategoryAddonSchema(PDO $pdo): void
     if ($addedFormModelColumn) {
         financeBackfillCategoryFormModels($pdo);
     }
+    $ready[$pdo]=true;
 }
 
 function financeSlug(string $value): string

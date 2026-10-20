@@ -44,10 +44,20 @@ if (!$request || ($request['status'] ?? '') !== 'pending') {
     flash('error', 'Solicitação não encontrada ou já revisada.');
     redirect(PROJECT_URL . '/admin/financeiro/wallet_requests.php');
 }
+$teamWalletParty=null;
+if(financeTeamEnabled()&&$action==='approve'){
+    $identity=$pdo->prepare('SELECT id FROM players WHERE user_id=? ORDER BY id LIMIT 2');$identity->execute([(int)$request['user_id']]);$matches=$identity->fetchAll(PDO::FETCH_COLUMN);
+    if(count($matches)!==1){http_response_code(422);exit('Vincule o solicitante a um unico jogador antes de aprovar o recebimento.');}
+    $teamWalletParty=financeTeamParty($pdo,['team_party_kind'=>'player','team_player_id'=>$matches[0]]);
+}
 
 $pdo->beginTransaction();
 
 try {
+    if(financeTeamEnabled()){
+        $lock=$pdo->prepare('SELECT status FROM finance_wallet_requests WHERE id=? FOR UPDATE');$lock->execute([$id]);
+        if($lock->fetchColumn()!=='pending'){$pdo->rollBack();redirect(PROJECT_URL.'/admin/financeiro/wallet_requests.php');exit;}
+    }
     if ($action === 'reject') {
         $stmt = $pdo->prepare("
             UPDATE finance_wallet_requests
@@ -80,6 +90,11 @@ try {
             (int)$currentUser['id'],
             (int)$currentUser['id'],
         ]);
+        if($teamWalletParty){
+            $teamWalletEntryId=(int)$pdo->lastInsertId();
+            $pdo->prepare('UPDATE finance_entries SET party_type=?,party_module=?,party_id=?,party_name=? WHERE id=?')->execute([$teamWalletParty['party_type'],$teamWalletParty['party_module'],$teamWalletParty['party_id'],$teamWalletParty['party_name'],$teamWalletEntryId]);
+            financeTeamAudit($pdo,$teamWalletEntryId,'created',(int)$currentUser['id']);
+        }
     }
 
     $pdo->commit();

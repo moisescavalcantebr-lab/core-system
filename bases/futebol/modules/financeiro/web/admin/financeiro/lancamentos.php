@@ -12,6 +12,7 @@ financeEnsureCategoryAddonSchema($pdo);
 
 $title = 'Lancamentos';
 $advancedCategories = financeAdvancedCategoriesEnabled();
+$teamTrackedIds=[];
 
 $today = new DateTimeImmutable('today');
 $currentMonthStart = $today->modify('first day of this month')->format('Y-m-d');
@@ -114,6 +115,11 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute($params);
 $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+if(financeTeamEnabled()&&$entries){
+    $visibleIds=array_map('intval',array_column($entries,'id'));
+    $tracked=$pdo->prepare('SELECT DISTINCT entry_id FROM finance_team_history WHERE entry_id IN ('.implode(',',array_fill(0,count($visibleIds),'?')).')');$tracked->execute($visibleIds);
+    $teamTrackedIds=array_fill_keys(array_map('intval',$tracked->fetchAll(PDO::FETCH_COLUMN)),true);
+}
 
 ob_start();
 ?>
@@ -477,7 +483,7 @@ ob_start();
                                 </div>
                                 <div>
                                     <span>Parte</span>
-                                    <strong><?= htmlspecialchars(financePartyTypeLabel($entry['party_type'] ?? 'other')) ?></strong>
+                                    <strong><?= htmlspecialchars(($entry['party_module']??'')==='jogadores'?'Jogador':financePartyTypeLabel($entry['party_type'] ?? 'other')) ?></strong>
                                     <?php if (!empty($entry['party_display'])): ?>
                                         <span><?= htmlspecialchars((string)$entry['party_display']) ?></span>
                                     <?php endif; ?>
@@ -518,7 +524,7 @@ ob_start();
                                                 <button class="c-btn-secondary" type="submit">Concluir</button>
                                             </form>
                                         <?php endif; ?>
-                                        <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/edit.php?id=<?= (int)$entry['id'] ?>">Editar</a>
+                                        <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/<?= isset($teamTrackedIds[(int)$entry['id']]) ? 'time_elenco.php?entry_id=' : 'edit.php?id=' ?><?= (int)$entry['id'] ?>"><?= isset($teamTrackedIds[(int)$entry['id']]) ? 'Historico' : 'Editar' ?></a>
                                     </div>
                                 </div>
                             </div>
@@ -561,7 +567,7 @@ ob_start();
                                     </td>
                                     <td data-label="Tipo"><?= financeEntryTypeLabel($entry) ?></td>
                                     <td data-label="Parte">
-                                        <?= htmlspecialchars(financePartyTypeLabel($entry['party_type'] ?? 'other')) ?>
+                                        <?= htmlspecialchars(($entry['party_module']??'')==='jogadores'?'Jogador':financePartyTypeLabel($entry['party_type'] ?? 'other')) ?>
                                         <?php if (!empty($entry['party_display'])): ?>
                                             <div><?= htmlspecialchars((string)$entry['party_display']) ?></div>
                                         <?php endif; ?>
@@ -602,7 +608,7 @@ ob_start();
                                                     <button class="c-btn-secondary" type="submit">Concluir</button>
                                                 </form>
                                             <?php endif; ?>
-                                            <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/edit.php?id=<?= (int)$entry['id'] ?>">Editar</a>
+                                            <a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/<?= isset($teamTrackedIds[(int)$entry['id']]) ? 'time_elenco.php?entry_id=' : 'edit.php?id=' ?><?= (int)$entry['id'] ?>"><?= isset($teamTrackedIds[(int)$entry['id']]) ? 'Historico' : 'Editar' ?></a>
                                         </div>
                                     </td>
                                 </tr>
