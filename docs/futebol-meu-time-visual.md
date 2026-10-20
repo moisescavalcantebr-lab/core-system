@@ -21,6 +21,8 @@ Alterações salvas na branch local `codex/futebol-gratis`. Não havia projeto F
 
 Publicação concluída em 19/10/2026 (20/10 às 01:16 UTC), pelo publicador limitado `scripts/futebol-publicar.ps1`: catálogo, base e um projeto Futebol instalado atualizados. Baselines, sintaxe PHP, hashes finais e saúde do Core aprovados. Banco de dados e configurações dos projetos preservados. Backup privado: `/opt/private-futebol/release-20261020T011650Z-1SWZQt30`. Relatório local: `_deploy/futebol-publication.txt`.
 
+Correção dos avatares: a proteção global de `storage` retornava 403 para `/projects/<slug>/web/storage/uploads/avatars/<arquivo>`. Exceção restrita a esse caminho e a extensões raster permite as fotos públicas, mantendo arquivos privados, PHP e SVG bloqueados. Teste HTTP local confirmou 403 antes e 200 depois. Meu Time mostra iniciais se o arquivo estiver ausente; teste de navegador `scripts/tests/team_avatar_ui.cjs` cobre falha imediata/tardia e preservação de fotos válidas. Publicação limitada: `scripts/futebol-publicar.ps1 -AvatarFix`; inclui sete arquivos de origem e suas cópias nos projetos, valida imagens existentes por HTTP e mantém backup/reversão.
+
 ## Validação
 
 `team_formations_test.php`: banco descartável, regras Grátis/Start, configurações e dados preservados, nomes, vagas, alteração opcional da posição principal e cenários com trinta disponíveis e dois campos completos. `football_modules_test.php`: paridade entre catálogo/cópias e preservação dos schemas/dados existentes.

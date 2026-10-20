@@ -3,13 +3,28 @@ declare(strict_types=1);
 ini_set('display_errors','0');
 try {
     if (PHP_SAPI !== 'cli') exit(1);
-    if (($argv[1] ?? '') === '--projects') {
+    if (in_array($argv[1]??'',['--projects','--avatar-urls'],true)) {
         $config = require '/var/www/html/env/env.production.php';
         $d = $config['db'];
         $pdo = new PDO('mysql:host='.$d['host'].';dbname='.$d['name'].';charset=utf8mb4',$d['user'],$d['pass'],[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
         $pdo->exec('SET SESSION TRANSACTION READ ONLY');
         $rows = $pdo->query("SELECT p.path FROM projects p JOIN bases b ON b.id=p.base_id WHERE b.slug='futebol' ORDER BY p.id")->fetchAll(PDO::FETCH_COLUMN);
         $rows = array_map(static fn(string $path):string=>ltrim($path,'/'),$rows);
+        if($argv[1]==='--avatar-urls'){
+            foreach(array_unique($rows) as $path){
+                if(!preg_match('~^projects/[a-zA-Z0-9_-]+$~D',$path))throw new RuntimeException('avatar_project_path');
+                $folder='/var/www/html/'.$path.'/web/storage/uploads/avatars';
+                $resolved=realpath($folder);if($resolved===false)continue;
+                if(!str_starts_with($resolved,'/var/www/html/'.$path.'/web/'))throw new RuntimeException('avatar_directory');
+                $count=0;foreach(glob($folder.'/*')?:[] as $file){
+                    if(is_link($file)||!is_file($file)||!preg_match('~^[a-zA-Z0-9_-]+\.(?:png|jpe?g|gif|webp)$~iD',basename($file)))continue;
+                    if(@getimagesize($file)===false)continue;
+                    echo '/'.$path.'/web/storage/uploads/avatars/'.basename($file),PHP_EOL;
+                    if(++$count>=3)break;
+                }
+            }
+            exit;
+        }
         echo json_encode(array_values(array_unique($rows)),JSON_THROW_ON_ERROR);
         exit;
     }
@@ -24,7 +39,10 @@ try {
     }
     foreach ($manifest['files'] as $file) {
         $path = $file['path'];
-        if (!preg_match('~^(?:bases/futebol/(?:app/(?:bootstrap/project_bootstrap|helpers/football_plan|views/partials/sidebar_admin)|web/admin/(?:dashboard|(?:competicoes|meu_time)/[a-z_]+)|modules/(?:competicoes|meu_time)/web/admin/(?:competicoes|meu_time)/[a-z_]+)|modules/(?:competicoes|meu_time)/web/admin/(?:competicoes|meu_time)/[a-z_]+)\.php$~D',$path)) throw new RuntimeException('source_path');
+        $avatarFix=($manifest['mode']??'full')==='avatars';
+        if($avatarFix){
+            if(count($manifest['files'])!==7 || !($path==='.htaccess'||preg_match('~^(?:modules/meu_time|bases/futebol(?:/modules/meu_time)?)/web/admin/meu_time/(?:index|appearance)\.php$~D',$path)))throw new RuntimeException('avatar_source_path');
+        }elseif (!preg_match('~^(?:bases/futebol/(?:app/(?:bootstrap/project_bootstrap|helpers/football_plan|views/partials/sidebar_admin)|web/admin/(?:dashboard|(?:competicoes|meu_time)/[a-z_]+)|modules/(?:competicoes|meu_time)/web/admin/(?:competicoes|meu_time)/[a-z_]+)|modules/(?:competicoes|meu_time)/web/admin/(?:competicoes|meu_time)/[a-z_]+)\.php$~D',$path)) throw new RuntimeException('source_path');
         $targets = [$path];
         if (str_starts_with($path,'bases/futebol/')) {
             $relative = substr($path,strlen('bases/futebol/'));

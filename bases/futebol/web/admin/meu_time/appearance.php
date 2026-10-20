@@ -74,6 +74,11 @@
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
  const page=document.querySelector('.c-team-page'), layout=page?.querySelector('.c-team-layout');if(!layout)return;
+ page.querySelectorAll('img[data-team-avatar-initials]').forEach(image=>{
+   const fallback=()=>{const initials=document.createElement('span');initials.className=image.className;initials.textContent=image.dataset.teamAvatarInitials;initials.setAttribute('aria-label',image.alt);image.replaceWith(initials);};
+   image.addEventListener('error',fallback,{once:true});
+   if(image.complete&&image.naturalWidth===0)fallback();
+ });
  const pool=page.querySelector('.c-team-left-column'),stage=pool.querySelector('.c-team-available-stage');
  const players=[...stage.querySelectorAll('.c-team-available-player')],nav=pool.querySelector('.c-team-available-pagination');
  const prev=nav.querySelector('[data-available-prev]'),next=nav.querySelector('[data-available-next]'),counter=nav.querySelector('[data-available-counter]');

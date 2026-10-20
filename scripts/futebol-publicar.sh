@@ -20,7 +20,12 @@ image=$(docker inspect --format '{{.Image}}' app_php)
 check(){ docker run --rm --network none --read-only --mount "type=bind,source=$stage,target=/release,readonly" --mount "type=bind,source=$root,target=/production,readonly" --entrypoint php "$image" /release/check.php /release /production "$1"; }
 check --preflight >"$backup/files.tsv"
 echo 'football_baselines=PASS'
-while IFS=$'\t' read -r source target; do docker exec -i app_php php -l <"$stage/$source" >"$backup/lint.txt"; done <"$backup/files.tsv"
+: >"$backup/avatar-urls.txt"
+if grep -q $'\.htaccess\t.htaccess' "$backup/files.tsv"; then
+ cat "$stage/check.php" | docker exec -i --user www-data app_php php /dev/stdin --avatar-urls >"$backup/avatar-urls.txt"
+ while IFS= read -r avatar; do curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}\n' "https://meuprojetoweb.com$avatar" >>"$backup/avatar-status-before.txt"; done <"$backup/avatar-urls.txt"
+fi
+while IFS=$'\t' read -r source target; do if [[ "$source" == *.php ]]; then docker exec -i app_php php -l <"$stage/$source" >"$backup/lint.txt"; fi; done <"$backup/files.tsv"
 echo 'football_php_syntax=PASS'
 : >"$backup/existing.txt"; : >"$backup/new.txt"
 while IFS=$'\t' read -r source target; do
@@ -59,10 +64,23 @@ for phase in dependencies templates; do
 done
 check --after >"$backup/after.tsv"
 docker exec app_php apache2ctl graceful >"$backup/reload.txt" 2>&1
+docker exec app_php apache2ctl configtest >"$backup/apache-config.txt" 2>&1
 sleep 2
 [[ "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/admin/login.php)" == 200 ]] || exit 1
 [[ "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://meuprojetoweb.com/web/admin/central_contas/unified.php)" == 404 ]] || exit 1
 [[ "$(docker inspect --format '{{.Image}}' app_php)" == "$image" ]] || exit 1
+if grep -q $'\.htaccess\t.htaccess' "$backup/files.tsv"; then
+ for blocked in env/env.production.php projects/avatar-delivery-check/web/storage/private.txt projects/avatar-delivery-check/web/storage/uploads/avatars/test.php; do
+   [[ "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "https://meuprojetoweb.com/$blocked")" == 403 ]] || exit 1
+ done
+ avatar_count=0
+ while IFS= read -r avatar; do
+   [[ "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "https://meuprojetoweb.com$avatar")" == 200 ]] || exit 1
+   avatar_count=$((avatar_count+1))
+ done <"$backup/avatar-urls.txt"
+ echo "public_avatar_images_verified=$avatar_count"
+ echo 'private_storage_still_blocked=PASS'
+fi
 completed=yes
 echo 'football_published=yes'
 echo 'football_hashes_and_core_health=PASS'

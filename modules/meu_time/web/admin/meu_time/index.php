@@ -206,7 +206,7 @@ function teamAvatarHtml(?string $avatar, string $name, string $class): string
 {
     if ($avatar !== null && trim($avatar) !== '') {
         $src = PROJECT_URL . '/' . ltrim($avatar, '/');
-        return '<img class="' . htmlspecialchars($class) . '" src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($name) . '">';
+        return '<img class="' . htmlspecialchars($class) . '" src="' . htmlspecialchars($src) . '" alt="' . htmlspecialchars($name) . '" data-team-avatar-initials="' . htmlspecialchars(teamInitials($name)) . '">';
     }
 
     return '<span class="' . htmlspecialchars($class) . '">' . htmlspecialchars(teamInitials($name)) . '</span>';

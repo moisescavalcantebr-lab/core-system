@@ -17,6 +17,7 @@ RewriteEngine On
 RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 RewriteRule (^|/)_notes(?:/|$) - [F,L,NC]
 RewriteRule ^(?:projects/[^/]+/)?storage/uploads/avatars/[a-zA-Z0-9_-]+\.(?:png|jpe?g|gif|webp)$ - [L,NC]
+RewriteRule ^projects/[a-zA-Z0-9_-]+/web/storage/uploads/avatars/[a-zA-Z0-9_-]+\.(?:png|jpe?g|gif|webp)$ - [L,NC]
 RewriteRule (^|/)(?:env|storage|docker|cron|docs|scripts|tmp|output|_backups|_deploy)(?:/|$) - [F,L,NC]
 RewriteRule (^|/)app/(?!actions(?:/|$)) - [F,L,NC]
 RewriteRule ^(?:bases|modules|vendor)(?:/|$) - [F,L,NC]
