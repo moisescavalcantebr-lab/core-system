@@ -88,6 +88,12 @@ try {
 
 require_once APP_PATH . '/helpers/settings.php';
 require_once APP_PATH . '/helpers/project_auth.php';
+require_once APP_PATH . '/helpers/football_plan.php';
+if(!footballPlanModuleVisible('classificacao')&&preg_match('~/admin/classificacao(?:/|$)~',(string)(parse_url($_SERVER['REQUEST_URI']??$_SERVER['PHP_SELF']??'',PHP_URL_PATH)?:''))){
+    requireProjectAdmin();
+    http_response_code(403);
+    exit('Classificacao disponivel a partir do Plano Start.');
+}
 require_once APP_PATH . '/helpers/flash.php';
 require_once APP_PATH . '/helpers/csrf.php';
 require_once APP_PATH . '/helpers/http.php';

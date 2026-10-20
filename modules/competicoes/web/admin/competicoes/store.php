@@ -63,6 +63,9 @@ $status = in_array($_POST['status'] ?? '', ['draft','active','finished','cancele
 $startsAt = trim((string)($_POST['starts_at'] ?? '')) ?: null;
 $endsAt = trim((string)($_POST['ends_at'] ?? '')) ?: null;
 $notes = trim((string)($_POST['notes'] ?? '')) ?: null;
+if(competitionFreeFriendlyOnly()&&($context!=='external'||$type!=='friendly')){
+    flash('error','O Plano Gratis permite apenas Amistoso.');redirect(PROJECT_URL.'/admin/competicoes/index.php');
+}
 
 if ($name === '') {
     flash('error', 'Nome obrigatorio.');

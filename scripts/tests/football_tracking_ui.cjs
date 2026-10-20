@@ -9,9 +9,10 @@ const root = path.resolve(__dirname, '../..');
       const page = await browser.newPage({viewport:{width,height:900}});
       const errors = [];
       page.on('pageerror',error=>errors.push(error.message));
-      for (const name of ['championship','training','tracking-edit','tracking-index','friendly','friendly-lineup','friendly-create','friendly-edit','friendly-stats']) {
+      for (const name of ['championship','training','tracking-edit','tracking-index','friendly','friendly-lineup','friendly-create','friendly-edit','friendly-stats','free-index']) {
         await page.route('http://football-test.local/**',route=>route.fulfill({contentType:'text/html',body:fs.readFileSync(path.join(root,`_deploy/football-${name}-preview.html`),'utf8')}));
         await page.goto(`http://football-test.local/${name}`);
+        if(name==='free-index'&&(await page.locator('.c-competition-card').count()!==1||!await page.getByRole('heading',{name:'Amistoso',exact:true}).isVisible()))throw new Error('Gratis deve mostrar apenas Amistoso');
         if (name==='championship') {
           if (!await page.getByText('Pontos do meu time',{exact:true}).isVisible()) throw new Error('Pontos ausentes');
           if (!await page.getByText('Posição oficial',{exact:true}).isVisible()) throw new Error('Posicao ausente');

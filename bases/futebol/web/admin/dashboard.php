@@ -64,6 +64,7 @@ function dashboardInstalledModules(): array
     }
 
     foreach (scandir($modulesPath) ?: [] as $moduleSlug) {
+        if(function_exists('footballPlanModuleVisible')&&!footballPlanModuleVisible($moduleSlug))continue;
         if ($moduleSlug === '.' || $moduleSlug === '..') {
             continue;
         }

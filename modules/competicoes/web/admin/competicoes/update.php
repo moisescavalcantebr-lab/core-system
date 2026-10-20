@@ -41,6 +41,9 @@ $status = in_array($_POST['status'] ?? '', ['draft','active','finished','cancele
 $startsAt = trim((string)($_POST['starts_at'] ?? '')) ?: null;
 $endsAt = trim((string)($_POST['ends_at'] ?? '')) ?: null;
 $notes = trim((string)($_POST['notes'] ?? '')) ?: null;
+if(competitionFreeFriendlyOnly()&&($context!=='external'||$type!=='friendly')){
+    flash('error','O Plano Gratis permite apenas Amistoso.');redirect(PROJECT_URL.'/admin/competicoes/index.php');
+}
 
 if ($id <= 0 || $name === '') {
     flash('error', 'Dados invalidos.');
@@ -60,6 +63,9 @@ $competition = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$competition) {
     flash('error', 'Competicao nao encontrada.');
     redirect(PROJECT_URL . '/admin/competicoes/index.php');
+}
+if(competitionFreeFriendlyOnly()&&(($competition['context']??'')!=='external'||($competition['type']??'')!=='friendly')){
+    flash('error','O Plano Gratis permite apenas Amistoso.');redirect(PROJECT_URL.'/admin/competicoes/index.php');
 }
 
 if (competitionIsDefaultFriendly($competition)) {

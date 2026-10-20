@@ -73,6 +73,7 @@ function competitionEnsureDefaultTraining(PDO $pdo): void
 
 function competitionProjectPlanIsStart(PDO $pdo): bool
 {
+    if(function_exists('footballPlanIsFree'))return !footballPlanIsFree();
     if (function_exists('projectPlanName')) {
         $planName = strtolower(projectPlanName());
         if (!str_contains($planName, 'gratis')) {
@@ -147,6 +148,7 @@ $typeFilter = in_array($_GET['type'] ?? '', ['championship','cup','league','tour
 $yearFilter = preg_match('/^\d{4}$/', (string)($_GET['year'] ?? '')) ? (string)$_GET['year'] : '';
 $internalCompetitionsEnabled = competitionTrainingAvailable($pdo);
 $startFeaturesEnabled = competitionProjectPlanIsStart($pdo);
+if(competitionFreeFriendlyOnly()){$contextFilter='external';$typeFilter='friendly';$internalCompetitionsEnabled=false;}
 
 if ($internalCompetitionsEnabled && $startFeaturesEnabled) {
     competitionEnsureDefaultTraining($pdo);
@@ -242,7 +244,7 @@ try {
 $canCreateCompetition = $openCompetitionCount < $openCompetitionLimit;
 $friendlyCompetition = null;
 $trainingCompetition = null;
-$championshipCompetition = competitionEnsureOpenChampionship($pdo);
+$championshipCompetition = competitionFreeFriendlyOnly()?null:competitionEnsureOpenChampionship($pdo);
 
 foreach ($competitions as $competition) {
     if (($competition['type'] ?? '') === 'friendly' && !$friendlyCompetition) {
@@ -315,7 +317,7 @@ ob_start();
     <div class="c-page-header">
         <div>
             <h1 class="c-page-title">Competicoes</h1>
-            <p class="c-page-subtitle">Partidas simples do Meu Time. Campeonatos e treinos entram no Start.</p>
+            <p class="c-page-subtitle"><?= competitionFreeFriendlyOnly()?'Partidas amistosas do Meu Time.':'Partidas simples do Meu Time. Campeonatos e treinos entram no Start.' ?></p>
         </div>
     </div>
 
@@ -383,6 +385,7 @@ ob_start();
             </div>
 
             <?php endif; ?>
+            <?php if(!competitionFreeFriendlyOnly()): ?>
             <div class="c-competition-card <?= $startFeaturesEnabled ? 'c-competition-card--start-active' : 'c-competition-card--locked' ?>">
                 <div class="c-competition-card-visual c-competition-card-visual--championship" aria-hidden="true"></div>
                 <div class="c-competition-card-body">
@@ -418,6 +421,7 @@ ob_start();
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>

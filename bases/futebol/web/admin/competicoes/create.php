@@ -13,6 +13,7 @@ $title = 'Criar Competicao';
 $formAction = PROJECT_URL . '/admin/competicoes/store.php';
 $submitLabel = 'Criar Competicao';
 $createType = (string)($_GET['type'] ?? '');
+if(competitionFreeFriendlyOnly())$createType='friendly';
 $competition = [];
 $championshipMode = $createType === 'championship';
 

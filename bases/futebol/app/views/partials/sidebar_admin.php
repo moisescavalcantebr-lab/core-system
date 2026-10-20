@@ -112,6 +112,7 @@ function projectModuleMenus(): array
     }
 
     foreach ($installedModules as $moduleSlug) {
+        if(function_exists('footballPlanModuleVisible')&&!footballPlanModuleVisible($moduleSlug))continue;
         $manifest = $moduleManifests[$moduleSlug] ?? null;
 
         if (!is_array($manifest) || empty($manifest['menu']) || !is_array($manifest['menu'])) {

@@ -21,13 +21,14 @@ $externalTypes = [
 ];
 
 $allowedExternalTypes = projectPlanList('external_competition_types', array_keys($externalTypes));
+if(competitionFreeFriendlyOnly()){$allowedExternalTypes=['friendly'];$championshipMode=false;}
 $externalTypes = array_intersect_key($externalTypes, array_flip($allowedExternalTypes));
 
 $internalTypes = [
     'training' => 'Treino',
 ];
 
-if (!competitionTrainingAvailable($pdo) && empty($competition['id'])) {
+if (competitionFreeFriendlyOnly()||(!competitionTrainingAvailable($pdo) && empty($competition['id']))) {
     $internalTypes = [];
 }
 

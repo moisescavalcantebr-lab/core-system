@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 
+function competitionFreeFriendlyOnly(): bool
+{
+    return function_exists('footballPlanIsFree')&&footballPlanIsFree();
+}
+
 function competitionEnsureTrackingSchema(PDO $pdo): void
 {
     $columns = $pdo->query('SHOW COLUMNS FROM competitions')->fetchAll(PDO::FETCH_COLUMN);

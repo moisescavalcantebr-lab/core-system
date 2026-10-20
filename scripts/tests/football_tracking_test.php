@@ -4,6 +4,16 @@ if (PHP_SAPI !== 'cli') exit(1);
 $root = dirname(__DIR__, 2);
 define('PROJECT_URL', '/projects/football-test/web');
 function trackingCheck(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
+require $root.'/bases/futebol/app/helpers/football_plan.php';
+foreach([
+    [['plan_name'=>'Plano Gratis','billing_cycle'=>'free'],true],
+    [['plan_name'=>'Grátis'],true],
+    [['plan_name'=>'Plano Start','billing_cycle'=>'free'],true],
+    [['plan_name'=>'Plano Start','billing_cycle'=>'monthly'],false],
+    [['plan_name'=>'Plano Start','billing_cycle'=>'annual'],false],
+    [[],true],
+]as[$project,$expectedFree])trackingCheck(footballPlanIsFree()===$expectedFree,'Identificacao do plano Futebol incorreta');
+unset($project);
 function trackingRoute(string $path, array $post = [], array $get = [], int $actor = 1): string
 {
     $code = '$_SERVER["REQUEST_METHOD"]='.var_export($post ? 'POST' : 'GET',true).';$_SERVER["PHP_SELF"]='.var_export('/web/admin/'.basename(dirname($path)).'/'.basename($path),true).';$_POST='.var_export($post,true).';$_GET='.var_export($get,true).';$actor='.$actor.';require '.var_export($path,true).';';
@@ -32,6 +42,10 @@ try {
     foreach (['project_auth.php','csrf.php'] as $file) copy($root.'/bases/futebol/app/helpers/'.$file,$fixture.'/app/helpers/'.$file);
     $connection = '$pdo=new PDO('.var_export('mysql:host='.$db['host'].';dbname='.$database.';charset=utf8mb4',true).','.var_export($db['user'],true).','.var_export($db['pass'],true).',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);';
     file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php','<?php ob_start();define("PROJECT_PATH",'.var_export($fixture,true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/football-test/web");$_SESSION=["project_user_id"=>$actor===1?991:992,"_csrf"=>"test"];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";function flash($type,$msg){$_SESSION["flash"]=$msg;echo $msg;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}function projectPlanName(){return is_file(PROJECT_PATH."/test-plan") ? trim(file_get_contents(PROJECT_PATH."/test-plan")) : "Plano Start";}function projectPlanAllows($key,$default=false){return projectPlanName()!=="Plano Gratis";}function projectPlanLimit($key,$default=0){return 100;}function projectPlanList($key,$default=[]){return $default;}');
+    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php','require '.var_export($root.'/bases/futebol/app/helpers/football_plan.php',true).';',FILE_APPEND);
+    mkdir($fixture.'/app/views/partials',0700,true);
+    copy($root.'/bases/futebol/app/views/partials/sidebar_admin.php',$fixture.'/app/views/partials/sidebar_admin.php');
+    file_put_contents($fixture.'/web/admin/test-menu.php','<?php require __DIR__."/../../app/bootstrap/project_bootstrap.php";require APP_PATH."/views/partials/sidebar_admin.php";');
     $css = '';
     foreach (['core_base.css','admin/layout.css','admin/components.css','themes/dark.css'] as $file) $css .= file_get_contents($root.'/bases/futebol/web/assets/css/'.$file);
     file_put_contents($fixture.'/app/views/layout_admin.php','<?php echo "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><style>".'.var_export($css,true).'."body{padding:16px}.c-content{margin:0!important;max-width:1200px}</style></head><body class=c-app><main class=c-content>".$content."</main></body></html>";');
@@ -130,6 +144,18 @@ try {
     $winger = (int)$pdo->query("SELECT id FROM player_positions WHERE code='PTD1'")->fetchColumn();
     $pdo->prepare('UPDATE players SET position_id=? WHERE id=2')->execute([$winger]);
     file_put_contents($fixture.'/test-plan', 'Plano Gratis');
+    $freeIndex=trackingRoute($routes.'competicoes/index.php');
+    trackingCheck(str_contains($freeIndex,'<h3>Amistoso</h3>')&&!str_contains($freeIndex,'<h3>Campeonato</h3>')&&!str_contains($freeIndex,'<h3>Treino</h3>'),'Gratis mostra competicoes do Start');
+    trackingCheck(!str_contains(trackingRoute($routes.'test-menu.php'),'/admin/classificacao/'),'Classificacao aparece no menu Gratis');
+    $beforeCompetitions=(int)$pdo->query('SELECT COUNT(*) FROM competitions')->fetchColumn();
+    foreach(['championship','cup','league','tournament','challenge','ranking','other']as$restrictedType){
+        trackingCheck(str_contains(trackingRoute($routes.'competicoes/store.php',[...$champ,'type'=>$restrictedType]),'apenas Amistoso'),'Gratis criou tipo restrito: '.$restrictedType);
+    }
+    trackingCheck((int)$pdo->query('SELECT COUNT(*) FROM competitions')->fetchColumn()===$beforeCompetitions,'Bloqueio alterou competicoes existentes');
+    trackingCheck(str_contains(trackingRoute($routes.'competicoes/update.php',[...$champ,'type'=>'friendly'],['id'=>$champId]),'apenas Amistoso'),'Gratis converteu campeonato existente');
+    $freeForm=trackingRoute($routes.'competicoes/create.php',[],['type'=>'championship']);
+    trackingCheck(str_contains($freeForm,'value="friendly"')&&!str_contains($freeForm,'value="championship"')&&!str_contains($freeForm,'value="internal"'),'Formulario Gratis oferece outro tipo');
+    file_put_contents($root.'/_deploy/football-free-index-preview.html',$freeIndex);
     $beforeTraining = (int)$pdo->query('SELECT COUNT(*) FROM matches')->fetchColumn();
     trackingCheck(str_contains(trackingRoute($routes.'partidas/store.php',$game),'Ative os dois times'), 'Gratis nao bloqueou treino pelo plano');
     trackingCheck((int)$pdo->query('SELECT COUNT(*) FROM matches')->fetchColumn()===$beforeTraining, 'Gratis criou treino usando segundo time antigo');
@@ -171,6 +197,7 @@ try {
     file_put_contents($root.'/_deploy/football-friendly-preview.html',$friendlyView);
     file_put_contents($root.'/_deploy/football-friendly-lineup-preview.html',$friendlyLineup);
     file_put_contents($fixture.'/test-plan', 'Plano Start');
+    trackingCheck(str_contains(trackingRoute($routes.'test-menu.php'),'/admin/classificacao/'),'Classificacao desapareceu no Start');
     foreach (['championship'=>$champView,'training'=>$trainingView,'tracking-edit'=>trackingRoute($routes.'competicoes/edit.php',[],['id'=>$champId]),'tracking-index'=>trackingRoute($routes.'competicoes/index.php')] as $key=>$html) file_put_contents($root.'/_deploy/football-'.$key.'-preview.html',$html);
     echo "PASS: amistoso com posicao alternativa, Ver Partida/Escalacao sem fatal, vagas vazias, avatares, snapshots preservados, campeonato, treino, classificacao 3/1/0, rollback e permissoes.\n";
 } finally {
