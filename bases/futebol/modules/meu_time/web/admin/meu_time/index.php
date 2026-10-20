@@ -545,6 +545,10 @@ ob_start();
     <div class="c-page-content">
         <?php flash_show(); ?>
 
+        <nav class="c-team-view-tabs" aria-label="Visualização do elenco">
+            <?php foreach($formationKeys as $viewKey): ?><button type="button" data-team-view="<?= $viewKey ?>" aria-pressed="<?= $viewKey==='time_1'?'true':'false' ?>"><?= htmlspecialchars(teamFormationName($team,$viewKey)) ?></button><?php endforeach; ?>
+            <button type="button" data-team-view="available" aria-pressed="false">Disponíveis</button>
+        </nav>
         <div class="c-team-layout" data-team-count="<?= count($formationKeys) ?>">
             <?php foreach ($formationFields as $formationKey => $formationField): ?>
             <div class="c-card c-team-field-card" data-team-key="<?= $formationKey ?>">
@@ -564,6 +568,10 @@ ob_start();
                     <div class="c-team-field-box c-team-field-box-bottom"></div>
                     <div class="c-team-field-goal c-team-field-goal-top"></div>
                     <div class="c-team-field-goal c-team-field-goal-bottom"></div>
+                    <div class="c-team-small-box c-team-small-box--top" aria-hidden="true"></div>
+                    <div class="c-team-small-box c-team-small-box--bottom" aria-hidden="true"></div>
+                    <div class="c-team-penalty-arc c-team-penalty-arc--top" aria-hidden="true"></div>
+                    <div class="c-team-penalty-arc c-team-penalty-arc--bottom" aria-hidden="true"></div>
 
                     <?php foreach ($slotMap as $positionKey => $slots): ?>
                         <?php foreach ($slots as $slotIndex => $slot): ?>
@@ -608,13 +616,11 @@ ob_start();
                 <div class="c-card c-team-reserve-card">
                     <div class="c-team-available-header">
                         <h3>Jogadores disponíveis</h3>
-                        <?php if (count($availablePages) > 1): ?>
-                            <nav class="c-team-available-pagination" aria-label="Paginas de jogadores">
+                            <nav class="c-team-available-pagination" aria-label="Paginas de jogadores" <?= count($availablePages)>1?'':'hidden' ?>>
                                 <button type="button" class="c-btn-secondary" data-available-prev title="Pagina anterior" disabled>&larr;</button>
                                 <span data-available-counter aria-live="polite">1/<?= count($availablePages) ?></span>
                                 <button type="button" class="c-btn-secondary" data-available-next title="Proxima pagina">&rarr;</button>
                             </nav>
-                        <?php endif; ?>
                     </div>
                     <div class="c-team-available-stage">
                         <?php foreach ($availablePages as $pageIndex => $pagePlayers): ?>
@@ -1385,6 +1391,7 @@ img.c-team-token-avatar {
 .c-team-assign-actions { gap: 4px; }
 .c-team-assign-actions button { white-space: nowrap; padding: 3px 6px; }
 </style>
+<?php require __DIR__.'/appearance.php'; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -1425,20 +1432,6 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') playerMenus.forEach(function (menu) { menu.open = false; });
     });
-    const availablePages = Array.from(document.querySelectorAll('[data-available-page]'));
-    const previousPage = document.querySelector('[data-available-prev]');
-    const nextPage = document.querySelector('[data-available-next]');
-    let availablePageIndex = 0;
-    function changeAvailablePage(offset) {
-        availablePageIndex = Math.max(0, Math.min(availablePages.length - 1, availablePageIndex + offset));
-        playerMenus.forEach(function (menu) { menu.open = false; });
-        availablePages.forEach(function (page, index) { page.hidden = index !== availablePageIndex; });
-        previousPage.disabled = availablePageIndex === 0;
-        nextPage.disabled = availablePageIndex === availablePages.length - 1;
-        document.querySelector('[data-available-counter]').textContent = (availablePageIndex + 1) + '/' + availablePages.length;
-    }
-    previousPage?.addEventListener('click', function () { changeAvailablePage(-1); });
-    nextPage?.addEventListener('click', function () { changeAvailablePage(1); });
     const formationsForm = document.querySelector('.c-team-formations-toggle');
     formationsForm?.addEventListener('submit', function (event) {
         if (formationsForm.dataset.secondTeamActive === '1' && !formationsForm.elements.second_team.checked

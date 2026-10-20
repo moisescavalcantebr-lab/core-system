@@ -196,6 +196,16 @@ try {
         teamCheck(teamSecondFormationAllowed()===$expected, 'Politica de segundo time incorreta para '.$name);
     }
     unset($project);
+    // Presentation fixtures: exactly thirty available, then two complete fields.
+    $pdo->exec("UPDATE players SET status='inactive'; UPDATE players SET status='active' ORDER BY id LIMIT 30; UPDATE team_roster SET status='inactive'; UPDATE team_profile SET team_type='field',custom_slots_json=NULL,starters_count=11,formations_count=2 WHERE id=1");
+    $thirty=teamRoute($routes.'index.php');
+    teamCheck(substr_count($thirty,'<details class="c-team-available-player">')===30,'Visual perdeu jogador no elenco de trinta');
+    file_put_contents($root.'/_deploy/team-thirty-preview.html',$thirty);
+    require_once $root.'/modules/meu_time/web/admin/meu_time/lineup_helpers.php';
+    $slots=teamFormationSlots($pdo->query('SELECT * FROM team_profile WHERE id=1')->fetch(PDO::FETCH_ASSOC));
+    $activeIds=$pdo->query("SELECT id FROM players WHERE status='active' ORDER BY id LIMIT 22")->fetchAll(PDO::FETCH_COLUMN);
+    foreach($activeIds as$i=>$playerId){$slot=array_values($slots)[$i%11];$pdo->prepare("INSERT INTO team_roster(player_id,status,team_key,slot_group,slot_index,field_position_code) VALUES(?,'active',?,?,?,?) ON DUPLICATE KEY UPDATE status=VALUES(status),team_key=VALUES(team_key),slot_group=VALUES(slot_group),slot_index=VALUES(slot_index),field_position_code=VALUES(field_position_code)")->execute([$playerId,$i<11?'time_1':'time_2',$slot['group'],$slot['index'],$slot['code']]);}
+    file_put_contents($root.'/_deploy/team-full-roster-preview.html',teamRoute($routes.'index.php'));
     echo "PASS: formacoes, migracao, vagas e posicao escolhida independentes da principal, atualizacao opcional atomica, cadastro compartilhado, retirada/reinclusao, CSRF e permissoes.\n";
 } finally {
     $pdo->exec('DROP DATABASE IF EXISTS `'.$database.'`');
