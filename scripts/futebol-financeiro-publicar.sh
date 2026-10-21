@@ -61,16 +61,19 @@ while IFS=$'\t' read -r index project database tables entries; do
 done <"$backup/projects.tsv"
 sleep 3
 while IFS=$'\t' read -r index project database tables entries; do
- docker exec app_db sh -c 'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"; exec mysqldump -uroot --single-transaction --routines --events --triggers --hex-blob --set-gtid-purged=OFF "$1"' sh "$database" | gzip >"$backup/project-$index.sql.gz"
+ echo "finance_backup_$index=START"
+ timeout 120 docker exec app_db sh -c 'export MYSQL_PWD="$MYSQL_ROOT_PASSWORD"; exec mysqldump -uroot --single-transaction --routines --events --triggers --hex-blob --set-gtid-purged=OFF "$1"' sh "$database" | gzip >"$backup/project-$index.sql.gz"
  gzip -t "$backup/project-$index.sql.gz"
  # Validate the complete dump in a network-isolated database container before modifying the project.
  restore="ff-restore-$(date +%s)-$index"
- docker run -d --network none --name "$restore" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes "$dbimage" --skip-log-bin --event-scheduler=OFF --performance-schema=OFF --innodb-buffer-pool-size=64M >"$backup/restore-container-$index.txt"
+ echo "finance_restore_$index=START"
+ timeout 30 docker run -d --network none --memory 384m --memory-swap 512m --cpus 0.5 --pids-limit 256 --name "$restore" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes "$dbimage" --skip-log-bin --event-scheduler=OFF --performance-schema=OFF --innodb-buffer-pool-size=64M >"$backup/restore-container-$index.txt"
  ready=no
- for attempt in $(seq 1 60); do if docker exec "$restore" mysqladmin --host=127.0.0.1 -uroot ping --silent >/dev/null 2>&1; then ready=yes; break; fi; sleep 1; done
+ deadline=$((SECONDS+120))
+ while (( SECONDS < deadline )); do if timeout 5 docker exec "$restore" mysqladmin --host=127.0.0.1 --connect-timeout=2 -uroot ping --silent >/dev/null 2>&1; then ready=yes; break; fi; sleep 1; done
  [[ "$ready" == yes ]] || { echo 'finance_restore_not_ready'; exit 1; }
  docker exec "$restore" mysql -uroot -e 'CREATE DATABASE restore_test CHARACTER SET utf8mb4'
- gzip -dc "$backup/project-$index.sql.gz" | docker exec -i "$restore" mysql -uroot restore_test >"$backup/restore-$index.txt" 2>&1
+ gzip -dc "$backup/project-$index.sql.gz" | timeout 120 docker exec -i "$restore" mysql -uroot restore_test >"$backup/restore-$index.txt" 2>&1
  [[ "$(docker exec "$restore" mysql -uroot -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='restore_test' AND table_type='BASE TABLE'")" == "$tables" ]] || exit 1
  [[ "$(docker exec "$restore" mysql -uroot -N -e 'SELECT COUNT(*) FROM restore_test.finance_entries')" == "$entries" ]] || exit 1
  docker rm -fv "$restore" >/dev/null; restore=''
