@@ -9,13 +9,13 @@ $playerId=max(0,(int)($_GET['player_id']??0));$chargeId=max(0,(int)($_GET['charg
 $players=financeTeamPlayers($pdo);$where='1=1';$params=[];
 if($playerId){$where.=' AND c.beneficiary_player_id=?';$params[]=$playerId;}
 if($chargeId){$where.=' AND c.id=?';$params[]=$chargeId;}
-$stmt=$pdo->prepare("SELECT c.*,COALESCE((SELECT SUM(e.amount) FROM finance_team_charge_payments p JOIN finance_entries e ON e.id=p.entry_id WHERE p.charge_id=c.id AND e.status='paid'),0) AS received_amount FROM finance_team_charges c WHERE $where ORDER BY c.id DESC LIMIT 100");$stmt->execute($params);$charges=$stmt->fetchAll(PDO::FETCH_ASSOC);
+$stmt=$pdo->prepare("SELECT c.*,COALESCE((SELECT SUM(e.amount) FROM finance_team_charge_payments p JOIN finance_entries e ON e.id=p.entry_id WHERE p.charge_id=c.id AND e.status='paid'),0) AS received_amount,(SELECT i.batch_id FROM finance_team_charge_batch_items i WHERE i.charge_id=c.id) AS batch_id FROM finance_team_charges c WHERE $where ORDER BY c.id DESC LIMIT 100");$stmt->execute($params);$charges=$stmt->fetchAll(PDO::FETCH_ASSOC);
 if($chargeId&&!$charges){http_response_code(404);exit('Cobranca nao encontrada.');}
 $categories=$pdo->query("SELECT id,name FROM finance_categories WHERE status='active' AND type IN ('income','both') ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 $title='Cobrancas do elenco';ob_start();
 ?>
 <div class="c-page">
- <div class="c-page-header"><h1 class="c-page-title">Cobrancas do elenco</h1><div class="c-page-actions"><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/time_elenco.php">Caixa do time</a><?php if($chargeId): ?><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/time_cobrancas.php">Todas as cobrancas</a><?php endif; ?></div></div>
+ <div class="c-page-header"><h1 class="c-page-title">Cobrancas do elenco</h1><div class="c-page-actions"><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/time_elenco.php">Caixa do time</a><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/time_grupo.php">Cobranca em grupo / rateio</a><?php if($chargeId): ?><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/time_cobrancas.php">Todas as cobrancas</a><?php endif; ?></div></div>
  <div class="c-page-content">
  <?php if(!$chargeId): ?>
   <details class="c-card" id="teamNewCharge"><summary>Nova cobranca individual</summary>
@@ -37,6 +37,7 @@ $title='Cobrancas do elenco';ob_start();
  <?php foreach($charges as$charge): $remaining=max(0,financeTeamCents($charge['total_amount'])-financeTeamCents($charge['received_amount']));$canceled=$charge['status']==='canceled';$label=$canceled?'Cancelada':($remaining===0?'Quitada':(financeTeamCents($charge['received_amount'])>0?'Parcial':'Em aberto')); ?>
   <article class="c-card">
    <h3><?= htmlspecialchars($charge['title']) ?></h3><p>Cobranca de <strong><?= htmlspecialchars($charge['beneficiary_name']) ?></strong> · <?= $label ?> · Previsto: <?= htmlspecialchars($charge['due_date']) ?></p>
+   <?php if($charge['batch_id']): ?><p><a href="<?= PROJECT_URL ?>/admin/financeiro/time_grupo.php?batch_id=<?= (int)$charge['batch_id'] ?>">Grupo / rateio #<?= (int)$charge['batch_id'] ?></a></p><?php endif; ?>
    <div class="team-charge-values"><span>Total: <strong><?= financeMoney((float)$charge['total_amount']) ?></strong></span><span>Recebido: <strong><?= financeMoney((float)$charge['received_amount']) ?></strong></span><span><?= $canceled?'Saldo cancelado':'Restante' ?>: <strong><?= financeMoney($remaining/100) ?></strong></span></div>
    <?php if(!$chargeId): ?><a class="c-btn-secondary" href="<?= PROJECT_URL ?>/admin/financeiro/time_cobrancas.php?charge_id=<?= (int)$charge['id'] ?>">Abrir cobranca</a><?php else: ?>
     <?php if(!$canceled&&$remaining>0): ?>

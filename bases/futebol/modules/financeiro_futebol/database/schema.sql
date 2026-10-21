@@ -11,6 +11,23 @@ CREATE TABLE IF NOT EXISTS finance_team_history (
     INDEX(actor_user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS finance_team_charge_batches (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(150) NOT NULL,
+    allocation_mode ENUM('per_player','split_total') NOT NULL,
+    input_amount DECIMAL(12,2) NOT NULL,
+    total_amount DECIMAL(14,2) NOT NULL,
+    due_date DATE NOT NULL,
+    category_id INT NULL,
+    plan_json MEDIUMTEXT NOT NULL,
+    created_by_user_id INT NOT NULL,
+    request_key CHAR(64) NOT NULL,
+    request_fingerprint CHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_team_batch_request(request_key),
+    CONSTRAINT fk_team_batch_category FOREIGN KEY(category_id) REFERENCES finance_categories(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS finance_team_charges (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     beneficiary_player_id INT NOT NULL,
@@ -56,4 +73,15 @@ CREATE TABLE IF NOT EXISTS finance_team_charge_history (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX(charge_id),
     INDEX(payment_entry_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS finance_team_charge_batch_items (
+    batch_id BIGINT UNSIGNED NOT NULL,
+    charge_id BIGINT UNSIGNED NOT NULL,
+    player_id INT NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    PRIMARY KEY(batch_id,player_id),
+    UNIQUE KEY unique_team_batch_charge(charge_id),
+    CONSTRAINT fk_team_batch_item_batch FOREIGN KEY(batch_id) REFERENCES finance_team_charge_batches(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_team_batch_item_charge FOREIGN KEY(charge_id) REFERENCES finance_team_charges(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

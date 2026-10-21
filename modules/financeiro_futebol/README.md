@@ -1,4 +1,4 @@
-# Financeiro do Time — identificacao e recebimentos parciais
+# Financeiro do Time — identificacao, recebimentos e rateios
 
 Addon vinculado ao Financeiro e Jogadores, instalado inicialmente na base Futebol. Mantem um unico conjunto de movimentos de caixa em `finance_entries`; `finance_team_history` registra snapshots, responsavel, data e motivo de cancelamento. Cobrancas do elenco sao obrigacoes separadas do dinheiro recebido.
 
@@ -26,10 +26,20 @@ Addon vinculado ao Financeiro e Jogadores, instalado inicialmente na base Futebo
 - `finance_team_charges` guarda a obrigacao e snapshots; `finance_team_charge_payments` liga os movimentos reais e suas chaves de reenvio; `finance_team_charge_history` guarda a trilha. Nao ha caixa paralelo. As FKs dos recebimentos impedem exclusao fisica dos movimentos vinculados; excluir uma categoria limpa o vinculo da cobranca sem apagar a obrigacao.
 - Lancamentos manuais pendentes anteriores continuam com confirmacao integral. Nao sao convertidos em cobrancas automaticamente: para o novo fluxo parcial, usar Cobrancas do elenco. Nao criar uma segunda cobranca para representar uma pendencia ja existente sem regularizar o registro anterior.
 
+## Grupos e rateios (0.3.0)
+
+- Selecionar explicitamente de 1 a 30 jogadores, inclusive inativos identificados, para cobrar o mesmo valor por pessoa ou dividir um total. Nenhum jogador ou modo e preselecionado. Selecionar ativos e uma acao opcional do administrador.
+- Previa obrigatoria no servidor mostra nomes, valores, vencimento e total antes da criacao. No rateio, o resto dos centavos e distribuido pela ordem crescente dos IDs, a mesma ordem mostrada na previa. Nao sao criadas cobrancas de valor zero.
+- A confirmacao e assinada com chave da sessao, responsavel, chave de reenvio e distribuicao canonica. O servidor revalida e bloqueia os cadastros selecionados durante a gravacao. Mudar valor, jogadores ou dados cadastrais exige refazer a previa.
+- O grupo inteiro, as cobrancas e os historicos sao gravados numa unica transacao. Falha em qualquer jogador desfaz tudo; confirmacoes repetidas ou simultaneas nao criam um segundo grupo.
+- `finance_team_charge_batches` guarda os parametros e snapshots da previa; `finance_team_charge_batch_items` vincula cada jogador a uma cobranca individual. O mesmo gravador interno e usado na criacao individual e em grupo.
+- Criar o grupo nao registra recebimentos e nao envia mensagens aos jogadores. Cada cobranca usa o fluxo de recebimentos parciais ja existente. A visao do grupo acompanha recebido, em aberto e valores cancelados, mantendo o total originalmente gerado.
+- Categorias apenas classificam estas cobrancas; nao geram meses ou parcelas adicionais no grupo. Esta etapa nao implementa recorrencia automatica, disparos de cobranca, rateio ponderado ou cancelamento coletivo.
+
 ## Proximas etapas, nao implementadas
 
 1. Definir saldo inicial e transferencias entre caixa/conta sem inflar arrecadacao; nao registrar saldo inicial como receita manual ficticia.
-2. Cobrancas em grupo, competencia mensal, rateio e vinculo especifico com partida/treino. A geracao por categorias existente nao substitui esse fluxo esportivo.
+2. Competencia mensal, recorrencia esportiva e vinculo especifico com partida/treino. A geracao por categorias existente nao substitui esse fluxo esportivo.
 3. Conciliar creditos antecipados e utilizacao por jogador, estornos vinculados, chave Pix do time e regras herdadas de pagamentos de partidas. Nao atribuir uma segunda entrada ao consumo de um credito.
 4. Cadastro proprio de patrocinadores/instituicoes, consulta restrita do jogador e definicao comercial por plano.
 

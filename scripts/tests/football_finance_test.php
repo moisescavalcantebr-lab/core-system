@@ -28,7 +28,7 @@ try{
     copy($root.'/modules/financeiro_futebol/database/schema.sql',$fixture.'/modules/financeiro_futebol/database/schema.sql');
     foreach(['project_auth.php','csrf.php','settings.php']as$file)copy($root.'/bases/futebol/app/helpers/'.$file,$fixture.'/app/helpers/'.$file);
     $connection='$pdo=new PDO('.var_export('mysql:host='.$db['host'].';dbname='.$database.';charset=utf8mb4',true).','.var_export($db['user'],true).','.var_export($db['pass'],true).',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);';
-    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php','<?php ob_start();define("PROJECT_PATH",'.var_export($fixture,true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/finance-test/web");$_SESSION=["project_user_id"=>$actor,"_csrf"=>"test"];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";require APP_PATH."/helpers/settings.php";function flash($type,$message){echo $message;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}');
+    file_put_contents($fixture.'/app/bootstrap/project_bootstrap.php','<?php ob_start();define("PROJECT_PATH",'.var_export($fixture,true).');define("APP_PATH",PROJECT_PATH."/app");define("PROJECT_URL","/projects/finance-test/web");$_SESSION=["project_user_id"=>$actor,"_csrf"=>"test","finance_team_group_secret"=>str_repeat("9",64)];'.$connection.'require APP_PATH."/helpers/project_auth.php";require APP_PATH."/helpers/csrf.php";require APP_PATH."/helpers/settings.php";function flash($type,$message){echo $message;}function flash_show(){}function redirect($url){echo "REDIRECT:".$url;exit;}');
     $css='';foreach(['core_base.css','admin/layout.css','admin/components.css','themes/dark.css']as$file)$css.=file_get_contents($root.'/bases/futebol/web/assets/css/'.$file);
     file_put_contents($fixture.'/app/views/layout_admin.php','<?php echo "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\"><style>".'.var_export($css,true).'."body{padding:12px;background:var(--bg-body);color:var(--text-primary);font-family:Arial,sans-serif}.c-content{margin:0;max-width:1100px}</style></head><body><main class=c-content>".$content."</main></body></html>";');
     file_put_contents($fixture.'/project.json',json_encode(['plan_name'=>'Plano Gratis','billing_cycle'=>'free']));
@@ -162,12 +162,59 @@ try{
     ffCheck((bool)preg_match('~<span>Pendencias liquidas</span>\s*<strong[^>]*>R\$ 240,00</strong>~',$financeIndex),'Resumo nao inclui o saldo restante das cobrancas');
     file_put_contents($fixture.'/web/admin/financeiro/dashboard_probe.php','<?php require __DIR__."/../../../app/bootstrap/project_bootstrap.php"; $panel=require '.var_export($root.'/modules/financeiro/dashboard.php',true).'; echo $panel["html"];');
     ffCheck(str_contains(ffRoute('dashboard_probe.php'),'Pendencias: R$ 240,00'),'Painel financeiro nao inclui cobrancas');
+    // Explicit group preview, exact allocation and all-or-nothing creation.
+    $pdo->exec("INSERT INTO players(id,name,status) VALUES(3,'Terceiro jogador','active')");
+    $groupInput=['_csrf'=>'test','action'=>'preview','player_ids'=>[3,1,2],'allocation_mode'=>'split_total','amount'=>'100.00','title'=>'Rateio <Campo>','due_date'=>'2026-10-25','request_key'=>hash('sha256','first group')];
+    $batchCount=fn()=>(int)$pdo->query('SELECT COUNT(*) FROM finance_team_charge_batches')->fetchColumn();
+    $groupConfirm=function(array $input):array{$page=ffRoute('time_grupo.php',$input);ffCheck((bool)preg_match('/name="preview_signature" value="([a-f0-9]{64})"/',$page,$m),'Previa assinada ausente');return [...$input,'action'=>'group_create','preview_signature'=>$m[1]];};
+    $groupBeforeCash=$count();$groupBeforeCharges=$chargeCount();
+    ffCheck(str_contains(ffRoute('time_grupo.php',$groupInput,[],992),'Acesso negado'),'Cliente acessou criacao em grupo');
+    ffCheck(str_contains(ffRoute('time_grupo.php',[...$groupInput,'_csrf'=>'wrong']),'CSRF'),'Previa sem CSRF');
+    foreach([[],[1,1],[1,999],range(1,31)]as$invalid){ffRoute('time_grupo.php',[...$groupInput,'player_ids'=>$invalid]);}
+    ffRoute('time_grupo.php',[...$groupInput,'amount'=>'0.02']);
+    ffCheck($batchCount()===0&&$chargeCount()===$groupBeforeCharges&&$count()===$groupBeforeCash,'Previa invalida gravou dados');
+    $groupPreview=ffRoute('time_grupo.php',$groupInput);$confirm=$groupConfirm($groupInput);
+    ffCheck(str_contains($groupPreview,'33,34')&&str_contains($groupPreview,'33,33')&&str_contains($groupPreview,'Rateio &lt;Campo&gt;'),'Rateio ou escape da previa incorreto');
+    ffCheck($chargeCount()===$groupBeforeCharges,'Previa gerou cobrancas antes da confirmacao');
+    ffRoute('time_charge_action.php',[...$confirm,'amount'=>'120.00']);ffRoute('time_charge_action.php',[...$confirm,'player_ids'=>[1,2]]);ffRoute('time_charge_action.php',[...$confirm,'preview_signature'=>str_repeat('0',64)]);
+    ffCheck($batchCount()===0,'Confirmacao adulterada criou grupo');
+    $pdo->exec("UPDATE players SET name='Nome alterado apos previa' WHERE id=3");ffRoute('time_charge_action.php',$confirm);ffCheck($batchCount()===0,'Mudanca de jogador nao invalidou previa');$pdo->exec("UPDATE players SET name='Terceiro jogador' WHERE id=3");
+    ffRoute('time_charge_action.php',$confirm);$batchId=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charge_batches')->fetchColumn();
+    ffCheck($batchCount()===1&&$chargeCount()===$groupBeforeCharges+3&&$count()===$groupBeforeCash,'Grupo nao criou apenas obrigacoes');
+    $groupRows=$pdo->query('SELECT player_id,amount,charge_id FROM finance_team_charge_batch_items WHERE batch_id='.$batchId.' ORDER BY player_id')->fetchAll(PDO::FETCH_ASSOC);
+    ffCheck(array_column($groupRows,'amount')===['33.34','33.33','33.33'],'Rateio nao fecha em centavos');
+    ffCheck($pdo->query('SELECT SUM(amount) FROM finance_team_charge_batch_items WHERE batch_id='.$batchId)->fetchColumn()==='100.00','Total do rateio alterado');
+    ffRoute('time_charge_action.php',$confirm);ffCheck($batchCount()===1&&$chargeCount()===$groupBeforeCharges+3,'Reenvio duplicou grupo');
+    $changedConfirm=$groupConfirm([...$groupInput,'amount'=>'200.00']);ffRoute('time_charge_action.php',$changedConfirm);ffCheck($batchCount()===1,'Mesma chave criou novo grupo com valor alterado');
+    $perPlayer=[...$groupInput,'title'=>'Contribuicao por jogador','allocation_mode'=>'per_player','amount'=>'7.00','request_key'=>hash('sha256','per person')];
+    ffRoute('time_charge_action.php',$groupConfirm($perPlayer));$perBatch=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charge_batches')->fetchColumn();ffCheck($pdo->query('SELECT SUM(amount) FROM finance_team_charge_batch_items WHERE batch_id='.$perBatch)->fetchColumn()==='21.00','Valor por jogador calculado como total');
+    $paidGroupChild=(int)$groupRows[1]['charge_id'];
+    ffRoute('time_charge_action.php',[...$payInput,'charge_id'=>$paidGroupChild,'amount'=>'10.00','team_party_kind'=>'player','team_player_id'=>3,'request_key'=>hash('sha256','group receipt')]);
+    ffCheck($receiptTotal()==='80.03'&&$chargeSnapshot($paidGroupChild)['received']==='10.00','Recebimento em grupo duplicou caixa');
+    $groupResult=ffRoute('time_grupo.php',[],['batch_id'=>$batchId]);ffCheck(str_contains($groupResult,'90,00')&&str_contains($groupResult,'10,00'),'Grupo nao acompanha restante dos recebimentos');
+    file_put_contents($root.'/_deploy/football-finance-group-preview.html',$groupPreview);file_put_contents($root.'/_deploy/football-finance-group-result-preview.html',$groupResult);
+    $unpaidGroupChild=(int)$groupRows[0]['charge_id'];ffRoute('time_charge_action.php',['_csrf'=>'test','action'=>'cancel','charge_id'=>$unpaidGroupChild,'reason'=>'Jogador dispensado desta cobranca']);
+    $canceledGroup=ffRoute('time_grupo.php',[],['batch_id'=>$batchId]);ffCheck(str_contains($canceledGroup,'Cobrancas canceladas')&&str_contains($canceledGroup,'56,66'),'Grupo manteve cobranca cancelada nas pendencias');
+    ffRoute('time_charge_action.php',$confirm);ffCheck($chargeSnapshot($unpaidGroupChild)['status']==='canceled','Reenvio de grupo reativou cobranca cancelada');
+    $beforeFailedBatches=$batchCount();$beforeFailedCharges=$chargeCount();
+    $atomic=[...$groupInput,'request_key'=>hash('sha256','atomic batch'),'title'=>'Grupo atomico'];$atomicConfirm=$groupConfirm($atomic);
+    $pdo->exec('CREATE TRIGGER fail_second_batch_item BEFORE INSERT ON finance_team_charge_batch_items FOR EACH ROW SET NEW.amount=IF(NEW.player_id=2,NULL,NEW.amount)');
+    ffRoute('time_charge_action.php',$atomicConfirm);ffCheck($batchCount()===$beforeFailedBatches&&$chargeCount()===$beforeFailedCharges,'Falha no segundo jogador deixou grupo parcial');$pdo->exec('DROP TRIGGER fail_second_batch_item');
+    $parallel=$groupConfirm([...$groupInput,'request_key'=>hash('sha256','parallel batch'),'title'=>'Grupo concorrente']);$requests=[];
+    foreach([1,2]as$ignored){$code='$actor=991;$_POST='.var_export($parallel,true).';$_GET=[];$_FILES=[];$_SERVER["REQUEST_METHOD"]="POST";usleep(100000);require '.var_export($fixture.'/web/admin/financeiro/time_charge_action.php',true).';';$process=proc_open([PHP_BINARY,'-r',$code],[1=>['pipe','w'],2=>['pipe','w']],$pipes);$requests[]=[$process,$pipes];}
+    foreach($requests as[$process,$pipes]){$out=stream_get_contents($pipes[1]);$error=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);ffCheck(proc_close($process)===0&&$error===''&&str_contains($out,'REDIRECT:'),'Falha de confirmacao concorrente');}
+    ffCheck($batchCount()===$beforeFailedBatches+1&&$chargeCount()===$beforeFailedCharges+3,'Confirmacoes simultaneas duplicaram grupo');
+    for($player=4;$player<=30;$player++)$pdo->prepare("INSERT INTO players(id,name,status) VALUES(?,?,'active')")->execute([$player,'Jogador '.$player]);
+    $thirty=[...$groupInput,'player_ids'=>range(1,30),'allocation_mode'=>'per_player','amount'=>'0.01','title'=>'Trinta jogadores','request_key'=>hash('sha256','thirty players')];
+    ffRoute('time_charge_action.php',$groupConfirm($thirty));$thirtyBatch=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charge_batches')->fetchColumn();ffCheck((int)$pdo->query('SELECT COUNT(*) FROM finance_team_charge_batch_items WHERE batch_id='.$thirtyBatch)->fetchColumn()===30,'Grupo de trinta perdeu jogadores');
+    ffCheck($pdo->query('SELECT total_amount FROM finance_team_charge_batches WHERE id='.$thirtyBatch)->fetchColumn()==='0.30','Total de trinta jogadores incorreto');
+    file_put_contents($root.'/_deploy/football-finance-group-form-preview.html',ffRoute('time_grupo.php'));
     $beforeDisabled=$count();
     rename($fixture.'/modules/financeiro_futebol/module.json',$fixture.'/modules/financeiro_futebol/module.disabled');
     ffCheck(!str_contains(ffRoute('create.php'),'team_party_kind'),'Outro projeto recebeu regras esportivas');
     ffRoute('store.php',['_csrf'=>'test','type'=>'income','title'=>'Entrada pessoal','amount'=>'5','status'=>'pending']);
     ffCheck($count()===$beforeDisabled+1,'Financeiro sem addon mudou comportamento');
-    echo "PASS: regras e legado preservados; cobranca sem movimentar caixa, parcial/quitacao, pagador diferente do beneficiario, reenvios idempotentes, limite de saldo, cancelamento/reabertura e centavos exatos; rollback atomico.\n";
+    echo "PASS: regras e legado; recebimentos parciais, caixa e concorrencia; grupos/rateios com previa assinada, trinta jogadores, centavos exatos, confirmacao idempotente e rollback do grupo inteiro.\n";
 }finally{
     if(!preg_match('/^test_football_finance_[a-f0-9]{10}$/D',$database))throw new RuntimeException('Banco de teste invalido');
     $server->exec('DROP DATABASE `'.$database.'`');

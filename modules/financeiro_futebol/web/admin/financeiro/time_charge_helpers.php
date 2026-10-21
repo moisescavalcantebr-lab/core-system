@@ -51,16 +51,24 @@ function financeTeamChargeCreate(PDO $pdo,array $input,int $actor): int
         $stmt=$pdo->prepare("SELECT id FROM finance_categories WHERE id=? AND status='active' AND type IN ('income','both')");$stmt->execute([(int)$input['category_id']]);$categoryId=$stmt->fetchColumn();
         if(!$categoryId)throw new DomainException('Selecione uma categoria de entrada valida.');
     }
-    $fingerprint=hash('sha256',json_encode([$actor,$party,$title,$cents,$categoryId?:null,$input['due_date']],JSON_THROW_ON_ERROR));
     $pdo->beginTransaction();
     try{
-        $pdo->prepare('INSERT INTO finance_team_charges(beneficiary_player_id,beneficiary_name,title,total_amount,category_id,due_date,created_by_user_id,creation_key,creation_fingerprint) VALUES(?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)')->execute([$party['party_id'],$party['party_name'],$title,financeTeamDecimal($cents),$categoryId?:null,$input['due_date'],$actor,$key,$fingerprint]);
-        $id=(int)$pdo->lastInsertId();$charge=financeTeamChargeSnapshot($pdo,$id);
-        if(!hash_equals($charge['creation_fingerprint'],$fingerprint))throw new DomainException('Este envio ja foi utilizado. Reabra o formulario para outra cobranca.');
-        $history=$pdo->prepare("SELECT 1 FROM finance_team_charge_history WHERE charge_id=? AND action='created' LIMIT 1");$history->execute([$id]);
-        if(!$history->fetchColumn())financeTeamChargeAudit($pdo,$id,'created',$actor);
+        $id=financeTeamChargeWrite($pdo,$party,$title,$cents,$categoryId?(int)$categoryId:null,$input['due_date'],$actor,$key);
         $pdo->commit();return $id;
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
+}
+
+/** Internal writer shared by individual and atomic group creation. */
+function financeTeamChargeWrite(PDO $pdo,array $party,string $title,int $cents,?int $categoryId,string $dueDate,int $actor,string $key): int
+{
+    if(!$pdo->inTransaction()||$actor<=0||$cents<=0)throw new LogicException('Cobranca exige transacao, valor e responsavel.');
+    $fingerprint=hash('sha256',json_encode([$actor,$party,$title,$cents,$categoryId,$dueDate],JSON_THROW_ON_ERROR));
+    $pdo->prepare('INSERT INTO finance_team_charges(beneficiary_player_id,beneficiary_name,title,total_amount,category_id,due_date,created_by_user_id,creation_key,creation_fingerprint) VALUES(?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)')->execute([$party['party_id'],$party['party_name'],$title,financeTeamDecimal($cents),$categoryId,$dueDate,$actor,$key,$fingerprint]);
+    $id=(int)$pdo->lastInsertId();$charge=financeTeamChargeSnapshot($pdo,$id);
+    if(!hash_equals($charge['creation_fingerprint'],$fingerprint))throw new DomainException('Este envio ja foi utilizado. Reabra o formulario para outra cobranca.');
+    $history=$pdo->prepare("SELECT 1 FROM finance_team_charge_history WHERE charge_id=? AND action='created' LIMIT 1");$history->execute([$id]);
+    if(!$history->fetchColumn())financeTeamChargeAudit($pdo,$id,'created',$actor);
+    return $id;
 }
 
 function financeTeamChargePay(PDO $pdo,int $chargeId,array $input,int $actor,?string $receipt=null): int

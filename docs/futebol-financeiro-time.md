@@ -4,6 +4,8 @@ Primeira etapa implementada localmente em 20/10/2026, com addon `financeiro_fute
 
 Segunda etapa local, versao 0.2.0: cobrancas individuais, recebimentos parciais, pagador separado do beneficiario e cancelamento de recebimento reabrindo a obrigacao. Somente os recebimentos entram no caixa. Registros e configuracoes reais nao foram migrados.
 
+Terceira etapa local, versao 0.3.0: criacao atomica de cobrancas em grupo, valor por pessoa ou rateio de total em centavos, com selecao explicita de ate trinta jogadores e previa obrigatoria. Confirmacao vinculada a sessao e idempotencia impedem adulteracao da distribuicao e duplicacao em reenvios. Cada jogador recebe uma obrigacao individual no banco, sem envio de mensagens ou entrada de dinheiro.
+
 ## Integracao
 
 O Financeiro geral expoe hooks opcionais de validacao e historico, ativados somente pela presenca do manifesto instalado e das rotas do addon. As copias do Financeiro nas bases Futebol e Financeiro ficam alinhadas ao catalogo; somente Futebol recebe o addon. Configuracoes de planos, cadastros existentes e valores financeiros nao sao alterados.
@@ -22,4 +24,6 @@ Dados antigos nao sao marcados retroativamente como identificados. Telas gerais 
 
 Na segunda etapa, os testes cobrem cobranca de R$ 100 recebida em R$ 30 e R$ 70, pagador externo ou outro jogador, reenvios identicos/alterados, cancelamento reabrindo saldo, limites, somas exatas de centavos e falha induzida no historico sem gravacao parcial. Duas requisicoes concorrentes de R$ 70 para uma cobranca de R$ 100 resultam em apenas um recebimento. Os totais visiveis do caixa e dashboard sao conferidos para impedir duplicar cobranca como receita. A interface de criacao e recebimento e conferida em 1280 e 390 pixels, com selecoes explicitas e limite do restante.
 
-Previews sinteticos em `_deploy/football-finance-*.html` e `_deploy/football-finance-form-*.png`. Nenhuma sincronizacao ou publicacao de producao executada nesta etapa.
+Na terceira etapa, a suite cobre R$ 100/3 distribuido como 33,34 + 33,33 + 33,33; valor por pessoa; selecao vazia, duplicada, inexistente ou acima do limite; alteracao de valores, jogadores e cadastro entre previa e confirmacao; reenvio e duas confirmacoes simultaneas; falha no segundo item sem grupo parcial; trinta cobrancas de um centavo; caixa inalterado na criacao e recebimento posterior vinculado ao grupo. A interface confere os trinta checkboxes, selecao opcional de ativos, limpeza, modos de calculo, confirmacao e resultado em 1280 e 390 pixels.
+
+Previews sinteticos em `_deploy/football-finance-*.html` e `_deploy/football-finance-*.png`. Nenhuma sincronizacao ou publicacao de producao executada nesta etapa.

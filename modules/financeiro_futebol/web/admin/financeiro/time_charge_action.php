@@ -8,7 +8,10 @@ if($_SERVER['REQUEST_METHOD']!=='POST'){http_response_code(405);exit;}
 csrf_verify();financeEnsureEntryMetaSchema($pdo);financeEnsureCategoryAddonSchema($pdo);
 $actor=(int)projectUser()['id'];$action=(string)($_POST['action']??'');$id=(int)($_POST['charge_id']??0);
 try{
-    if($action==='create')$id=financeTeamChargeCreate($pdo,$_POST,$actor);
+    if($action==='group_create'){
+        $batchId=financeTeamGroupCreate($pdo,$_POST,$actor,(string)($_SESSION['finance_team_group_secret']??''));
+        redirect(PROJECT_URL.'/admin/financeiro/time_grupo.php?batch_id='.$batchId);exit;
+    }elseif($action==='create')$id=financeTeamChargeCreate($pdo,$_POST,$actor);
     elseif($action==='pay'){
         financeTeamChargeSnapshot($pdo,$id);
         financeTeamParty($pdo,$_POST);
