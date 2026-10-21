@@ -4,6 +4,8 @@ umask 077
 [[ "${1:-}" =~ ^[a-f0-9]{64}$ ]] || exit 1
 [[ "${2:-}" =~ ^[0-9]+$ && "$2" -le 104857600 ]] || exit 1
 root=/opt/workspace; private=/opt/private-futebol
+total_memory=$(awk '/MemTotal:/ {print $2}' /proc/meminfo)
+[[ "$total_memory" -ge 1800000 ]] || { echo 'finance_requires_2gb_upgrade'; exit 1; }
 available=$(awk '/MemAvailable:/ {print $2}' /proc/meminfo)
 [[ "$available" -ge 131072 ]] || { echo 'finance_server_memory_insufficient'; exit 1; }
 install -d -m 0700 "$private"

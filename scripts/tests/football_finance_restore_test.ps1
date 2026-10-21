@@ -25,5 +25,9 @@ $taskBadHash=(Get-FileHash -LiteralPath $taskBadBundle -Algorithm SHA256).Hash.T
 try{Invoke-FinanceLocalRestore -Bundle $taskBadBundle -ExpectedHash $taskBadHash -Image $taskDigest}catch{$taskFailed=$true}
 if(!$taskFailed){throw 'Unexpected backup entry accepted'}
 $taskShell=[IO.File]::ReadAllText((Join-Path $taskRoot 'scripts/futebol-financeiro-publicar.sh'))
-if($taskShell.Contains('docker run -d') -or !$taskShell.Contains('RESTORE_OK $bundle_hash') -or !$taskShell.Contains('head -c "$2"')){throw 'Remote restoration safety invariant failed'}
+if($taskShell.Contains('docker run -d') -or !$taskShell.Contains('RESTORE_OK $bundle_hash') -or !$taskShell.Contains('head -c "$2"') -or !$taskShell.Contains('finance_requires_2gb_upgrade')){throw 'Remote restoration safety invariant failed'}
+$taskProbe='awk(){ case "$1" in *MemTotal*) echo 984556;; *) echo 500000;; esac; }; export -f awk; bash /var/www/html/scripts/futebol-financeiro-publicar.sh '+('0'*64)+' 1'
+$taskOldPreference=$ErrorActionPreference;$ErrorActionPreference='Continue'
+try{$taskProbeOutput=& $taskDocker exec app_php bash -c $taskProbe 2>&1;$taskProbeCode=$LASTEXITCODE}finally{$ErrorActionPreference=$taskOldPreference}
+if($taskProbeCode -eq 0 -or ($taskProbeOutput -join "`n").Trim() -ne 'finance_requires_2gb_upgrade'){throw '1 GB production guard did not stop before publication'}
 Write-Output 'PASS: backup hash, isolated local MySQL restoration, counts, archive allowlist and no second database on production.'
