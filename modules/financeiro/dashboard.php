@@ -36,6 +36,7 @@ $row = $pdo->query("
 $summary['income'] = (float)($row['income_total'] ?? 0);
 $summary['expense'] = (float)($row['expense_total'] ?? 0);
 $summary['pending_income'] = (float)($row['pending_income_total'] ?? 0);
+if(financeTeamEnabled()){financeTeamEnsureSchema($pdo);$summary['pending_income']+=(float)financeTeamOutstanding($pdo);}
 $summary['pending_expense'] = (float)($row['pending_expense_total'] ?? 0);
 
 $balance = $summary['income'] - $summary['expense'];

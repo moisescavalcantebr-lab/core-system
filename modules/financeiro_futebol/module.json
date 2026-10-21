@@ -2,7 +2,7 @@
   "name": "financeiro_futebol",
   "label": "Financeiro do Time",
   "description": "Identificacao das movimentacoes do time e historico financeiro por jogador.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "project",
   "kind": "addon",
   "attach_to": ["financeiro", "jogadores"],
@@ -13,6 +13,6 @@
   "recommended_bases": ["futebol"],
   "tags": ["caixa", "elenco", "financeiro"],
   "menu": {"section": "Gestao", "label": "Financeiro do Time", "url": "/admin/financeiro/time_elenco.php", "key": "financeiro_futebol", "order": 53},
-  "database": {"schema": "database/schema.sql", "tables": ["finance_team_history"]},
+  "database": {"schema": "database/schema.sql", "tables": ["finance_team_history", "finance_team_charges", "finance_team_charge_payments", "finance_team_charge_history"]},
   "copy": [{"from": "web/admin/financeiro", "to": "web/admin/financeiro"}]
 }

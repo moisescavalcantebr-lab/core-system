@@ -21,8 +21,26 @@ const root=path.resolve(__dirname,'../..');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
    assert.deepEqual(errors,[]);await page.screenshot({path:path.join(root,`_deploy/football-finance-form-${width}.png`),fullPage:true});
    await page.setContent(fs.readFileSync(path.join(root,'_deploy/football-finance-history-preview.html'),'utf8'));
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await page.close();
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+   await page.setContent(fs.readFileSync(path.join(root,'_deploy/football-finance-charges-preview.html'),'utf8'));
+   await page.locator('#teamNewCharge summary').click();
+   assert.equal(await page.locator('[name=beneficiary_player_id]').inputValue(),'');
+   assert(await page.locator('[name=beneficiary_player_id]').evaluate(e=>e.required));
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
+   await page.setContent(fs.readFileSync(path.join(root,'_deploy/football-finance-charge-detail-preview.html'),'utf8'));
+   assert.equal(await page.locator('#chargePartyKind').inputValue(),'');
+   assert.equal(await page.locator('#teamChargePayment [name=amount]').getAttribute('max'),'70.00');
+   await page.locator('#teamChargePayment [name=amount]').fill('70.01');
+   assert(await page.locator('#teamChargePayment [name=amount]').evaluate(e=>e.validity.rangeOverflow));
+   await page.locator('#teamChargePayment [name=amount]').fill('30.00');
+   await page.locator('#chargePartyKind').selectOption('player');
+   assert.equal(await page.locator('#chargePayer').inputValue(),'');assert(await page.locator('#chargePayer').evaluate(e=>e.required));
+   await page.locator('#chargePartyKind').selectOption('external');assert.equal(await page.locator('#chargePayer').isEnabled(),false);
+   assert(await page.locator('#chargeExternalPayer').evaluate(e=>e.required));
+   assert.equal(await page.locator('#teamChargePayment [name=request_key]').inputValue().then(key=>/^[a-f0-9]{64}$/.test(key)),true);
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert.deepEqual(errors,[]);
+   await page.screenshot({path:path.join(root,`_deploy/football-finance-charge-${width}.png`),fullPage:true});await page.close();
   }
-  console.log('PASS: formulario sem selecao implicita, jogador/identificacao externa, datas obrigatorias e tela adaptada a desktop/celular.');
+  console.log('PASS: formularios sem selecao implicita, cobranca/recebimento, pagador distinto, limite do saldo, datas e telas desktop/celular.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exit(1);});

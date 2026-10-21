@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/time_charge_helpers.php';
 
 function financeTeamEnsureSchema(PDO $pdo): void
 {

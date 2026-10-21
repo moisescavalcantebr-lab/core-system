@@ -95,11 +95,79 @@ try{
     $pendingId=(int)$pdo->query("SELECT id FROM finance_entries WHERE status='pending' ORDER BY id DESC LIMIT 1")->fetchColumn();$beforePending=$entry($pendingId);
     ffRoute('update.php',[...$input,'status'=>'paid','paid_at'=>'2026-10-20'],['id'=>$pendingId]);ffCheck($entry($pendingId)===$beforePending,'Falha de historico confirmou pagamento parcial');
     $pdo->exec('DROP TRIGGER deny_team_audit');
+    // Charges are obligations; only their individual receipts enter the cash ledger.
+    $chargeInput=['_csrf'=>'test','action'=>'create','beneficiary_player_id'=>2,'title'=>'Cobranca parcial teste','amount'=>'100.00','due_date'=>'2026-10-25','request_key'=>str_repeat('c',64)];
+    $chargeCount=fn()=>(int)$pdo->query('SELECT COUNT(*) FROM finance_team_charges')->fetchColumn();
+    $chargeSnapshot=function(int $chargeId)use($pdo):array{$s=$pdo->prepare("SELECT c.*,COALESCE((SELECT SUM(e.amount) FROM finance_team_charge_payments p JOIN finance_entries e ON e.id=p.entry_id WHERE p.charge_id=c.id AND e.status='paid'),0) AS received FROM finance_team_charges c WHERE c.id=?");$s->execute([$chargeId]);return $s->fetch(PDO::FETCH_ASSOC);};
+    $receiptTotal=fn()=>(string)$pdo->query("SELECT COALESCE(SUM(amount),0) FROM finance_entries WHERE source='team_payment' AND status='paid'")->fetchColumn();
+    ffCheck(str_contains(ffRoute('time_charge_action.php',$chargeInput,[],992),'Acesso negado'),'Cliente criou cobranca');
+    ffCheck(str_contains(ffRoute('time_charge_action.php',[...$chargeInput,'_csrf'=>'wrong']),'CSRF'),'Cobranca sem CSRF');
+    ffRoute('time_charge_action.php',[...$chargeInput,'beneficiary_player_id'=>999]);ffCheck($chargeCount()===0,'Cobranca para jogador inexistente');
+    $beforeChargeEntries=$count();ffRoute('time_charge_action.php',$chargeInput);
+    $chargeId=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charges')->fetchColumn();
+    ffCheck($chargeCount()===1&&$count()===$beforeChargeEntries,'Criar cobranca movimentou caixa');
+    ffRoute('time_charge_action.php',$chargeInput);ffCheck($chargeCount()===1,'Reenvio criou cobranca duplicada');
+    ffRoute('time_charge_action.php',[...$chargeInput,'amount'=>'200.00']);ffCheck($chargeSnapshot($chargeId)['total_amount']==='100.00','Reenvio alterado reescreveu cobranca');
+    $payInput=['_csrf'=>'test','action'=>'pay','charge_id'=>$chargeId,'amount'=>'30.00','paid_at'=>'2026-10-20','team_party_kind'=>'external','team_party_name'=>'Mae <Teste>','request_key'=>str_repeat('a',64)];
+    ffRoute('time_charge_action.php',[...$payInput,'team_party_kind'=>'']);ffCheck($count()===$beforeChargeEntries,'Recebimento anonimo aceito');
+    ffRoute('time_charge_action.php',$payInput,[],992);ffCheck($count()===$beforeChargeEntries,'Cliente recebeu dinheiro');
+    ffRoute('time_charge_action.php',$payInput);
+    $firstPayment=(int)$pdo->query('SELECT MAX(id) FROM finance_entries')->fetchColumn();
+    ffCheck($entry($firstPayment)['party_name']==='Mae <Teste>'&&$entry($firstPayment)['party_id']===null,'Pagador substituido pelo beneficiario');
+    ffCheck($chargeSnapshot($chargeId)['received']==='30.00'&&$receiptTotal()==='30.00','Parcial inflou caixa');
+    ffCheck((int)$chargeSnapshot($chargeId)['beneficiary_player_id']===2,'Beneficiario alterado pelo pagamento');
+    $partialPage=ffRoute('time_cobrancas.php',[],['charge_id'=>$chargeId]);
+    ffCheck(str_contains($partialPage,'Parcial')&&str_contains($partialPage,'70,00')&&str_contains($partialPage,'Mae &lt;Teste&gt;'),'Tela nao mostra saldo parcial e pagador');
+    file_put_contents($root.'/_deploy/football-finance-charge-detail-preview.html',$partialPage);
+    file_put_contents($root.'/_deploy/football-finance-charges-preview.html',ffRoute('time_cobrancas.php'));
+    $beforeRetry=$count();ffRoute('time_charge_action.php',$payInput);ffCheck($count()===$beforeRetry&&$receiptTotal()==='30.00','Reenvio duplicou dinheiro');
+    ffRoute('time_charge_action.php',[...$payInput,'amount'=>'40.00']);ffCheck($count()===$beforeRetry,'Mesmo envio alterado criou pagamento');
+    ffRoute('time_charge_action.php',[...$payInput,'amount'=>'70.01','request_key'=>str_repeat('d',64)]);ffCheck($count()===$beforeRetry,'Recebeu mais que o saldo');
+    $secondPay=[...$payInput,'amount'=>'70.00','team_party_kind'=>'player','team_player_id'=>1,'request_key'=>str_repeat('b',64)];
+    ffRoute('time_charge_action.php',$secondPay);$secondPayment=(int)$pdo->query('SELECT MAX(id) FROM finance_entries')->fetchColumn();
+    ffCheck($receiptTotal()==='100.00'&&$chargeSnapshot($chargeId)['received']==='100.00','Quitacao duplicou valor total');
+    ffCheck((int)$entry($secondPayment)['party_id']===1,'Jogador pagador confundido com beneficiario');
+    ffCheck(str_contains(ffRoute('time_cobrancas.php',[],['charge_id'=>$chargeId]),'Quitada'),'Cobranca nao quitada');
+    $beneficiaryView=ffRoute('time_elenco.php',[],['player_id'=>2]);
+    ffCheck(str_contains($beneficiaryView,'Mae &lt;Teste&gt;')&&str_contains($beneficiaryView,'Jogador renomeado'),'Historico do beneficiario perdeu pagadores');
+    ffRoute('time_charge_action.php',[...$payInput,'amount'=>'0.01','request_key'=>str_repeat('e',64)]);ffCheck($receiptTotal()==='100.00','Quitada recebeu novamente');
+    ffRoute('time_charge_action.php',['_csrf'=>'test','action'=>'cancel','charge_id'=>$chargeId,'reason'=>'Teste']);ffCheck($chargeSnapshot($chargeId)['status']==='open','Cancelou cobranca com recebimentos ativos');
+    ffRoute('time_cancel.php',['_csrf'=>'test','id'=>$firstPayment,'reason'=>'Recebimento duplicado']);
+    ffCheck($receiptTotal()==='70.00'&&$chargeSnapshot($chargeId)['received']==='70.00','Cancelar recebimento nao reabriu pendencia');
+    ffCheck(str_contains(ffRoute('time_cobrancas.php',[],['charge_id'=>$chargeId]),'Recebimento cancelado'),'Cancelamento sem trilha na cobranca');
+    ffRoute('time_cancel.php',['_csrf'=>'test','id'=>$secondPayment,'reason'=>'Correcao do teste']);ffCheck($receiptTotal()==='0.00','Cancelamento nao ajustou caixa');
+    ffRoute('time_charge_action.php',$payInput);ffCheck($receiptTotal()==='0.00','Reenvio ressuscitou recebimento cancelado');
+    ffRoute('time_charge_action.php',['_csrf'=>'test','action'=>'cancel','charge_id'=>$chargeId,'reason'=>'Cobranca indevida']);ffCheck($chargeSnapshot($chargeId)['status']==='canceled','Cancelamento da cobranca falhou');
+    ffRoute('time_charge_action.php',[...$payInput,'request_key'=>str_repeat('f',64)]);ffCheck($receiptTotal()==='0.00','Cobranca cancelada recebeu pagamento');
+    ffRoute('time_charge_action.php',[...$chargeInput,'amount'=>'0.03','title'=>'Centavos','request_key'=>str_repeat('1',64)]);$centCharge=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charges')->fetchColumn();
+    foreach(['0.01','0.02']as$i=>$cent){ffRoute('time_charge_action.php',[...$payInput,'charge_id'=>$centCharge,'amount'=>$cent,'request_key'=>str_repeat((string)($i+2),64)]);}
+    ffCheck($receiptTotal()==='0.03'&&$chargeSnapshot($centCharge)['received']==='0.03','Erro de arredondamento em centavos');
+    ffRoute('time_charge_action.php',[...$chargeInput,'amount'=>'10.00','title'=>'Rollback de recebimento','request_key'=>str_repeat('4',64)]);$failCharge=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charges')->fetchColumn();
+    $beforeFail=$count();$pdo->exec("CREATE TRIGGER deny_charge_audit BEFORE INSERT ON finance_team_charge_history FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='test charge rollback'");
+    ffRoute('time_charge_action.php',[...$payInput,'charge_id'=>$failCharge,'amount'=>'5.00','request_key'=>str_repeat('5',64)]);
+    ffCheck($count()===$beforeFail&&$chargeSnapshot($failCharge)['received']==='0.00','Falha no historico deixou recebimento parcial');$pdo->exec('DROP TRIGGER deny_charge_audit');
+    // Concurrent requests cannot both consume the same outstanding balance.
+    ffRoute('time_charge_action.php',[...$chargeInput,'amount'=>'100.00','title'=>'Concorrencia','request_key'=>str_repeat('6',64)]);$concurrentCharge=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charges')->fetchColumn();
+    $requests=[];
+    foreach(['7','8']as$key){
+        $post=[...$payInput,'charge_id'=>$concurrentCharge,'amount'=>'70.00','request_key'=>str_repeat($key,64)];
+        $code='$actor=991;$_POST='.var_export($post,true).';$_GET=[];$_FILES=[];$_SERVER["REQUEST_METHOD"]="POST";usleep(100000);require '.var_export($fixture.'/web/admin/financeiro/time_charge_action.php',true).';';
+        $process=proc_open([PHP_BINARY,'-r',$code],[1=>['pipe','w'],2=>['pipe','w']],$pipes);$requests[]=[$process,$pipes];
+    }
+    foreach($requests as[$process,$pipes]){$output=stream_get_contents($pipes[1]);$error=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);ffCheck(proc_close($process)===0&&$error==='','Falha em requisicao concorrente');}
+    ffCheck($chargeSnapshot($concurrentCharge)['received']==='70.00','Recebimentos concorrentes ultrapassaram saldo');
+    $mapping=$pdo->prepare('SELECT COUNT(*) FROM finance_team_charge_payments WHERE charge_id=?');$mapping->execute([$concurrentCharge]);ffCheck((int)$mapping->fetchColumn()===1,'Concorrencia deixou registro duplicado');
+    $financeIndex=ffRoute('index.php');
+    ffCheck((bool)preg_match('~<p>Saldo atual</p>\s*<strong>R\$ 32,03</strong>~',$financeIndex),'Resumo do caixa contou cobrancas como dinheiro recebido');
+    ffCheck((bool)preg_match('~<span>Pendencias liquidas</span>\s*<strong[^>]*>R\$ 240,00</strong>~',$financeIndex),'Resumo nao inclui o saldo restante das cobrancas');
+    file_put_contents($fixture.'/web/admin/financeiro/dashboard_probe.php','<?php require __DIR__."/../../../app/bootstrap/project_bootstrap.php"; $panel=require '.var_export($root.'/modules/financeiro/dashboard.php',true).'; echo $panel["html"];');
+    ffCheck(str_contains(ffRoute('dashboard_probe.php'),'Pendencias: R$ 240,00'),'Painel financeiro nao inclui cobrancas');
+    $beforeDisabled=$count();
     rename($fixture.'/modules/financeiro_futebol/module.json',$fixture.'/modules/financeiro_futebol/module.disabled');
     ffCheck(!str_contains(ffRoute('create.php'),'team_party_kind'),'Outro projeto recebeu regras esportivas');
     ffRoute('store.php',['_csrf'=>'test','type'=>'income','title'=>'Entrada pessoal','amount'=>'5','status'=>'pending']);
-    ffCheck($count()===$beforeCount+1,'Financeiro sem addon mudou comportamento');
-    echo "PASS: identificacao, jogadores sem login, datas, CSRF/perfis, pendente/confirmado, snapshots, bloqueio de edicao/exclusao, cancelamento idempotente, legado e rollback atomico; modo geral preservado.\n";
+    ffCheck($count()===$beforeDisabled+1,'Financeiro sem addon mudou comportamento');
+    echo "PASS: regras e legado preservados; cobranca sem movimentar caixa, parcial/quitacao, pagador diferente do beneficiario, reenvios idempotentes, limite de saldo, cancelamento/reabertura e centavos exatos; rollback atomico.\n";
 }finally{
     if(!preg_match('/^test_football_finance_[a-f0-9]{10}$/D',$database))throw new RuntimeException('Banco de teste invalido');
     $server->exec('DROP DATABASE `'.$database.'`');
