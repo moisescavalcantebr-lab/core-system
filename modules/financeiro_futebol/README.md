@@ -12,7 +12,7 @@ Addon vinculado ao Financeiro e Jogadores, instalado inicialmente na base Futebo
 - Confirmacao rapida de registro acompanhado abre a edicao para informar a data efetiva. O usuario CLIENT nao recebe acesso as telas administrativas ou actions.
 - O historico por jogador inclui inativos e distingue registros acompanhados de lancamentos anteriores, que continuam nas telas gerais sem preenchimento retroativo ou migracao de valores.
 - Parcelas e recorrencias ja existentes no Financeiro recebem a mesma identificacao e trilha, de forma atomica; series sao criadas pendentes, e parcelas de valor zero sao rejeitadas.
-- Aprovacao de solicitacao de credito exige um unico jogador vinculado ao solicitante e registra identificacao/historico. A conciliacao e o cancelamento de creditos antecipados ficam para etapa propria; o addon bloqueia cancelamento generico desses movimentos para evitar alterar saldo ja utilizado.
+- Aprovacao de solicitacao de credito exige um unico jogador vinculado ao solicitante e registra identificacao/historico. Novos creditos seguem a conciliacao descrita abaixo. Creditos antigos nao sao convertidos automaticamente.
 - O Financeiro continua com o comportamento geral em projetos sem este addon. Nenhum novo projeto, patrocinador ou jogador real e criado por esta etapa.
 
 ## Cobrancas e recebimentos parciais (0.2.0)
@@ -36,13 +36,21 @@ Addon vinculado ao Financeiro e Jogadores, instalado inicialmente na base Futebo
 - Criar o grupo nao registra recebimentos e nao envia mensagens aos jogadores. Cada cobranca usa o fluxo de recebimentos parciais ja existente. A visao do grupo acompanha recebido, em aberto e valores cancelados, mantendo o total originalmente gerado.
 - Categorias apenas classificam estas cobrancas; nao geram meses ou parcelas adicionais no grupo. Esta etapa nao implementa recorrencia automatica, disparos de cobranca, rateio ponderado ou cancelamento coletivo.
 
-## Proximas etapas, nao implementadas
+## Caixas e creditos (0.4.0)
 
-1. Definir saldo inicial e transferencias entre caixa/conta sem inflar arrecadacao; nao registrar saldo inicial como receita manual ficticia.
-2. Competencia mensal, recorrencia esportiva e vinculo especifico com partida/treino. A geracao por categorias existente nao substitui esse fluxo esportivo.
-3. Conciliar creditos antecipados e utilizacao por jogador, estornos vinculados, chave Pix do time e regras herdadas de pagamentos de partidas. Nao atribuir uma segunda entrada ao consumo de um credito.
-4. Cadastro proprio de patrocinadores/instituicoes, consulta restrita do jogador e definicao comercial por plano.
+- Caixa geral preserva o historico sem conta; novas contas sao cadastradas pelo responsavel. Saldo inicial tem data, motivo e historico proprio, sem criar receita. Movimentos anteriores a sua data sao rejeitados.
+- Transferencias exigem origem/destino diferentes, saldo disponivel, data e motivo. Reenvio nao duplica a transferencia. Cancelamento exige motivo e disponibilidade no destino. Transferencias nao entram na arrecadacao nem na despesa.
+- Novos recebimentos e pagamentos permitem selecionar a conta. O saldo total inclui saldos iniciais; os graficos de entradas e saidas continuam mostrando apenas movimentos reais.
+- Credito pertence a um jogador cadastrado; o pagador pode ser outra pessoa identificada. Deposito cria uma entrada real, devolucao realizada cria uma saida. Uso quita cobranca sem outro lancamento no caixa. Recebimentos em dinheiro e em credito compartilham o limite restante da cobranca.
+- Cancelar uso devolve credito e reabre cobranca, com motivo e trilha. Cancelar deposito so e permitido se o credito estiver disponivel. Nao executa operacao bancaria. Creditos legados nao sao reinterpretados nem migrados automaticamente.
+- Mutacoes novas usam bloqueio por projeto, transacao, centavos inteiros e chaves de reenvio. Origem, responsavel, datas e snapshots ficam registrados.
+- Solicitacao aprovada registra credito do jogador com data efetiva e conta. Pix vem das configuracoes do proprio projeto. Consulta do jogador exige vinculo unico ao login e nunca aceita outro jogador pela URL.
+- Categorias e finalidade permitem identificar mensalidade, jogo ou outra atividade manualmente. Recorrencia esportiva automatica, vinculo automatico com partida/treino, consumo de credito no pagamento automatico de partidas, cadastro de patrocinadores/instituicoes e mudancas comerciais por plano seguem para evolucao separada. Nenhuma dessas automacoes e ativada por esta entrega.
 
 ## Publicacao
 
-Etapa preparada localmente. Nao foi aplicado deploy nem migracao em projetos reais. Para publicar, instalar o addon com seus pais, aplicar apenas seu schema aditivo e copiar as rotas novas junto dos hooks do Financeiro, com backup e verificacao. Nao usar o publicador antigo de sete/28 arquivos, cujo escopo e visual e nao inclui este addon.
+Usar `scripts/futebol-financeiro-publicar.ps1`; `-PackageOnly` prepara sem conectar ao servidor. O pacote inclui o addon, hooks e copias das bases. O instalador encontra apenas projetos Futebol com Financeiro e Jogadores, confere hashes da versao anterior e interrompe em divergencias.
+
+Antes de instalar: bloqueio temporario das rotas financeiras, backup privado de codigo e banco, restauracao integral em MySQL isolado sem rede e conferencia de contagens. Aplicar apenas o SQL aditivo do addon; nunca importar o schema completo da base em projeto existente. Comparar o digest dos dados financeiros anteriores antes/depois. Ativar o manifest somente depois de instalar dependencias. Verificar hashes, autenticacao e saude do Core.
+
+Em falha, reverter apenas os arquivos exatos e restaurar o acesso. Tabelas aditivas permanecem, sem apagar dados ou restaurar automaticamente um banco em uso. Backups e relatorios privados ficam em `/opt/private-futebol/finance-*`; o relatorio local fica em `_deploy/futebol-financeiro-publication.txt`. Este documento nao confirma uma publicacao: exigir `finance_published=yes` no relatorio final.

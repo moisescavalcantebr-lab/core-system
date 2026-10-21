@@ -126,7 +126,7 @@ try {
     exit($e->getMessage());
 }
 
-if(financeTeamEnabled())$pdo->beginTransaction();
+if(financeTeamEnabled())financeTeamTransaction($pdo);
 $teamCreatedIds=[];
 try{
 $stmt = $pdo->prepare("
@@ -240,7 +240,7 @@ if (!$isBalanceDeposit && $categoryFormModel === 'installment') {
     }
 }
 
-if(financeTeamEnabled())financeTeamFinish($pdo,$teamCreatedIds,(int)$currentUser['id']);
+if(financeTeamEnabled())financeTeamFinish($pdo,$teamCreatedIds,(int)$currentUser['id'],(int)($_POST['account_id']??0));
 }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();http_response_code(500);exit('Nao foi possivel salvar o lancamento.');}
 header('Location: ' . PROJECT_URL . '/admin/financeiro/index.php');
 exit;

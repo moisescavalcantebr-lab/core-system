@@ -41,7 +41,7 @@ function financeTeamGroupSignature(array $plan,string $key,int $actor,string $se
 function financeTeamGroupCreate(PDO $pdo,array $input,int $actor,string $secret): int
 {
     $key=(string)($input['request_key']??'');$signature=(string)($input['preview_signature']??'');
-    $pdo->beginTransaction();
+    financeTeamTransaction($pdo);
     try{
         // Revalidate the exact preview with current project rows held until commit.
         $plan=financeTeamGroupPlan($pdo,$input,true);

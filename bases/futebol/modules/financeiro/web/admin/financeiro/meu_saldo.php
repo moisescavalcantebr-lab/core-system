@@ -7,6 +7,7 @@ require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/helpers.php';
 
 requireProjectAuth();
+if(financeTeamEnabled()){require __DIR__.'/time_meu_financeiro.php';exit;}
 financeEnsureEntryMetaSchema($pdo);
 
 if (!financeUsesParticipants($pdo)) {

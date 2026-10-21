@@ -34,6 +34,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  const sync=()=>{document.getElementById('teamPlayerGroup').hidden=kind.value!=='player';document.getElementById('teamExternalGroup').hidden=kind.value!=='external';player.required=kind.value==='player';player.disabled=kind.value!=='player';external.required=kind.value==='external';external.disabled=kind.value!=='external';};
  const heading=()=>{document.getElementById('teamPartyHeading').textContent=document.getElementById('financeType').value==='expense'?'Quem recebe?':'De quem vem o valor?';};
  const dates=()=>{const paid=document.querySelector('[name=status]').value==='paid';document.querySelector('[name=paid_at]').required=paid;document.querySelector('[name=due_date]').required=!paid;};
- kind.addEventListener('change',sync);document.getElementById('financeType').addEventListener('change',heading);document.getElementById('financeCategory').addEventListener('change',()=>queueMicrotask(heading));document.querySelector('[name=status]').addEventListener('change',dates);sync();heading();dates();
+ kind.addEventListener('change',sync);document.getElementById('financeType')?.addEventListener('change',heading);document.getElementById('financeCategory')?.addEventListener('change',()=>queueMicrotask(heading));document.querySelector('[name=status]')?.addEventListener('change',dates);sync();if(document.getElementById('financeType'))heading();if(document.querySelector('[name=status]'))dates();
 });
 </script>

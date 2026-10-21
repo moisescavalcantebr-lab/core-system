@@ -9,7 +9,7 @@ csrf_verify();financeTeamEnsureSchema($pdo);
 $id=(int)($_POST['id']??0);$reason=trim((string)($_POST['reason']??''));
 if($id<=0||$reason===''||mb_strlen($reason)>500){http_response_code(422);exit('Informe o motivo do cancelamento, com ate 500 caracteres.');}
 $linked=$pdo->prepare('SELECT charge_id FROM finance_team_charge_payments WHERE entry_id=?');$linked->execute([$id]);$chargeId=(int)$linked->fetchColumn();
-$pdo->beginTransaction();
+financeTeamTransaction($pdo);
 try{
     // Match the lock order used when receiving: charge first, then ledger entry.
     $chargeBefore=null;
@@ -20,6 +20,11 @@ try{
     if(in_array($entry['source'],['balance_deposit','balance_usage','wallet_payment'],true))throw new DomainException('Credito antecipado exige conciliacao do saldo antes do cancelamento.');
     if($entry['status']==='canceled'){$pdo->rollBack();redirect(PROJECT_URL.'/admin/financeiro/time_elenco.php?entry_id='.$id);exit;}
     $actor=(int)projectUser()['id'];
+    $credit=$pdo->prepare('SELECT * FROM finance_team_credit_movements WHERE entry_id=?');$credit->execute([$id]);$credit=$credit->fetch(PDO::FETCH_ASSOC);
+    if($credit&&$credit['status']==='active'){
+        if($credit['kind']==='deposit'&&financeTeamCreditBalance($pdo,(int)$credit['player_id'])<financeTeamCents($credit['amount']))throw new DomainException('Credito ja utilizado. Cancele a quitacao ou regularize antes.');
+        $pdo->prepare("UPDATE finance_team_credit_movements SET status='canceled' WHERE id=?")->execute([$credit['id']]);financeTeamCreditAudit($pdo,(int)$credit['id'],'canceled',$actor,$reason);
+    }
     $pdo->prepare("UPDATE finance_entries SET status='canceled',updated_by_user_id=? WHERE id=?")->execute([$actor,$id]);
     financeTeamAudit($pdo,$id,'canceled',$actor,$entry,$reason);
     if($chargeBefore)financeTeamChargeAudit($pdo,$chargeId,'payment_canceled',$actor,$chargeBefore,$id,$reason);

@@ -1,0 +1,1 @@
+<div class="c-form-group"><label>Caixa / conta</label><select name="account_id" class="c-input"><?php foreach(financeTeamAccounts($pdo) as $account): ?><option value="<?= (int)$account['id'] ?>"><?= htmlspecialchars($account['name']) ?></option><?php endforeach; ?></select></div>

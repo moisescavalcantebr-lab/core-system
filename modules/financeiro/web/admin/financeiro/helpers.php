@@ -634,6 +634,7 @@ function financeUserBalance(PDO $pdo, int $userId): float
 
 function financeAllocatedBalance(PDO $pdo): float
 {
+    if(financeTeamEnabled()){financeTeamEnsureSchema($pdo);$total=0;foreach(financeTeamPlayers($pdo) as $player)$total+=financeTeamCreditBalance($pdo,(int)$player['id']);return $total/100;}
     $row = $pdo->query("
         SELECT
             COALESCE(SUM(CASE WHEN type = 'income' AND source = 'balance_deposit' THEN amount ELSE 0 END), 0) AS deposited_total,
@@ -673,6 +674,7 @@ function financeCorePdo(): ?PDO
 
 function financeCorePixSettings(): array
 {
+    if(financeTeamEnabled()){global $pdo;return ['upgrade_pix_key'=>financeSetting($pdo,'pix_key'),'upgrade_pix_holder'=>financeSetting($pdo,'pix_receiver_name'),'upgrade_pix_notes'=>'Pix do time. Aguarde a confirmacao do responsavel.'];}
     $corePdo = financeCorePdo();
 
     if (!$corePdo) {

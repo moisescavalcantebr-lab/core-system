@@ -72,13 +72,13 @@ try{
     file_put_contents($root.'/_deploy/football-finance-form-preview.html',ffRoute('create.php'));
     file_put_contents($root.'/_deploy/football-finance-history-preview.html',$view);
     $pdo->exec("INSERT INTO finance_wallet_requests(user_id,amount,status) VALUES(992,25,'pending')");$requestId=(int)$pdo->lastInsertId();
-    ffRoute('wallet_request_review.php',['_csrf'=>'test','action'=>'approve'],['id'=>$requestId]);
+    ffRoute('wallet_request_review.php',['_csrf'=>'test','action'=>'approve','paid_at'=>'2026-10-20'],['id'=>$requestId]);
     ffCheck($pdo->query('SELECT status FROM finance_wallet_requests WHERE id='.$requestId)->fetchColumn()==='pending','Credito sem jogador identificado aprovado');
     $pdo->exec('UPDATE players SET user_id=992 WHERE id=2');
-    ffRoute('wallet_request_review.php',['_csrf'=>'test','action'=>'approve'],['id'=>$requestId]);
+    ffRoute('wallet_request_review.php',['_csrf'=>'test','action'=>'approve','paid_at'=>'2026-10-20'],['id'=>$requestId]);
     $walletId=(int)$pdo->query('SELECT MAX(id) FROM finance_entries')->fetchColumn();
     ffCheck($entry($walletId)['party_module']==='jogadores'&&(int)$entry($walletId)['party_id']===2&&$history($walletId)===1,'Credito aprovado sem origem ou trilha');
-    $afterWalletCount=$count();ffRoute('wallet_request_review.php',['_csrf'=>'test','action'=>'approve'],['id'=>$requestId]);ffCheck($count()===$afterWalletCount,'Credito aprovado em duplicidade');
+    $afterWalletCount=$count();ffRoute('wallet_request_review.php',['_csrf'=>'test','action'=>'approve','paid_at'=>'2026-10-20'],['id'=>$requestId]);ffCheck($count()===$afterWalletCount,'Credito aprovado em duplicidade');
     file_put_contents($fixture.'/project.json',json_encode(['plan_name'=>'Plano Start','billing_cycle'=>'monthly']));
     $pdo->exec("INSERT INTO finance_categories(name,type,form_model) VALUES('Parcelamento teste','income','installment'),('Recorrencia teste','income','recurring')");
     foreach(['installment','recurring']as$model){
@@ -158,7 +158,7 @@ try{
     ffCheck($chargeSnapshot($concurrentCharge)['received']==='70.00','Recebimentos concorrentes ultrapassaram saldo');
     $mapping=$pdo->prepare('SELECT COUNT(*) FROM finance_team_charge_payments WHERE charge_id=?');$mapping->execute([$concurrentCharge]);ffCheck((int)$mapping->fetchColumn()===1,'Concorrencia deixou registro duplicado');
     $financeIndex=ffRoute('index.php');
-    ffCheck((bool)preg_match('~<p>Saldo atual</p>\s*<strong>R\$ 32,03</strong>~',$financeIndex),'Resumo do caixa contou cobrancas como dinheiro recebido');
+    ffCheck((bool)preg_match('~<p>Saldo atual</p>\s*<strong>R\$ 57,03</strong>~',$financeIndex),'Resumo do caixa contou cobrancas como dinheiro recebido');
     ffCheck((bool)preg_match('~<span>Pendencias liquidas</span>\s*<strong[^>]*>R\$ 240,00</strong>~',$financeIndex),'Resumo nao inclui o saldo restante das cobrancas');
     file_put_contents($fixture.'/web/admin/financeiro/dashboard_probe.php','<?php require __DIR__."/../../../app/bootstrap/project_bootstrap.php"; $panel=require '.var_export($root.'/modules/financeiro/dashboard.php',true).'; echo $panel["html"];');
     ffCheck(str_contains(ffRoute('dashboard_probe.php'),'Pendencias: R$ 240,00'),'Painel financeiro nao inclui cobrancas');
@@ -209,6 +209,36 @@ try{
     ffRoute('time_charge_action.php',$groupConfirm($thirty));$thirtyBatch=(int)$pdo->query('SELECT MAX(id) FROM finance_team_charge_batches')->fetchColumn();ffCheck((int)$pdo->query('SELECT COUNT(*) FROM finance_team_charge_batch_items WHERE batch_id='.$thirtyBatch)->fetchColumn()===30,'Grupo de trinta perdeu jogadores');
     ffCheck($pdo->query('SELECT total_amount FROM finance_team_charge_batches WHERE id='.$thirtyBatch)->fetchColumn()==='0.30','Total de trinta jogadores incorreto');
     file_put_contents($root.'/_deploy/football-finance-group-form-preview.html',ffRoute('time_grupo.php'));
+    require $root.'/modules/financeiro_futebol/web/admin/financeiro/time_helpers.php';
+    $beforeCash=$count();$treasury=['_csrf'=>'test','section'=>'treasury'];
+    ffCheck(str_contains(ffRoute('time_manage_action.php',[...$treasury,'action'=>'account','name'=>'Banco'],[],992),'Acesso negado'),'Cliente criou caixa');
+    ffRoute('time_manage_action.php',[...$treasury,'action'=>'account','name'=>'Banco']);$account=(int)$pdo->query('SELECT MAX(id) FROM finance_team_accounts')->fetchColumn();
+    $opening=[...$treasury,'action'=>'opening','account_id'=>$account,'amount'=>'100.00','movement_date'=>'2026-10-01','reason'=>'Dinheiro anterior ao historico'];ffRoute('time_manage_action.php',$opening);ffRoute('time_manage_action.php',$opening);
+    ffCheck(financeTeamAccountBalance($pdo,$account)===10000&&$count()===$beforeCash,'Saldo inicial virou receita ou duplicou');
+    $transfer=[...$treasury,'action'=>'transfer','from_account_id'=>$account,'to_account_id'=>0,'amount'=>'30.00','movement_date'=>'2026-10-20','reason'=>'Dinheiro em especie','request_key'=>hash('sha256','transfer')];$general=financeTeamAccountBalance($pdo,0);
+    ffRoute('time_manage_action.php',$transfer);ffRoute('time_manage_action.php',$transfer);ffCheck(financeTeamAccountBalance($pdo,$account)===7000&&financeTeamAccountBalance($pdo,0)===$general+3000&&$count()===$beforeCash,'Transferencia duplicou dinheiro');
+    ffCheck(str_contains(ffRoute('time_manage_action.php',[...$transfer,'amount'=>'1000','request_key'=>hash('sha256','transfer insufficient')]),'insuficiente'),'Transferiu sem saldo');
+    ffCheck(str_contains(ffRoute('time_manage_action.php',[...$transfer,'movement_date'=>'2026-09-30','request_key'=>hash('sha256','transfer old')]),'anterior'),'Transferencia anterior ao saldo inicial aceita');
+    ffRoute('time_manage_action.php',[...$treasury,'action'=>'cancel_transfer','id'=>1,'reason'=>'Conta incorreta']);ffCheck(financeTeamAccountBalance($pdo,$account)===10000&&financeTeamAccountBalance($pdo,0)===$general,'Cancelamento nao devolveu transferencia');
+    $credit=['_csrf'=>'test','section'=>'credit','kind'=>'deposit','credit_player_id'=>1,'team_party_kind'=>'external','team_party_name'=>'Pagador identificado','amount'=>'20.00','paid_at'=>'2026-10-20','account_id'=>$account,'request_key'=>hash('sha256','credit deposit')];
+    ffRoute('time_manage_action.php',$credit);$depositEntry=(int)$pdo->query('SELECT MAX(entry_id) FROM finance_team_credit_movements')->fetchColumn();ffRoute('time_manage_action.php',$credit);ffCheck($count()===$beforeCash+1&&financeTeamCreditBalance($pdo,1)===2000&&financeTeamAccountBalance($pdo,$account)===12000,'Deposito nao entrou uma unica vez no caixa');
+    $useCharge=financeTeamChargeCreate($pdo,['beneficiary_player_id'=>2,'title'=>'Cobranca para uso de credito','amount'=>'20','due_date'=>'2026-10-25','request_key'=>hash('sha256','credit charge')],991);
+    $use=[...$credit,'kind'=>'use','charge_id'=>$useCharge,'amount'=>'15.00','request_key'=>hash('sha256','credit use')];ffRoute('time_manage_action.php',$use);$useId=(int)$pdo->query('SELECT MAX(id) FROM finance_team_credit_movements')->fetchColumn();ffRoute('time_manage_action.php',$use);
+    ffCheck(financeTeamCreditBalance($pdo,1)===500&&financeTeamChargeSnapshot($pdo,$useCharge)['remaining_amount']==='5.00'&&$count()===$beforeCash+1,'Uso de credito duplicou caixa ou nao quitou a cobranca');
+    ffCheck(str_contains(ffRoute('time_cancel.php',['_csrf'=>'test','id'=>$depositEntry,'reason'=>'Cancelar credito usado']),'utilizado'),'Cancelou credito ja utilizado');
+    ffCheck(str_contains(ffRoute('time_manage_action.php',[...$use,'amount'=>'6.00','request_key'=>hash('sha256','over credit')]),'insuficiente'),'Usou credito inexistente');
+    $refund=[...$credit,'kind'=>'refund','amount'=>'5.00','request_key'=>hash('sha256','credit refund')];ffRoute('time_manage_action.php',$refund);$refundEntry=(int)$pdo->query('SELECT MAX(entry_id) FROM finance_team_credit_movements')->fetchColumn();ffCheck(financeTeamCreditBalance($pdo,1)===0&&financeTeamAccountBalance($pdo,$account)===11500&&$count()===$beforeCash+2,'Devolucao nao reduziu credito e caixa');
+    ffRoute('time_manage_action.php',['_csrf'=>'test','section'=>'credit','action'=>'cancel_use','id'=>$useId,'reason'=>'Quitacao incorreta']);ffCheck(financeTeamCreditBalance($pdo,1)===1500&&financeTeamChargeSnapshot($pdo,$useCharge)['remaining_amount']==='20.00','Cancelamento de credito nao reabriu cobranca');
+    ffRoute('time_cancel.php',['_csrf'=>'test','id'=>$refundEntry,'reason'=>'Devolucao registrada em duplicidade']);ffRoute('time_cancel.php',['_csrf'=>'test','id'=>$depositEntry,'reason'=>'Credito registrado em duplicidade']);ffCheck(financeTeamCreditBalance($pdo,1)===0&&financeTeamAccountBalance($pdo,$account)===10000,'Cancelamento de credito e devolucao inconsistente');
+    $parallelCredit=[...$credit,'credit_player_id'=>3,'request_key'=>hash('sha256','parallel deposit')];ffRoute('time_manage_action.php',$parallelCredit);$beforeCreditUse=$count();$requests=[];
+    foreach([1,2] as $n){$target=financeTeamChargeCreate($pdo,['beneficiary_player_id'=>3,'title'=>'Quitacao concorrente '.$n,'amount'=>'15','due_date'=>'2026-10-25','request_key'=>hash('sha256','parallel target '.$n)],991);$post=[...$parallelCredit,'kind'=>'use','charge_id'=>$target,'amount'=>'15','request_key'=>hash('sha256','parallel credit use '.$n)];$code='$actor=991;$_POST='.var_export($post,true).';$_GET=[];$_FILES=[];$_SERVER["REQUEST_METHOD"]="POST";usleep(100000);require '.var_export($fixture.'/web/admin/financeiro/time_manage_action.php',true).';';$process=proc_open([PHP_BINARY,'-r',$code],[1=>['pipe','w'],2=>['pipe','w']],$pipes);$requests[]=[$process,$pipes];}
+    $successes=0;foreach($requests as [$process,$pipes]){$out=stream_get_contents($pipes[1]);$error=stream_get_contents($pipes[2]);fclose($pipes[1]);fclose($pipes[2]);ffCheck(proc_close($process)===0&&$error==='','Falha na concorrencia de credito');if(str_contains($out,'REDIRECT:'))$successes++;}
+    ffCheck($successes===1&&financeTeamCreditBalance($pdo,3)===500&&$count()===$beforeCreditUse,'Usos concorrentes gastaram credito duas vezes');
+    $beforeFail=$count();$pdo->exec("CREATE TRIGGER fail_credit_audit BEFORE INSERT ON finance_team_credit_history FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='audit failure'");ffRoute('time_manage_action.php',[...$credit,'request_key'=>hash('sha256','failed credit')]);$pdo->exec('DROP TRIGGER fail_credit_audit');ffCheck($count()===$beforeFail&&financeTeamCreditBalance($pdo,1)===0,'Falha no historico deixou dinheiro ou credito parcial');
+    $mine=ffRoute('meu_saldo.php',[],['player_id'=>1],992);ffCheck(str_contains($mine,'Meu financeiro')&&!str_contains($mine,'Jogador renomeado')&&!str_contains($mine,'Pagador identificado'),'Consulta propria vazou outro jogador');
+    $pdo->exec('UPDATE players SET user_id=992 WHERE id=1');ffCheck(str_contains(ffRoute('meu_saldo.php',[],[],992),'unico jogador'),'Vinculo ambiguo acessou dados');$pdo->exec('UPDATE players SET user_id=NULL WHERE id=1');
+    file_put_contents($root.'/_deploy/football-finance-treasury-preview.html',ffRoute('time_caixas.php'));file_put_contents($root.'/_deploy/football-finance-credit-preview.html',ffRoute('time_creditos.php'));
+    ffCheck($entry($legacyId)===$legacy,'Novas operacoes alteraram o legado');
     $beforeDisabled=$count();
     rename($fixture.'/modules/financeiro_futebol/module.json',$fixture.'/modules/financeiro_futebol/module.disabled');
     ffCheck(!str_contains(ffRoute('create.php'),'team_party_kind'),'Outro projeto recebeu regras esportivas');

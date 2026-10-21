@@ -16,7 +16,7 @@ function financeTeamDecimal(int $cents): string
 
 function financeTeamChargeSnapshot(PDO $pdo,int $id): array
 {
-    $stmt=$pdo->prepare("SELECT c.*,COALESCE((SELECT SUM(e.amount) FROM finance_team_charge_payments p JOIN finance_entries e ON e.id=p.entry_id WHERE p.charge_id=c.id AND e.status='paid'),0) AS received_amount FROM finance_team_charges c WHERE c.id=?");
+    $received=financeTeamChargeReceivedSql();$stmt=$pdo->prepare("SELECT c.*,$received AS received_amount FROM finance_team_charges c WHERE c.id=?");
     $stmt->execute([$id]);$charge=$stmt->fetch(PDO::FETCH_ASSOC);
     if(!$charge)throw new DomainException('Cobranca nao encontrada neste projeto.');
     $charge['remaining_amount']=financeTeamDecimal(max(0,financeTeamCents($charge['total_amount'])-financeTeamCents($charge['received_amount'])));
@@ -32,7 +32,7 @@ function financeTeamChargeAudit(PDO $pdo,int $id,string $action,int $actor,?arra
 
 function financeTeamOutstanding(PDO $pdo,?int $playerId=null): string
 {
-    $sql="SELECT COALESCE(SUM(GREATEST(c.total_amount-COALESCE((SELECT SUM(e.amount) FROM finance_team_charge_payments p JOIN finance_entries e ON e.id=p.entry_id WHERE p.charge_id=c.id AND e.status='paid'),0),0)),0) FROM finance_team_charges c WHERE c.status='open'";
+    $received=financeTeamChargeReceivedSql();$sql="SELECT COALESCE(SUM(GREATEST(c.total_amount-$received,0)),0) FROM finance_team_charges c WHERE c.status='open'";
     $params=[];if($playerId){$sql.=' AND c.beneficiary_player_id=?';$params[]=$playerId;}
     $stmt=$pdo->prepare($sql);$stmt->execute($params);return (string)$stmt->fetchColumn();
 }
@@ -51,7 +51,7 @@ function financeTeamChargeCreate(PDO $pdo,array $input,int $actor): int
         $stmt=$pdo->prepare("SELECT id FROM finance_categories WHERE id=? AND status='active' AND type IN ('income','both')");$stmt->execute([(int)$input['category_id']]);$categoryId=$stmt->fetchColumn();
         if(!$categoryId)throw new DomainException('Selecione uma categoria de entrada valida.');
     }
-    $pdo->beginTransaction();
+    financeTeamTransaction($pdo);
     try{
         $id=financeTeamChargeWrite($pdo,$party,$title,$cents,$categoryId?(int)$categoryId:null,$input['due_date'],$actor,$key);
         $pdo->commit();return $id;
@@ -81,7 +81,7 @@ function financeTeamChargePay(PDO $pdo,int $chargeId,array $input,int $actor,?st
     $method=trim((string)($input['payment_method']??''));
     if($method!==''&&!isset(financePaymentMethodOptions()[$method]))throw new DomainException('Forma de pagamento invalida.');
     $fingerprint=hash('sha256',json_encode([$chargeId,$actor,$amount,$input['paid_at'],$party,$method],JSON_THROW_ON_ERROR));
-    $pdo->beginTransaction();
+    financeTeamTransaction($pdo);
     try{
         $lock=$pdo->prepare('SELECT id FROM finance_team_charges WHERE id=? FOR UPDATE');$lock->execute([$chargeId]);
         if(!$lock->fetchColumn())throw new DomainException('Cobranca nao encontrada neste projeto.');
@@ -96,7 +96,7 @@ function financeTeamChargePay(PDO $pdo,int $chargeId,array $input,int $actor,?st
         $pdo->prepare("INSERT INTO finance_entries(category_id,type,title,description,amount,party_type,party_module,party_id,party_name,due_date,paid_at,status,source,payment_method,receipt_path,created_by_user_id,updated_by_user_id) VALUES(?,'income',?,?,?,?,?,?,?,?,?,'paid','team_payment',?,?,?,?)")->execute([$before['category_id'],mb_substr('Recebimento: '.$before['title'],0,150),'Cobranca #'.$chargeId.' de '.$before['beneficiary_name'],financeTeamDecimal($amount),$party['party_type'],$party['party_module'],$party['party_id'],$party['party_name'],$before['due_date'],$input['paid_at'],$method?:null,$receipt,$actor,$actor]);
         $id=(int)$pdo->lastInsertId();
         $pdo->prepare('INSERT INTO finance_team_charge_payments(charge_id,entry_id,request_key,request_fingerprint) VALUES(?,?,?,?)')->execute([$chargeId,$id,$key,$fingerprint]);
-        financeTeamAudit($pdo,$id,'created',$actor);
+        financeTeamAudit($pdo,$id,'created',$actor,null,null,(int)($input['account_id']??0));
         financeTeamChargeAudit($pdo,$chargeId,'payment_recorded',$actor,$before,$id);
         $pdo->commit();return $id;
     }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
@@ -106,7 +106,7 @@ function financeTeamChargeCancel(PDO $pdo,int $id,string $reason,int $actor): vo
 {
     $reason=trim($reason);
     if($id<=0||$actor<=0||$reason===''||mb_strlen($reason)>500)throw new DomainException('Informe o motivo do cancelamento, com ate 500 caracteres.');
-    $pdo->beginTransaction();
+    financeTeamTransaction($pdo);
     try{
         $lock=$pdo->prepare('SELECT id FROM finance_team_charges WHERE id=? FOR UPDATE');$lock->execute([$id]);
         if(!$lock->fetchColumn())throw new DomainException('Cobranca nao encontrada.');

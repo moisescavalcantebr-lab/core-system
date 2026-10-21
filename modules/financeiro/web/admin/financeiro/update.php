@@ -32,7 +32,7 @@ if ($id <= 0 || ($title === '' && !$isBalanceDeposit)) {
 
 $title = $isBalanceDeposit ? 'Adicao de saldo' : $title;
 try{
-if(financeTeamEnabled())$pdo->beginTransaction();
+if(financeTeamEnabled())financeTeamTransaction($pdo);
 $stmt = $pdo->prepare("SELECT * FROM finance_entries WHERE id = ? LIMIT 1".(financeTeamEnabled()?' FOR UPDATE':''));
 $stmt->execute([$id]);
 $existingEntry = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -161,7 +161,7 @@ $stmt->execute([
 
 financeSyncEntryTags($pdo, $id, (string)($_POST['tags'] ?? ''));
 if(financeTeamEnabled()){
-    if($teamTracked)financeTeamAudit($pdo,$id,$status==='paid'?'confirmed':'updated',(int)$currentUser['id'],$existingEntry);
+    if($teamTracked)financeTeamAudit($pdo,$id,$status==='paid'?'confirmed':'updated',(int)$currentUser['id'],$existingEntry,null,(int)($_POST['account_id']??0));
     $pdo->commit();
 }
 

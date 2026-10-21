@@ -89,7 +89,7 @@ ob_start();
                                         <?php if (($request['status'] ?? '') === 'pending'): ?>
                                             <form action="<?= PROJECT_URL ?>/admin/financeiro/wallet_request_review.php?id=<?= (int)$request['id'] ?>" method="POST" style="display:inline;">
                                                 <?= csrf_field(); ?>
-                                                <input type="hidden" name="action" value="approve">
+                                                <input type="hidden" name="action" value="approve"><?php if(financeTeamEnabled()): ?><label>Data recebida</label><input type="date" name="paid_at" class="c-input" required><?php require __DIR__.'/time_account_form.php'; endif; ?>
                                                 <button class="c-btn-secondary">Aprovar</button>
                                             </form>
 

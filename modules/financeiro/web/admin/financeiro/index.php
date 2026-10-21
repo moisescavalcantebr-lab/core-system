@@ -41,7 +41,7 @@ $summary['expense'] = (float)($row['expense_total'] ?? 0);
 $summary['pending_income'] = (float)($row['pending_income_total'] ?? 0);
 if(financeTeamEnabled())$summary['pending_income']+=(float)financeTeamOutstanding($pdo);
 $summary['pending_expense'] = (float)($row['pending_expense_total'] ?? 0);
-$balance = $summary['income'] - $summary['expense'];
+$balance = $summary['income'] - $summary['expense'] + (financeTeamEnabled()?financeTeamOpeningTotal($pdo):0);
 $pendingBalance = $summary['pending_income'] - $summary['pending_expense'];
 $allocatedBalance = financeAllocatedBalance($pdo);
 
@@ -269,8 +269,8 @@ ob_start();
                 <a href="<?= PROJECT_URL ?>/admin/financeiro/wallet_requests.php" class="c-btn-secondary">
                     Solicitações de saldo
                 </a>
-                <a href="<?= PROJECT_URL ?>/admin/financeiro/meu_saldo.php" class="c-btn-secondary c-btn-balance">
-                    Adicionar Saldo
+                <a href="<?= PROJECT_URL ?>/admin/financeiro/<?= financeTeamEnabled()?'time_creditos.php':'meu_saldo.php' ?>" class="c-btn-secondary c-btn-balance">
+                    <?= financeTeamEnabled()?'Creditos dos jogadores':'Adicionar Saldo' ?>
                 </a>
             <?php endif; ?>
             <a href="<?= PROJECT_URL ?>/admin/financeiro/lancamentos.php" class="c-btn-secondary">

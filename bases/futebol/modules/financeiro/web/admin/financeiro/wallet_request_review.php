@@ -49,6 +49,8 @@ if(financeTeamEnabled()&&$action==='approve'){
     $identity=$pdo->prepare('SELECT id FROM players WHERE user_id=? ORDER BY id LIMIT 2');$identity->execute([(int)$request['user_id']]);$matches=$identity->fetchAll(PDO::FETCH_COLUMN);
     if(count($matches)!==1){http_response_code(422);exit('Vincule o solicitante a um unico jogador antes de aprovar o recebimento.');}
     $teamWalletParty=financeTeamParty($pdo,['team_party_kind'=>'player','team_player_id'=>$matches[0]]);
+    try{financeTeamCreditRecord($pdo,['kind'=>'deposit','credit_player_id'=>$matches[0],'team_party_kind'=>'player','team_player_id'=>$matches[0],'amount'=>(string)$request['amount'],'paid_at'=>(string)($_POST['paid_at']??''),'account_id'=>(int)($_POST['account_id']??0),'payment_method'=>'pix','request_key'=>hash('sha256','wallet-request:'.$id)],(int)$currentUser['id'],$request);}catch(Throwable $e){http_response_code(422);exit($e instanceof DomainException?$e->getMessage():'Nao foi possivel aprovar o credito.');}
+    redirect(PROJECT_URL.'/admin/financeiro/wallet_requests.php');exit;
 }
 
 $pdo->beginTransaction();

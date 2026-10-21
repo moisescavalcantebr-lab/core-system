@@ -2,6 +2,8 @@
 declare(strict_types=1);
 require_once __DIR__.'/time_charge_helpers.php';
 require_once __DIR__.'/time_group_helpers.php';
+require_once __DIR__.'/time_treasury_helpers.php';
+require_once __DIR__.'/time_credit_helpers.php';
 
 function financeTeamEnsureSchema(PDO $pdo): void
 {
@@ -59,11 +61,12 @@ function financeTeamValidate(array $input): void
     foreach(['paid_at','due_date']as$key)if(!empty($input[$key])&&!financeTeamDate((string)$input[$key]))throw new DomainException('Data invalida.');
 }
 
-function financeTeamAudit(PDO $pdo,int $id,string $action,int $actor,?array $before=null,?string $reason=null): void
+function financeTeamAudit(PDO $pdo,int $id,string $action,int $actor,?array $before=null,?string $reason=null,int $accountId=0): void
 {
     if(!$pdo->inTransaction()||$actor<=0)throw new RuntimeException('Historico exige transacao e responsavel.');
     $stmt=$pdo->prepare('SELECT * FROM finance_entries WHERE id=?');$stmt->execute([$id]);$after=$stmt->fetch(PDO::FETCH_ASSOC);
     if(!$after)throw new RuntimeException('Lancamento nao encontrado.');
+    if($after['status']==='paid')financeTeamAssignAccount($pdo,$after,$accountId);
     $pdo->prepare('INSERT INTO finance_team_history(entry_id,action,actor_user_id,reason,before_json,after_json) VALUES(?,?,?,?,?,?)')->execute([$id,$action,$actor,$reason,$before?json_encode($before,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE):null,json_encode($after,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE)]);
 }
 
@@ -72,8 +75,8 @@ function financeTeamGuardEditable(PDO $pdo,array $entry): void
     if(financeTeamTracked($pdo,(int)$entry['id'])&&$entry['status']!=='pending')throw new DomainException('Lancamento confirmado ou cancelado nao pode ser reescrito. Use cancelar com motivo e registre a correcao.');
 }
 
-function financeTeamFinish(PDO $pdo,array $ids,int $actor): void
+function financeTeamFinish(PDO $pdo,array $ids,int $actor,int $accountId=0): void
 {
-    foreach($ids as$id)financeTeamAudit($pdo,$id,'created',$actor);
+    foreach($ids as$id)financeTeamAudit($pdo,$id,'created',$actor,null,null,$accountId);
     $pdo->commit();
 }

@@ -39,7 +39,7 @@ $summary['pending_income'] = (float)($row['pending_income_total'] ?? 0);
 if(financeTeamEnabled()){financeTeamEnsureSchema($pdo);$summary['pending_income']+=(float)financeTeamOutstanding($pdo);}
 $summary['pending_expense'] = (float)($row['pending_expense_total'] ?? 0);
 
-$balance = $summary['income'] - $summary['expense'];
+$balance = $summary['income'] - $summary['expense'] + (financeTeamEnabled()?financeTeamOpeningTotal($pdo):0);
 $pendingBalance = $summary['pending_income'] - $summary['pending_expense'];
 $advancedCategories = financeAdvancedCategoriesEnabled();
 

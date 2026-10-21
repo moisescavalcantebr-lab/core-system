@@ -6,7 +6,7 @@ requireProjectRole(['ADMIN','FINANCE']);
 if(!financeTeamEnabled()){http_response_code(404);exit;}
 if(!in_array($_SERVER['REQUEST_METHOD'],['GET','POST'],true)){http_response_code(405);exit;}
 if($_SERVER['REQUEST_METHOD']==='POST')csrf_verify();
-financeEnsureEntryMetaSchema($pdo);financeEnsureCategoryAddonSchema($pdo);
+$receivedSql=financeTeamChargeReceivedSql();financeEnsureEntryMetaSchema($pdo);financeEnsureCategoryAddonSchema($pdo);
 $actor=(int)projectUser()['id'];$batchId=max(0,(int)($_GET['batch_id']??0));$plan=null;$batch=null;$items=[];$signature='';$requestKey='';
 try{
     if($_SERVER['REQUEST_METHOD']==='POST'){
@@ -17,7 +17,7 @@ try{
     }elseif($batchId){
         $stmt=$pdo->prepare('SELECT * FROM finance_team_charge_batches WHERE id=?');$stmt->execute([$batchId]);$batch=$stmt->fetch(PDO::FETCH_ASSOC);
         if(!$batch){http_response_code(404);exit('Grupo nao encontrado.');}
-        $stmt=$pdo->prepare("SELECT c.*,COALESCE((SELECT SUM(e.amount) FROM finance_team_charge_payments p JOIN finance_entries e ON e.id=p.entry_id WHERE p.charge_id=c.id AND e.status='paid'),0) AS received_amount FROM finance_team_charge_batch_items i JOIN finance_team_charges c ON c.id=i.charge_id WHERE i.batch_id=? ORDER BY i.player_id");$stmt->execute([$batchId]);$items=$stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt=$pdo->prepare("SELECT c.*,{$receivedSql} AS received_amount FROM finance_team_charge_batch_items i JOIN finance_team_charges c ON c.id=i.charge_id WHERE i.batch_id=? ORDER BY i.player_id");$stmt->execute([$batchId]);$items=$stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }catch(DomainException $e){http_response_code(422);exit(htmlspecialchars($e->getMessage()));}
 $players=financeTeamPlayers($pdo);

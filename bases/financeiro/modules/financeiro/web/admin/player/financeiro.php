@@ -7,6 +7,7 @@ require __DIR__ . '/../../../app/bootstrap/project_bootstrap.php';
 require __DIR__ . '/../financeiro/helpers.php';
 
 requireProjectAuth();
+if(financeTeamEnabled()){require __DIR__.'/../financeiro/time_meu_financeiro.php';exit;}
 
 $user = projectUser();
 

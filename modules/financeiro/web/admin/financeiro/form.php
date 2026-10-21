@@ -63,7 +63,7 @@
             </div>
 
             <?php if ($teamForm): ?>
-                <?php require __DIR__.'/time_party_form.php'; ?>
+                <?php require __DIR__.'/time_party_form.php'; require __DIR__.'/time_account_form.php'; ?>
             <?php elseif ($usesParticipants): ?>
                 <div class="c-card" style="margin:16px 0;">
                     <h3 id="financePartyTitle">Parte relacionada</h3>
