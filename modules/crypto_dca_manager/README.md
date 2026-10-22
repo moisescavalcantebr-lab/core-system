@@ -19,5 +19,7 @@ O planejamento aprovado para evolucao local esta em
 
 A primeira etapa funcional e validar uma conexao Binance somente de leitura,
 com atualizacao acionada manualmente e conferencia da cobertura dos bots DCA.
-Integracao, migracoes e automacao ainda nao estao implementadas. Publicacao no
+O addon inicial de leitura esta disponivel na base Cripto; o guia de teste esta em
+[teste local](../../docs/cripto-dca-teste-local.md). Identificacao dos bots DCA,
+calculos consolidados e automacao ainda estao pendentes. Publicacao no
 servidor depende de decisao posterior.

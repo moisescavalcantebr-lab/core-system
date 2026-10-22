@@ -1,0 +1,25 @@
+{
+  "name": "crypto_binance",
+  "label": "Binance - leitura",
+  "description": "Consulta manual somente de leitura para validar dados Spot e cobertura dos DCAs.",
+  "version": "0.1.0",
+  "type": "project",
+  "kind": "addon",
+  "attach_to": ["crypto_dca_manager"],
+  "access_scope": "free",
+  "status": "draft",
+  "category": "Cripto",
+  "recommended_bases": ["cripto"],
+  "menu": {
+    "section": "Gestao",
+    "label": "Binance - leitura",
+    "url": "/admin/crypto_binance/index.php",
+    "key": "crypto_binance",
+    "order": 11
+  },
+  "database": {
+    "schema": "database/schema.sql",
+    "tables": ["crypto_binance_reads", "crypto_binance_trades"]
+  },
+  "copy": [{"from": "web/admin/crypto_binance", "to": "web/admin/crypto_binance"}]
+}

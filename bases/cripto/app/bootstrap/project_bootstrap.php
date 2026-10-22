@@ -109,7 +109,7 @@ try {
     $currentFile = basename($_SERVER['PHP_SELF']);
 
     if ($count == 0 && $currentFile !== 'create-password.php') {
-        header('Location: create-password.php');
+        header('Location: ' . PROJECT_URL . '/create-password.php');
         exit;
     }
 

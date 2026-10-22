@@ -11,6 +11,15 @@ require __DIR__ . '/../app/bootstrap/project_bootstrap.php';
 ========================= */
 
 $token = $_GET['token'] ?? '';
+if ($token === '') {
+    require_once APP_PATH . '/helpers/crypto_local_setup.php';
+    $localOwner = cryptoLocalSetupContext($pdo, $project);
+    if ($localOwner !== null) {
+        header('Cache-Control: no-store');
+        cryptoLocalSetupPage($pdo, $project, $localOwner);
+        exit;
+    }
+}
 
 if (!$token) {
     http_response_code(400);

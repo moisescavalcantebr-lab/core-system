@@ -9,7 +9,7 @@
     "is_protected": 1,
     "schema": {
         "path": "app/database/schema.sql",
-        "hash": "15f60e3f9f9c454d4df61626bcd73f2b",
-        "updated_at": "2026-07-31 17:55:41"
+        "hash": "2399cda01fc8a86e04e830a91d318a5d",
+        "updated_at": "2026-10-22 17:26:15"
     }
 }

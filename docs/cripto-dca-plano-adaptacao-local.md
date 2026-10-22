@@ -1,7 +1,7 @@
 # Cripto DCA: plano de adaptacao local
 
 Data: 2026-10-22.
-Estado: planejamento definido; integracao e migracoes ainda nao implementadas.
+Estado: primeira entrega local de leitura implementada; validacao da conta real e cobertura DCA pendentes. Guia: [teste local](cripto-dca-teste-local.md).
 
 ## Escopo aprovado
 

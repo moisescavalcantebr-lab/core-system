@@ -23,6 +23,9 @@ ob_start();
             <p class="c-page-subtitle">Gestao pessoal de estrategia cripto DCA Spot</p>
         </div>
         <div class="crypto-actions">
+            <?php if (is_file(PROJECT_PATH . '/modules/crypto_binance/module.json')): ?>
+                <a href="<?= PROJECT_URL ?>/admin/crypto_binance/index.php" class="c-btn-secondary">Binance - leitura</a>
+            <?php endif; ?>
             <a href="<?= PROJECT_URL ?>/admin/crypto_dca_manager/wallets.php" class="c-btn-secondary">Contas</a>
             <a href="<?= PROJECT_URL ?>/admin/crypto_dca_manager/assets.php" class="c-btn-secondary">Ativos</a>
             <a href="<?= PROJECT_URL ?>/admin/crypto_dca_manager/cycles.php" class="c-btn-secondary">Ciclos</a>
