@@ -121,11 +121,49 @@ Cada comando afeta somente seu servico. Se a imagem antiga saiu do cache, carreg
 
 Nao restaurar banco automaticamente para resolver falha de runtime: isso descartaria dados gravados depois do backup. A imagem antiga e vulneravel; rollback e recuperacao temporaria de disponibilidade, nao solucao permanente.
 
-## DigitalOcean — preparado, nao executado
+## DigitalOcean — diagnostico de 22/10, atualizacao nao executada
 
-O destino configurado e `157.230.214.72`, workspace `/opt/workspace`. A tentativa anterior de diagnostico SSH expirou durante o banner, antes de autenticar. Nao ha confirmacao atual de PHP, imagem, mounts, arquitetura, RAM ou arquivos Compose remotos. O atalho SSH `meuprojetoweb` historicamente apontava para outro IP; nao o usar como substituto sem conferir.
+Diagnostico de leitura concluido em 22/10/2026, 22:48 UTC, com autenticacao por senha em terminal. A chave local foi recusada; a conexao interativa funcionou. Nenhuma imagem foi enviada/carregada e nenhum container remoto foi reiniciado.
 
-Antes de autorizar a aplicacao, recuperar o acesso e executar somente diagnostico:
+| Item remoto confirmado | Estado |
+| --- | --- |
+| Arquitetura | x86_64 / linux amd64 |
+| Memoria | 961 MiB totais, aproximadamente 80 MiB disponiveis |
+| Swap | Ausente |
+| Disco raiz | 24 GiB; aproximadamente 13 GiB livres |
+| Core | PHP 8.3.35, Apache 2.4.68 |
+| phpMyAdmin | PHP 8.3.26, porta restrita a 127.0.0.1:8080 |
+| MySQL | 8.0.46, healthy; container em execucao ha aproximadamente tres horas |
+| Volume MySQL | docker_db_data em /var/lib/mysql |
+| Compose | Projeto docker, rede docker_default |
+
+O MySQL remoto e 8.0.46, diferente do local 8.0.45. Ele nao deve ser atualizado nem recriado nesta correcao. O tempo de execucao de tres horas, isoladamente, nao comprova a causa de eventual reinicio.
+
+Os quatro arquivos Compose reais de app_php sao, em ordem:
+
+1. `/opt/workspace/docker/docker-compose.yml`
+2. `/opt/workspace/docker/docker-compose.prod.yml`
+3. `/opt/workspace/docker/docker-compose.mail-center.prod.yml`
+4. `/opt/private-mail-center/tls/docker-compose.origin.yml`
+
+O servidor tem mounts privados adicionais em relacao ao local: `core-config.php`, `core-env-base.php`, certificado/chave e configuracao de logs/TLS da origem. Esses mounts sao somente leitura e precisam permanecer identicos. Portas atuais do app: 80 e 443 publicas, mais 127.0.0.1:8000. Nao copiar o override TLS local para producao.
+
+**Pendencia de capacidade antes da publicacao:** o servidor ainda tem 1 GB, pouca memoria disponivel e nenhum swap. Considerando o historico de OOM, a recomendacao e ampliar a RAM para 2 GB antes de carregar imagens ou recriar servicos. Nao criar um segundo MySQL nesse servidor. Upgrade, parada e alteracao de custo precisam da escolha do usuario; nao foram executados.
+
+Pacote local das duas imagens ja verificadas, arquitetura amd64, preparado fora do site/Git:
+
+- Arquivo: `../private-core-backups/php83-20261022-180456/php83-corrected-images.tar`
+- Tamanho: 199308288 bytes.
+- SHA256: `4c96c24d6c610efe6b899d4f056bbc8c58f979a3ddb449d000f1ead4269b9add`.
+- Manifesto: `php83-corrected-images.sha256`, na mesma pasta privada.
+
+Antes da aplicacao, ainda e necessario backup remoto recente de bancos/arquivos/Compose/imagens e teste de restauracao local com MySQL 8.0.46, preservando as diferencas em relacao ao ambiente local. Tambem e necessario conferir o conteudo efetivo do Compose em arquivo privado antes de definir o instalador final e garantir que deploys futuros mantenham a imagem corrigida.
+
+### Historico e procedimento preparado
+
+O destino confirmado e `157.230.214.72`, workspace `/opt/workspace`. A tentativa anterior expirou durante o banner SSH; o diagnostico atual por senha funcionou e confirmou os dados acima. O atalho SSH `meuprojetoweb` historicamente apontava para outro IP; nao o usar como substituto sem conferir.
+
+Comandos de leitura usados para conferir o servidor; repetir se o estado mudar antes da aplicacao:
 
 ```bash
 docker inspect app_php --format '{{.Config.Image}}'
@@ -181,3 +219,9 @@ Rollback remoto: mesmo Compose original, override apontando para a imagem anteri
 Os exemplos remotos nao sao um comando pronto para colar: `COMPOSE`, caminhos privados, overrides e arquitetura precisam ser determinados no servidor real. Nao executar `deploy-atualizar-servidor.ps1` para esta correcao isolada: ele publica codigo e pode executar migracoes nao relacionadas. O deploy Docker local generico tambem nao substitui rebuild do runtime.
 
 Proibido nesta atualizacao: `down -v`, limpeza indiscriminada, recriar MySQL, mudar versoes principais, executar instaladores/migracoes ou sobrescrever `.env` de producao. Nenhum desses passos foi executado localmente.
+
+### Upgrade de RAM proposto
+
+Conforme a documentacao oficial da DigitalOcean, pode-se redimensionar o Droplet existente, preferindo CPU/RAM sem aumentar o disco quando disponivel. A operacao exige parada; fazer backup/snapshot recente antes e desligamento ordenado pelo sistema. O preco e a configuracao disponivel devem ser conferidos no painel antes de confirmar. Nenhum upgrade foi executado.
+
+Fonte: https://docs.digitalocean.com/products/droplets/how-to/resize/
