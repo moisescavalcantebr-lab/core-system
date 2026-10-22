@@ -1,4 +1,4 @@
-FROM php:8.3-apache
+FROM php:8.3.36-apache-trixie@sha256:756c2884677bedea30afaa95811b42cd3ff251203291c5820c1ad209e86c9fb4
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -24,3 +24,7 @@ RUN echo '<Directory /var/www/html>\n\
 && a2enconf custom
 
 WORKDIR /var/www/html
+
+# Fail new builds if the runtime lacks the security fix or required capabilities.
+COPY verify-runtime.php /usr/local/lib/core-verify-runtime.php
+RUN php /usr/local/lib/core-verify-runtime.php && apache2ctl -t

@@ -100,7 +100,7 @@ cbAssert((int)$projectPdo->query('SELECT COUNT(*) FROM crypto_binance_reads')->f
 $session=bin2hex(random_bytes(24));$csrf=bin2hex(random_bytes(32));
 session_write_close(); session_id($session); session_start(); $session=session_id(); $coreAdmin=$pdo->query("SELECT id,role FROM core_users WHERE role IN ('ADMIN','SUPER_ADMIN') AND status=1 ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 cbAssert((bool)$coreAdmin,'Administrador local necessario para teste do primeiro acesso');
-$_SESSION=['core_user'=>$coreAdmin,'_csrf'=>$csrf]; session_write_close();
+$_SESSION=['core_user'=>$coreAdmin,'_csrf'=>$csrf,'core_authenticated_at'=>time()]; session_write_close();
 $sessionFile = (session_save_path() ?: sys_get_temp_dir()) . '/sess_' . $session;
 if (function_exists('posix_geteuid') && posix_geteuid() === 0) { chown($sessionFile, 'www-data'); chgrp($sessionFile, 'www-data'); }
 $fixture += ['session'=>$session,'csrf'=>$csrf];file_put_contents($root.'/_deploy/crypto-local-test.json',json_encode($fixture));

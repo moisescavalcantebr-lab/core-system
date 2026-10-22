@@ -35,7 +35,8 @@ services:
       retries: 10
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    build: ./phpmyadmin
+    image: core-phpmyadmin:5.2.3-php8.3.36
     container_name: app_pma
     restart: always
     ports:
