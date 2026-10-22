@@ -50,3 +50,17 @@ php scripts/tests/crypto_binance_test.php --cleanup
 ```
 
 Projetos criados antes desta entrega precisam do fluxo de sincronizacao de modulos da base no Core local. Prefira criar um projeto novo para este primeiro teste.
+
+## Links de acesso por token no Docker
+
+O fluxo com link de acesso tambem funciona localmente. A porta `8443` e a porta publicada para o navegador no computador; ela nao e a porta interna do container. No laboratorio com Core e projeto no mesmo MySQL, a base valida o token diretamente no Core, sem fazer uma chamada HTTPS a `localhost:8443` de dentro do container.
+
+A validacao mantem projeto, responsavel, vencimento e uso unico do token. A gravacao da senha e o consumo do token usam uma unica transacao; se houver falha, ambos sao revertidos. O fluxo sem email para o administrador autenticado no Core continua disponivel.
+
+Regressao do fluxo com token, depois de preparar a fixture do teste anterior:
+
+```sh
+php scripts/tests/crypto_local_tokens_test.php
+```
+
+Esse teste usa somente o projeto temporario `cripto-check-*`, nunca um projeto criado pelo usuario. O teste HTTP complementar esta em `scripts/tests/crypto_local_tokens_ui.cjs` e verifica o formulario, CSRF, uso unico e login.

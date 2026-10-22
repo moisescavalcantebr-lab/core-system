@@ -10,7 +10,19 @@ require __DIR__ . '/../app/bootstrap/project_bootstrap.php';
    VALIDAR TOKEN
 ========================= */
 
-$token = $_GET['token'] ?? '';
+$token = (string)($_GET['token'] ?? '');
+ini_set('display_errors', '0');
+header('Cache-Control: no-store');
+header('Referrer-Policy: no-referrer');
+if ($token !== '') {
+    require_once APP_PATH . '/helpers/crypto_local_tokens.php';
+    try { $localBridge = cryptoLocalTokenBridge($project); }
+    catch (Throwable $e) { http_response_code(503); exit('Nao foi possivel validar o acesso no Core local. Tente novamente.'); }
+    if ($localBridge !== null) {
+        cryptoLocalTokenPage($localBridge, $project, $token);
+        exit;
+    }
+}
 if ($token === '') {
     require_once APP_PATH . '/helpers/crypto_local_setup.php';
     $localOwner = cryptoLocalSetupContext($pdo, $project);
@@ -35,12 +47,13 @@ $coreConfig = file_exists($coreConfigPath) ? require $coreConfigPath : [];
 $coreUrl = rtrim((string)($coreConfig['app_url'] ?? 'https://meuprojetoweb.com'), '/');
 $coreApiUrl = str_replace('http://localhost:8000', 'http://127.0.0.1', $coreUrl);
 
-$response = file_get_contents(
+$response = @file_get_contents(
     $coreApiUrl . "/web/api/validate-token.php",
     false,
     stream_context_create([
         'http' => [
             'method'  => 'POST',
+            'timeout' => 8,
             'header'  => "Content-type: application/x-www-form-urlencoded",
             'content' => http_build_query(['token' => $token])
         ]
@@ -124,12 +137,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         /* Marcar token como usado */
 
-        file_get_contents(
+        @file_get_contents(
             $coreApiUrl . "/web/api/mark-token-used.php",
             false,
             stream_context_create([
                 'http' => [
                     'method'  => 'POST',
+            'timeout' => 8,
                     'header'  => "Content-type: application/x-www-form-urlencoded",
                     'content' => http_build_query(['token' => $token])
                 ]

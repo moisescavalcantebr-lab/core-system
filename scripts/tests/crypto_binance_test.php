@@ -12,6 +12,7 @@ if (($argv[1] ?? '') === '--cleanup') {
     $fixture = json_decode((string)file_get_contents($file), true, 64, JSON_THROW_ON_ERROR);
     $slug = $fixture['slug']; $database = $fixture['db_name'];
     cbAssert((bool)preg_match('/^cripto-check-[a-f0-9]{10}$/D', $slug) && $database === ProjectProvisioner::projectDatabaseName($slug), 'Alvo de limpeza invalido.');
+    $pdo->prepare('DELETE FROM project_access_tokens WHERE project_id=?')->execute([$fixture['project_id']]);
     $pdo->prepare('DELETE FROM project_logs WHERE project_id=?')->execute([$fixture['project_id']]);
     $pdo->prepare('DELETE FROM projects WHERE id=? AND slug=?')->execute([$fixture['project_id'], $slug]);
     $db = $config['project_db'];
