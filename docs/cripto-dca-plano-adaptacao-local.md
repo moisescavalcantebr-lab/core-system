@@ -1,7 +1,7 @@
 # Cripto DCA: plano de adaptacao local
 
 Data: 2026-10-22.
-Estado: primeira entrega local de leitura implementada; validacao da conta real e cobertura DCA pendentes. Guia: [teste local](cripto-dca-teste-local.md).
+Estado: conexao Spot local validada, com credenciais criptografadas salvas; cobertura dos bots DCA nativos ainda pendente. Pesquisa: [cobertura dos bots nativos](cripto-dca-cobertura-bots-nativos.md). Guia: [teste local](cripto-dca-teste-local.md).
 
 ## Escopo aprovado
 
