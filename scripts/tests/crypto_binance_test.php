@@ -23,6 +23,13 @@ if (($argv[1] ?? '') === '--cleanup') {
     foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($folder, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST) as $item) {
         $item->isDir() ? rmdir($item->getPathname()) : unlink($item->getPathname());
     }
+    foreach (['session','client_session','cross_session','inactive_session'] as $sessionKey) {
+        $testSession = $fixture[$sessionKey] ?? '';
+        if (is_string($testSession) && preg_match('/^[A-Za-z0-9,-]{16,128}$/D', $testSession)) {
+            $sessionFile = (session_save_path() ?: sys_get_temp_dir()) . '/sess_' . $testSession;
+            if (is_file($sessionFile)) unlink($sessionFile);
+        }
+    }
     rmdir($folder); unlink($file);
     echo "PASS: projeto e banco temporarios removidos.\n";
     exit;

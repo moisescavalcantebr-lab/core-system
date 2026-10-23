@@ -1,0 +1,8 @@
+services:
+  app:
+    volumes:
+      - crypto_binance_keys:/run/crypto-binance:ro
+volumes:
+  crypto_binance_keys:
+    external: true
+    name: docker_crypto_binance_keys

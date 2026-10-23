@@ -5,6 +5,11 @@ ini_set('display_errors', '0');
 header('Cache-Control: no-store');
 header('Referrer-Policy: no-referrer');
 requireProjectRole(['ADMIN']);
+if ((projectUser()['status'] ?? '') !== 'active') { http_response_code(403); exit('Acesso negado.'); }
+if (!hash_equals(hash('sha256', PROJECT_PATH), (string)($_SESSION['crypto_authenticated_project'] ?? ''))) {
+    unset($_SESSION['project_user_id'], $_SESSION['crypto_authenticated_project']);
+    header('Location: ' . PROJECT_URL . '/admin/login.php'); exit;
+}
 if (!is_file(PROJECT_PATH . '/modules/crypto_binance/module.json') || !is_file(PROJECT_PATH . '/modules/crypto_dca_manager/module.json')) {
     http_response_code(404);
     exit('Addon indisponivel neste projeto.');
@@ -22,6 +27,7 @@ if (!$isLocal) {
     exit('Esta versao da leitura Binance esta disponivel apenas no laboratorio local.');
 }
 require_once __DIR__ . '/service.php';
+require_once __DIR__ . '/connection_service.php';
 function cryptoBinanceEscape(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function cryptoBinanceState(string $state): string {
     return ['confirmed'=>'Consultado', 'partial'=>'Amostra parcial', 'failed'=>'Falhou', 'not_tested'=>'Nao validado', 'demo'=>'Demonstracao'][$state] ?? 'Nao validado';
@@ -34,6 +40,7 @@ function cryptoBinanceLabel(string $check): string {
 }
 try {
     $pdo->query('SELECT id FROM crypto_binance_reads LIMIT 0');
+    $pdo->query('SELECT id FROM crypto_binance_connections LIMIT 0');
 } catch (PDOException $e) {
     if (($e->errorInfo[1] ?? null) !== 1146) throw $e;
     $pdo->exec((string)file_get_contents(PROJECT_PATH . '/modules/crypto_binance/database/schema.sql'));

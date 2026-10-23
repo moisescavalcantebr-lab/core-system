@@ -51,6 +51,7 @@ function cryptoLocalSetupPage(PDO $pdo, array $project, array $owner): void
                 $pdo->commit();
                 session_regenerate_id(true);
                 $_SESSION['project_user_id'] = $id;
+                $_SESSION['crypto_authenticated_project'] = hash('sha256', PROJECT_PATH);
                 header('Location: ' . PROJECT_URL . '/admin/crypto_binance/index.php', true, 303);
                 exit;
             } catch (Throwable $e) {

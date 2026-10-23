@@ -26,6 +26,13 @@ foreach (['crypto_dca_manager','crypto_binance'] as $slug) {
     $schema = (string)file_get_contents($baseSchemaPath);
     if (!str_contains($schema, '-- MODULE: ' . $slug)) {
         file_put_contents($baseSchemaPath, "\n\n-- MODULE: " . $slug . "\n" . file_get_contents($source . '/' . $manifest['database']['schema']), FILE_APPEND);
+    } elseif ($slug === 'crypto_binance') {
+        $marker = '-- MODULE: ' . $slug;
+        $start = strpos($schema, $marker);
+        $next = strpos($schema, "\n-- MODULE:", $start + strlen($marker));
+        $end = $next === false ? strlen($schema) : $next;
+        $section = $marker . "\n" . file_get_contents($source . '/' . $manifest['database']['schema']);
+        file_put_contents($baseSchemaPath, substr($schema, 0, $start) . $section . substr($schema, $end));
     }
 }
 $baseJsonPath = $basePath . '/base.json';

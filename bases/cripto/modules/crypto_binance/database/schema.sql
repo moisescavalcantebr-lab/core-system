@@ -9,6 +9,14 @@ CREATE TABLE IF NOT EXISTS crypto_binance_reads (
     INDEX (mode, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS crypto_binance_connections (
+    id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+    credential_envelope TEXT NOT NULL,
+    actor_id INT NOT NULL,
+    generation INT UNSIGNED NOT NULL DEFAULT 1,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS crypto_binance_trades (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     source_id VARCHAR(64) NOT NULL,

@@ -6,7 +6,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 csrf_verify();
 $mode = (string)($_POST['mode'] ?? '');
-$lock = 'crypto_binance_' . substr(hash('sha256', (string)$pdo->query('SELECT DATABASE()')->fetchColumn()), 0, 40);
+$lock = cryptoBinanceConnectionLock($pdo);
 $locked = false;
 $readId = null;
 try {
@@ -22,17 +22,14 @@ try {
         $snapshot = CryptoBinanceReader::demo();
     } else {
         $symbols = CryptoBinanceReader::symbols((string)($_POST['symbols'] ?? ''));
-        $key = $mode === 'account' ? trim((string)($_POST['api_key'] ?? '')) : '';
-        $secret = $mode === 'account' ? trim((string)($_POST['api_secret'] ?? '')) : '';
         unset($_POST['api_key'], $_POST['api_secret']);
-        if ($mode === 'account' && (($_POST['read_only'] ?? '') !== '1' || $key === '' || $secret === '')) {
-            throw new InvalidArgumentException('Informe a chave e o segredo e confirme o uso de uma chave dedicada somente a leitura.');
-        }
-        try { $snapshot = (new CryptoBinanceReader())->read($symbols, $key, $secret); }
-        finally { unset($key, $secret); }
+        $reader = new CryptoBinanceReader();
+        $snapshot = $mode === 'account'
+            ? (new CryptoBinanceConnectionStore($pdo))->read($symbols, $reader)
+            : $reader->read($symbols);
     }
     $readId = cryptoBinanceSaveRead($pdo, $snapshot, (int)projectUser()['id']);
-} catch (InvalidArgumentException $e) {
+} catch (InvalidArgumentException|DomainException $e) {
     flash('error', $e->getMessage());
 } catch (Throwable $e) {
     flash('error', 'Nao foi possivel concluir ou salvar esta consulta. Os registros anteriores foram preservados.');

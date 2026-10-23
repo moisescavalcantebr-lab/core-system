@@ -102,7 +102,7 @@ final class CryptoBinanceReader
         return $data;
     }
 
-    /** Credentials exist only for this request; no URLs/headers/raw errors are persisted. */
+    /** The reader does not persist credentials, signed URLs, headers or raw errors. */
     public function read(array $symbols, #[SensitiveParameter] string $key = '', #[SensitiveParameter] string $secret = ''): array
     {
         $symbols = self::symbols(implode(',', $symbols));

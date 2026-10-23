@@ -18,11 +18,17 @@ Depois informe um par real (por exemplo BTCUSDT) e clique em **Consultar precos 
 ## Conferir a conta
 
 1. Na Binance, prepare uma chave API **HMAC dedicada somente a leitura**, sem negociacao, saque ou transferencia. Mantenha as restricoes de seguranca da sua conta; nao e necessario desabilita-las para este teste.
-2. Em **Consultar minha conta Spot**, digite API Key e Secret Key somente no formulario local. Nao envie pelo chat.
-3. Informe ate tres pares, confirme que a chave e de leitura e clique em **Atualizar dados da conta**.
-4. Confira os valores com o painel Binance e informe apenas quais categorias apareceram ou ficaram indisponiveis, sem expor dados privados.
+2. Em **Conexao Binance Spot → Salvar conexao**, digite API Key e Secret Key somente no formulario local. Nao envie pelo chat.
+3. Confirme que a chave e dedicada somente a leitura e clique em **Salvar conexao**. Salvar nao consulta a Binance nem comprova a validade da chave.
+4. Informe ate tres pares e clique em **Atualizar dados da conta**. Recarregue a pagina: a conexao continua salva e os campos permanecem vazios. Nao e necessario informar as chaves de novo.
+5. Confira os valores com o painel Binance. Para trocar as chaves, abra **Atualizar conexao** e informe as duas novamente.
+6. Para remover as credenciais locais, clique em **Desconectar** e confirme. O historico continua disponivel. Isso nao revoga a chave na Binance.
 
-As chaves nao ficam salvas: sao usadas durante o POST e descartadas. A aplicacao nao registra URLs assinadas ou respostas de erro brutas. O historico de consultas e as amostras retornadas ficam no banco exclusivo do projeto, fora do Git.
+API Key e Secret Key ficam criptografadas com XChaCha20-Poly1305 na tabela `crypto_binance_connections`, exclusiva do projeto. O contexto autenticado inclui o banco do projeto, impedindo reutilizar o envelope em outro banco. Somente administrador ativo, autenticado nesse projeto e com CSRF valido, pode gerenciar a conexao. A aplicacao nao exibe chaves salvas, registra URLs assinadas ou respostas de erro brutas.
+
+A chave de protecao fica no volume Docker `docker_crypto_binance_keys`, em `/run/crypto-binance/master.key`, montado somente leitura no PHP e separado do MySQL/site. O preparo faz uma copia com ACL restrita em `../private-crypto-binance/master.key`, fora do workspace/Git. Guarde essa copia: restaurar apenas o banco nao recupera as credenciais. Nao excluir o volume nem gerar outra chave para tentar recuperar conexoes antigas. O preparo recusa gerar uma chave nova se detectar conexoes salvas sem chave/backup.
+
+Conexao e historico persistem entre reinicios. A primeira abertura depois desta atualizacao pode exigir novo login para vincular a sessao ao projeto correto. Chaves informadas na versao anterior nao foram armazenadas e precisam ser cadastradas uma vez.
 
 ## Limites desta entrega
 
@@ -64,3 +70,31 @@ php scripts/tests/crypto_local_tokens_test.php
 ```
 
 Esse teste usa somente o projeto temporario `cripto-check-*`, nunca um projeto criado pelo usuario. O teste HTTP complementar esta em `scripts/tests/crypto_local_tokens_ui.cjs` e verifica o formulario, CSRF, uso unico e login.
+
+## Preparar conexao salva no Docker local
+
+O ambiente atual ja foi preparado. Em uma nova instalacao local, primeiro execute no PowerShell da raiz do workspace:
+
+```powershell
+./scripts/crypto-binance-preparar-chave-local.ps1
+```
+
+O script valida Docker local e PHP corrigido, cria/restaura a chave sem exibi-la, protege o backup e acrescenta `docker/docker-compose.crypto.local.yml` aos arquivos Compose reais. Recria somente PHP, mantendo imagem, portas, mounts anteriores e container MySQL. Nao altera producao. O volume e externo ao Compose; mantenha-o nas recriacoes do PHP.
+
+Atualizacao de projeto Cripto existente, depois de backup privado de seus arquivos e banco:
+
+```sh
+php scripts/cripto-preparar-local.php
+php scripts/cripto-atualizar-binance-local.php dca-spot
+```
+
+Essa atualizacao copia somente o addon e o vinculo de autenticacao ao projeto, adicionando a tabela da conexao com `CREATE TABLE IF NOT EXISTS`. Nao recria o projeto, nao regrava suas senhas e nao remove consultas, trades, ativos ou ciclos. A base tambem fica preparada para novos projetos.
+
+Testes adicionais, com a fixture sintetica criada pelo teste PHP e autenticada por `crypto_binance_ui.cjs`:
+
+```sh
+php scripts/tests/crypto_binance_connection_test.php
+# No host Windows com Playwright: node scripts/tests/crypto_binance_connection_ui.cjs
+```
+
+Os testes usam somente chaves ficticias e transporte Binance simulado para verificar consultas com credenciais salvas; nao usam a conta real nem executam ordens. Incluem adulteracao do envelope, chave ausente/errada, troca entre bancos, CSRF, CLIENT e administrador inativo bloqueados, sessao de outro projeto, concorrencia, confirmacao de desconexao e telas de 1280/390 pixels. Limpar a fixture ao concluir.

@@ -50,6 +50,7 @@ LOGIN
 ========================= */
 
 $_SESSION['project_user_id'] = $user['id'];
+$_SESSION['crypto_authenticated_project'] = hash('sha256', PROJECT_PATH);
 
 /* Segurança */
 session_regenerate_id(true);

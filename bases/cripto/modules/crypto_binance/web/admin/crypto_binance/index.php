@@ -10,6 +10,9 @@ if ($readId) {
 }
 $snapshot = $read ? json_decode($read['snapshot'], true, 64, JSON_THROW_ON_ERROR) : null;
 $history = $pdo->query('SELECT id, mode, status, created_at FROM crypto_binance_reads ORDER BY id DESC LIMIT 10')->fetchAll(PDO::FETCH_ASSOC);
+$connectionStore = new CryptoBinanceConnectionStore($pdo);
+$connection = $connectionStore->metadata();
+$protectionReady = $connectionStore->protectionAvailable();
 ob_start();
 ?>
 <div class="c-page cb-page">
@@ -20,22 +23,41 @@ ob_start();
  <div class="c-page-content">
   <?php flash_show(); ?>
   <div class="c-card"><strong>Primeiro teste: leitura dos dados</strong><p>Consulte pares e confira uma amostra Spot. A identificacao dos bots, ciclos e reservas DCA ainda precisa ser validada. Nenhuma compra, venda ou transferencia e realizada por esta tela.</p></div>
+  <section class="c-card cb-form" id="cb-connection" data-saved="<?= $connection ? '1' : '0' ?>">
+   <h2>Conexao Binance Spot</h2>
+   <?php if ($connection): ?><p><strong>Conexao salva.</strong> Credenciais atualizadas em <?= cryptoBinanceEscape($connection['updated_at']) ?> UTC. A validade e conferida ao consultar a conta.</p>
+   <?php else: ?><p>Salve uma chave HMAC dedicada somente a leitura para atualizar sua conta sem digitar as credenciais novamente.</p><?php endif; ?>
+   <?php if (!$protectionReady): ?><p role="alert">A protecao da conexao ainda nao esta disponivel neste ambiente. As consultas publicas e a demonstracao continuam funcionando.</p><?php else: ?>
+   <details><summary><?= $connection ? 'Atualizar conexao' : 'Salvar conexao' ?></summary>
+    <form method="post" action="<?= PROJECT_URL ?>/admin/crypto_binance/connection.php" autocomplete="off">
+     <?= csrf_field() ?><input type="hidden" name="action" value="save">
+     <div class="cb-grid">
+      <div><label for="cb-key">API Key de leitura</label><input class="c-input" id="cb-key" name="api_key" type="password" autocomplete="new-password" maxlength="256" required></div>
+      <div><label for="cb-secret">Secret Key</label><input class="c-input" id="cb-secret" name="api_secret" type="password" autocomplete="new-password" maxlength="256" required></div>
+     </div>
+     <p>As credenciais ficam criptografadas no banco deste projeto. A chave de protecao fica fora do site. As chaves salvas nunca sao exibidas no formulario.</p>
+     <label><input type="checkbox" name="read_only" value="1" required> Estou usando uma chave dedicada somente a leitura, sem negociacao, saque ou transferencia.</label>
+     <p><button class="c-btn-secondary cb-primary" type="submit">Salvar conexao</button></p>
+    </form>
+   </details>
+   <?php endif; ?>
+   <?php if ($connection): ?>
+   <form method="post" action="<?= PROJECT_URL ?>/admin/crypto_binance/connection.php" onsubmit="return window.confirm('Remover a conexao salva? O historico sera mantido.');">
+    <?= csrf_field() ?><input type="hidden" name="action" value="disconnect"><input type="hidden" name="confirm_disconnect" value="1">
+    <button class="c-btn-secondary" type="submit">Desconectar</button>
+   </form><p class="c-muted">Desconectar remove as credenciais salvas. O historico permanece; para revogar a chave na Binance, use o gerenciamento de API da corretora.</p>
+   <?php endif; ?>
+  </section>
   <form class="c-card cb-form" method="post" action="<?= PROJECT_URL ?>/admin/crypto_binance/read.php" autocomplete="off">
    <?= csrf_field() ?>
    <label for="cb-symbols">Pares para conferir (ate 3)</label>
    <input class="c-input" id="cb-symbols" name="symbols" maxlength="80" value="<?= cryptoBinanceEscape(implode(', ', ($snapshot['mode'] ?? '') !== 'demo' ? ($snapshot['symbols'] ?? ['BTCUSDT']) : ['BTCUSDT'])) ?>" placeholder="BTCUSDT, BTCUSDC">
-   <p class="c-muted">A consulta publica funciona sem chave. Para conferir sua conta, use uma chave HMAC dedicada com apenas leitura habilitada na Binance.</p>
-   <details><summary>Consultar minha conta Spot</summary>
-    <div class="cb-grid">
-     <div><label for="cb-key">API Key de leitura</label><input class="c-input" id="cb-key" name="api_key" type="password" autocomplete="off" maxlength="256"></div>
-     <div><label for="cb-secret">Secret Key</label><input class="c-input" id="cb-secret" name="api_secret" type="password" autocomplete="off" maxlength="256"></div>
-    </div>
-    <p>As chaves sao usadas somente nesta consulta e nao ficam salvas. Informe-as novamente ao atualizar a conta.</p>
-    <label><input type="checkbox" name="read_only" value="1"> Estou usando uma chave dedicada somente a leitura.</label>
-    <p>Negociacoes: amostra de ate 100 por par nas ultimas 24 horas. Ordens abertas: ate 100 por par. Saldos: somente a abrangencia retornada pela API Spot; um saldo zero nao comprova ausencia de valores nos bots.</p>
-    <button class="c-btn-secondary cb-primary" type="submit" name="mode" value="account">Atualizar dados da conta</button>
-   </details>
-   <div class="cb-actions"><button class="c-btn-secondary cb-primary" type="submit" name="mode" value="public">Consultar precos e pares</button><button class="c-btn-secondary" type="submit" name="mode" value="demo">Testar com demonstracao</button></div>
+   <p class="c-muted">A consulta publica funciona sem chave. A consulta da conta utiliza sua conexao salva.</p>
+   <p>Negociacoes: amostra de ate 100 por par nas ultimas 24 horas. Ordens abertas: ate 100 por par. Saldos: somente a abrangencia retornada pela API Spot; um saldo zero nao comprova ausencia de valores nos bots.</p>
+   <div class="cb-actions">
+    <?php if ($connection && $protectionReady): ?><button class="c-btn-secondary cb-primary" type="submit" name="mode" value="account">Atualizar dados da conta</button><?php endif; ?>
+    <button class="c-btn-secondary" type="submit" name="mode" value="public">Consultar precos e pares</button><button class="c-btn-secondary" type="submit" name="mode" value="demo">Testar com demonstracao</button>
+   </div>
   </form>
   <?php if ($snapshot): ?>
    <section class="c-card">
